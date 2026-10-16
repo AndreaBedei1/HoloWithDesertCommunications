@@ -77,6 +77,7 @@ class DESERTAdapter(CommunicationBackend):
         self.limit = 4096
         self._owns_service = False
         self.versions = {}
+        self.initial_events = []
 
     def start(self, scenario: Scenario):
         if self.socket:
@@ -99,6 +100,7 @@ class DESERTAdapter(CommunicationBackend):
             self.reader = self.socket.makefile("rb")
             self.socket.sendall((scenario.model_dump_json() + "\n").encode())
             initial = self._until_barrier()
+            self.initial_events = initial
             self.versions = next((e for e in initial if e["event"] == "engine_info"), {})
             if self.time != 0 or any(e["event"] == "rx" for e in initial):
                 raise BackendError("DESERT did not initialize at time zero")

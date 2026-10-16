@@ -4,6 +4,7 @@ import importlib.metadata
 import os
 import subprocess
 from ..common.models import Pose
+from .vehicles import VEHICLE_PROFILES
 
 
 def _kernel_exit_code(process):
@@ -28,6 +29,7 @@ class HoloOceanAdapter:
         self.show_viewport = show_viewport
         self.env = None
         self.poses = {}
+        self.profiles = {n.id: VEHICLE_PROFILES[n.vehicle] for n in scenario.nodes}
 
     def start(self):
         import holoocean
@@ -39,10 +41,7 @@ class HoloOceanAdapter:
                "main_agent": self.scenario.nodes[0].id,
                "ticks_per_sec": self.scenario.physics_hz, "frames_per_sec": False,
                "window_width": 960, "window_height": 640,
-               "agents": [{"agent_name": n.id, "agent_type": "HoveringAUV", "control_scheme": 1,
-                           "location": list(n.position), "rotation": [0, 0, n.yaw],
-                           "sensors": [{"sensor_type": "DynamicsSensor", "socket": "COM", "configuration": {"UseCOM": True, "UseRPY": True}}]}
-                          for n in self.scenario.nodes]}
+               "agents": [self.profiles[n.id].configuration(n) for n in self.scenario.nodes]}
         self.env = holoocean.make(scenario_cfg=cfg, show_viewport=self.show_viewport,
                                   frames_per_sec=False, ticks_per_sec=self.scenario.physics_hz)
         self.env.should_render_viewport(self.show_viewport)
@@ -56,11 +55,10 @@ class HoloOceanAdapter:
     def _read(self, state):
         for node in self.scenario.nodes:
             sensors = state[node.id] if node.id in state else state
-            data = sensors["DynamicsSensor"]
-            self.poses[node.id] = Pose(float(data[6]), float(data[7]), float(data[8]), float(data[17]))
+            self.poses[node.id] = self.profiles[node.id].pose(sensors)
 
     def command(self, node, action):
-        self.env.act(node, list(action))
+        self.env.act(node, self.profiles[node].action(action))
 
     def tick(self):
         self._read(self.env.tick(publish=False))

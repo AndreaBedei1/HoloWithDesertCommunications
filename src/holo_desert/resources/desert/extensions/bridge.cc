@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <underwater-bpsk.h>
+#include <mac.h>
 
 static std::string hexify(const char* p, unsigned n) {
     std::ostringstream s;
@@ -101,6 +102,7 @@ public:
                     << Scheduler::instance().clock() << ",\"node\":" << node_id_
                     << ",\"source_address\":" << (int)HDR_UWIP(p)->saddr()
                     << ",\"destination_address\":" << (int)HDR_UWIP(p)->daddr()
+                    << ",\"next_hop_address\":" << HDR_CMN(p)->next_hop()
                     << ",\"wire_hex\":\"" << hexify(ah->payload_msg, ah->payload_size()) << "\"}" << std::endl;
             }
             sendDown(p);
@@ -117,12 +119,13 @@ public:
 class HoloPhy : public UnderwaterMPhyBpsk {
     int node_id_ = 0;
     void report(const char* event, const std::string& wire, double timestamp,
-                double duration, const char* outcome, double snr, int next_hop) {
+                double duration, const char* outcome, double snr, int next_hop, int transmitter) {
         std::cout << std::setprecision(15) << "{\"event\":\"" << event << "\",\"time\":"
             << timestamp << ",\"node\":" << node_id_ << ",\"duration_s\":" << duration
             << ",\"outcome\":\"" << outcome << "\",\"snr_db\":";
         if (std::isfinite(snr)) std::cout << snr; else std::cout << "null";
-        std::cout << ",\"next_hop_mac\":" << next_hop << ",\"wire_hex\":\"" << wire << "\"}" << std::endl;
+        std::cout << ",\"transmitter_mac\":" << transmitter << ",\"next_hop_mac\":" << next_hop
+                  << ",\"wire_hex\":\"" << wire << "\"}" << std::endl;
     }
     std::string wire(Packet* p) {
         if (HDR_CMN(p)->ptype() != PT_DATA_APPLICATION) return "";
@@ -133,7 +136,7 @@ protected:
     void startTx(Packet* p) override {
         auto h = wire(p);
         if (!h.empty()) report("phy_tx_start", h, Scheduler::instance().clock(), HDR_MPHY(p)->duration,
-                               "transmitting", 0, HDR_CMN(p)->next_hop());
+                               "transmitting", 0, HDR_MAC(p)->macDA(), HDR_MAC(p)->macSA());
         UnderwaterMPhyBpsk::startTx(p);
     }
     void startRx(Packet* p) override {
@@ -148,7 +151,7 @@ protected:
                 busy_tx ? "transmitter_busy" : busy_rx ? "receiver_busy_overlap" :
                 ph->modulationType != modid ? "wrong_modulation" : "below_acquisition_threshold";
             report("phy_rx_start", h, Scheduler::instance().clock(), ph->duration,
-                   outcome, snr, HDR_CMN(p)->next_hop());
+                   outcome, snr, HDR_MAC(p)->macDA(), HDR_MAC(p)->macSA());
         }
     }
     void endRx(Packet* p) override {
@@ -157,12 +160,12 @@ protected:
         auto* ph = HDR_MPHY(p);
         double duration = ph->duration;
         double snr = 10 * std::log10(ph->Pr / ph->Pn);
-        int hop = HDR_CMN(p)->next_hop();
+        int hop = HDR_MAC(p)->macDA(), transmitter = HDR_MAC(p)->macSA();
         int noise = getErrorPktsNoise(), interference = getErrorPktsInterf();
         UnderwaterMPhyBpsk::endRx(p); // may free p; use only saved values afterwards
         if (!h.empty()) report("phy_rx_end", h, Scheduler::instance().clock(), duration,
             !synchronized ? "not_synchronized" : getErrorPktsNoise() > noise ? "noise_error" :
-            getErrorPktsInterf() > interference ? "interference_error" : "decoded", snr, hop);
+            getErrorPktsInterf() > interference ? "interference_error" : "decoded", snr, hop, transmitter);
     }
 public:
     HoloPhy() { bind("node_id_", &node_id_); }

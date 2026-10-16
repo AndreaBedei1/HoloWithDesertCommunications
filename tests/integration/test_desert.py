@@ -164,3 +164,24 @@ def test_multihop_requires_relay_under_validated_channel(engine):
     received, events = exchange(direct, payload=b"direct control", distance=1000)
     assert not received
     assert any(e["event"] == "phy_rx_end" and e["outcome"] in ("noise_error", "not_synchronized") for e in events)
+
+
+@pytest.mark.parametrize("protocol", ["aloha", "csma_aloha"])
+def test_ack_mode_and_real_mac_header_identity(engine, protocol):
+    scenario = ScenarioManager().load("e01_chat")
+    scenario.network.mac.protocol = protocol
+    scenario.network.mac.ack = True
+    backend = DESERTAdapter(manage_docker=False)
+    try:
+        backend.start(scenario)
+        addresses = {e["node"]: e["mac_address"] for e in backend.initial_events if e["event"] == "node_info"}
+        assert len(addresses) == 2 and len(set(addresses.values())) == 2
+        for node in scenario.nodes:
+            backend.update_node_position(node.id, Pose(*node.position), 0)
+        backend.send(Message("auv_01", "auv_02", b"ACK enabled", 0))
+        events = backend.advance(10)
+        assert any(e["event"] == "rx" and e["node"] == 2 for e in events)
+        tx = next(e for e in events if e["event"] == "phy_tx_start")
+        assert tx["transmitter_mac"] == addresses[1] and tx["next_hop_mac"] == addresses[2]
+    finally:
+        backend.stop()

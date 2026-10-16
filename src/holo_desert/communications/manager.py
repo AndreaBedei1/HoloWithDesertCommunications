@@ -27,7 +27,7 @@ class DroneCommunication:
 
 
 class CommunicationManager:
-    def __init__(self, backend, clock, telemetry, nodes, queue_limit=1000):
+    def __init__(self, backend, clock, telemetry, nodes, queue_limit=1000, max_message_bytes=4096):
         self.backend, self.clock, self.telemetry = backend, clock, telemetry
         self.nodes = set(nodes)
         self.inbox = {n: deque() for n in nodes}
@@ -36,6 +36,7 @@ class CommunicationManager:
         self.pending = []
         self.counter = itertools.count()
         self.queue_limit = queue_limit
+        self.max_message_bytes = max_message_bytes
 
     def drone(self, node):
         if node not in self.nodes:
@@ -48,8 +49,8 @@ class CommunicationManager:
         if len(self.outbox) >= self.queue_limit:
             raise BufferError("Application transmit queue is full")
         message = Message(source, destination, payload, self.clock.time, **options)
-        if len(message.encode()) > self.backend.limit:
-            raise ValueError("Encoded message exceeds configured DESERT payload limit")
+        if len(message.encode()) > self.max_message_bytes:
+            raise ValueError("Encoded message exceeds configured communication payload limit")
         self.outbox.append(message)
         self.telemetry.generated(message)
         return message.id

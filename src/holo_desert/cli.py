@@ -5,11 +5,24 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import socket
 from .core.orchestrator import SimulationOrchestrator
 from .dashboard.server import DashboardServer
 from .desert_adapter.backend import docker_command, COMPOSE, BASE_IMAGE, BackendError
 from .doctor import doctor
 from .scenarios.config import ScenarioManager, RESOURCE_ROOT, Network
+
+
+def serve_dashboard(application, port, before_start=None):
+    """Reserve the port before starting either simulator; fail without side effects."""
+    import uvicorn
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+        listener.bind(("127.0.0.1", port))
+        listener.listen(128)
+        if before_start:
+            before_start()
+        uvicorn.Server(uvicorn.Config(application, host="127.0.0.1", port=port,
+                                      log_level="warning")).run(sockets=[listener])
 
 
 def parser():
@@ -87,9 +100,8 @@ def main(argv=None):
             finally:
                 adapter.stop()
         elif args.command == "dashboard":
-            import uvicorn
             print(f"Dashboard: http://127.0.0.1:{args.port}")
-            uvicorn.run(DashboardServer(manage_docker=not args.no_manage_docker).application(), host="127.0.0.1", port=args.port, log_level="warning")
+            serve_dashboard(DashboardServer(manage_docker=not args.no_manage_docker).application(), args.port)
         elif args.command == "run":
             scenario = manager.load(args.scenario)
             overrides = {}
@@ -114,14 +126,13 @@ def main(argv=None):
                     run.run()
                     print(json.dumps({"state": run.state, "error": run.error, "counts": run.telemetry.snapshot()["counts"]}, indent=2))
                     return 1 if run.error else 0
-                import uvicorn
-                run.start_background()
                 print(f"Dashboard: http://127.0.0.1:{args.port} (Ctrl+C to close and clean up)")
-                uvicorn.run(DashboardServer(initial_run=run).application(), host="127.0.0.1", port=args.port, log_level="warning")
+                serve_dashboard(DashboardServer(initial_run=run, manage_docker=not args.no_manage_docker).application(),
+                                args.port, run.start_background)
                 return 1 if run.error else 0
             finally:
                 # Dashboard lifespan already closes its current run.
-                if args.no_dashboard:
+                if not run.telemetry.log.closed:
                     run.close()
         elif args.command == "test":
             marker = "holoocean" if args.end_to_end else "desert and not holoocean" if args.integration else "not desert and not holoocean"

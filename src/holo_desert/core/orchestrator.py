@@ -6,6 +6,7 @@ import math
 from pathlib import Path
 import threading
 import time
+import uuid
 
 from ..common.coordinates import CoordinateConverter
 from ..communications.manager import CommunicationManager
@@ -18,15 +19,17 @@ from .applications import TrafficApplication, HeartbeatCoordinator
 
 class SimulationOrchestrator:
     def __init__(self, scenario, *, standalone=False, manage_docker=True, persist=None,
-                 backend=None, physics=None, show_viewport=True):
+                 backend=None, physics=None, show_viewport=True, application_factory=None):
         self.scenario = scenario
+        self.run_id = str(uuid.uuid4())
         self.standalone = standalone
         self.backend = backend or DESERTAdapter(manage_docker=manage_docker)
         self.physics = physics or (StaticNetworkFixture(scenario) if standalone else HoloOceanAdapter(scenario, show_viewport))
         self.converter = CoordinateConverter()
         self.telemetry = TelemetryCollector(scenario.model_dump(), Path(persist) if persist else None)
         self.clock = ClockSynchronizer(scenario.physics_hz, scenario.realtime)
-        self.communication = CommunicationManager(self.backend, self.clock, self.telemetry, scenario.node_map)
+        self.communication = CommunicationManager(self.backend, self.clock, self.telemetry, scenario.node_map,
+                                                  max_message_bytes=scenario.network.max_wire_bytes)
         self.inverse = {v: k for k, v in scenario.node_map.items()}
         self.stop_event = threading.Event()
         self.pause_event = threading.Event()
@@ -36,12 +39,15 @@ class SimulationOrchestrator:
         self.thread = None
         self.lock = threading.RLock()
         self.applications = {}
+        self.application_factory = application_factory
         self._make_applications()
 
     def _make_applications(self):
         for i, node in enumerate(self.scenario.nodes):
             comm = self.communication.drone(node.id)
-            if self.scenario.coordination:
+            if self.application_factory:
+                self.applications[node.id] = self.application_factory(node, comm, self.scenario)
+            elif self.scenario.coordination:
                 peer = self.scenario.nodes[1 - i].id
                 target = (node.position[0] + 20, node.position[1], node.position[2])
                 self.applications[node.id] = HeartbeatCoordinator(comm, peer, target, leader=i == 0)
@@ -58,9 +64,15 @@ class SimulationOrchestrator:
 
     def run(self):
         self.state = "starting"
+        terminal_state = "stopped"
         try:
+            self.services["desert"] = "starting"
             self.backend.start(self.scenario)
+            for event in getattr(self.backend, "initial_events", []):
+                self.telemetry.engine_event(event, self.inverse)
             self.services["desert"] = "running"
+            if not self.standalone:
+                self.services["holoocean"] = "starting"
             poses = self.physics.start()
             if not self.standalone:
                 self.services["holoocean"] = "running"
@@ -137,27 +149,30 @@ class SimulationOrchestrator:
                     raise RuntimeError("DESERT did not acknowledge every physics position update")
                 self.communication.deliver_due()
                 if self.clock.time - last_pose_time >= 0.1:
-                    self.telemetry.positions(poses, self.clock.time)
+                    self.telemetry.positions(poses, self.clock.time,
+                                             origin="standalone_fixture" if self.standalone else "holoocean")
                     last_pose_time = self.clock.time
                 self.telemetry.sample(self.clock.time, self.clock.drift)
                 self.clock.pace(self.stop_event)
-            self.state = "stopped" if self.stop_event.is_set() else "finished"
-            self.telemetry.emit("run_ended", self.clock.time, state=self.state)
+            terminal_state = "stopped" if self.stop_event.is_set() else "finished"
         except Exception as exc:
             self.error = f"{type(exc).__name__}: {exc}"
-            self.state = "failed"
+            terminal_state = "failed"
             self.telemetry.emit("run_error", self.clock.time, reason=self.error)
         finally:
+            self.state = "stopping"
             for name, component in (("holoocean", self.physics), ("desert", self.backend)):
                 try:
                     component.stop()
-                    if self.services[name] == "running":
+                    if self.services[name] in ("running", "starting"):
                         self.services[name] = "stopped"
                 except Exception as exc:
                     self.telemetry.emit("cleanup_error", self.clock.time, service=name, reason=str(exc))
                     self.services[name] = "cleanup_failed"
                     self.error = self.error or f"Failed to stop {name}: {exc}"
-                    self.state = "failed"
+                    terminal_state = "failed"
+            self.state = terminal_state
+            self.telemetry.emit("run_ended", self.clock.time, state=self.state)
 
     def stop(self):
         self.stop_event.set()
@@ -174,7 +189,10 @@ class SimulationOrchestrator:
         self.pause_event.clear()
 
     def snapshot(self):
+        self.telemetry.applications({node: app.snapshot(self.clock.time)
+                                     for node, app in self.applications.items() if hasattr(app, "snapshot")})
         return {"state": self.state, "error": self.error, "services": dict(self.services),
+                "run_id": self.run_id,
                 "standalone": self.standalone, "configuration": self.scenario.model_dump(),
                 "pause_supported": self.backend.pause_supported, **self.telemetry.snapshot()}
 

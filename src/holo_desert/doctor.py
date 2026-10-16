@@ -44,13 +44,14 @@ def doctor():
             raise RuntimeError("nvidia-smi failed; use holo-desert probe-holo for an actual renderer test")
         return result.stdout.strip() + "; rendering still requires probe-holo"
     check("gpu", gpu)
-    for port in (8000, 5555):
+    desert_port = DESERTAdapter().port
+    for port in (8000, desert_port):
         def available(port=port):
             try:
                 with socket.socket() as s:
                     s.bind(("127.0.0.1", port))
             except OSError:
-                if port == 5555 and DESERTAdapter().health():
+                if port == desert_port and DESERTAdapter().health():
                     return "Port belongs to healthy DESERT service"
                 if port == 8000:
                     import json

@@ -67,6 +67,7 @@ for {set i 1} {$i <= $count} {incr i} {
     $mac($i) set max_payload_ 4096
     if {$ack} { $mac($i) setAckMode } else { $mac($i) setNoAckMode }
     $mac($i) initialize
+    puts "{\"event\":\"node_info\",\"time\":0,\"node\":$i,\"mac_address\":[$mac($i) addr]}"
 }
 foreach entry $routes {
     lassign $entry src dst hop

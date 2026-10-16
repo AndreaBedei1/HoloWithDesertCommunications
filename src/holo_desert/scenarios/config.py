@@ -49,6 +49,7 @@ class Node(Strict):
     id: str = Field(pattern=r"^auv_[0-9]{2}$")
     position: tuple[float, float, float]
     yaw: float = 0
+    vehicle: Literal["HoveringAUV"] = "HoveringAUV"
     # Waypoints are commands to HoloOcean's built-in pose controller, not a physics model.
     waypoints: list[tuple[float, float, float, float]] = Field(default_factory=list)
 
@@ -105,10 +106,23 @@ class Scenario(Strict):
         for src, routes in self.network.routes.items():
             if src not in ids or any(dst not in ids or hop not in ids for dst, hop in routes.items()):
                 raise ValueError("Unknown node in static route")
+            if src in routes or src in routes.values():
+                raise ValueError("Static routes cannot route to or through their own source")
+        # Unspecified entries are direct routes, exactly as rendered by the backend.
+        for src in ids:
+            for dst in ids - {src}:
+                seen, current = set(), src
+                while current != dst:
+                    if current in seen:
+                        raise ValueError(f"Static routing loop from {src} to {dst}")
+                    seen.add(current)
+                    current = self.network.routes.get(current, {}).get(dst, dst)
         if any(e.node not in ids for e in self.power_events):
             raise ValueError("Unknown node in power event")
         if self.coordination and len(self.nodes) != 2:
             raise ValueError("Coordination demo requires two nodes")
+        if self.coordination and self.flows:
+            raise ValueError("Coordination uses heartbeat traffic; additional flows are unsupported")
         return self
 
     @property

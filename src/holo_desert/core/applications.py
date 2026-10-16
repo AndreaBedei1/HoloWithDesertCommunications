@@ -59,3 +59,9 @@ class HeartbeatCoordinator:
             self.hold = (own_pose.x, own_pose.y, own_pose.z, 0, 0, own_pose.yaw)
         self.state = state
         return (*self.target, 0, 0, own_pose.yaw) if fresh else self.hold
+
+    def snapshot(self, now):
+        return {"role": "leader" if self.leader else "follower", "state": self.state,
+                "last_heartbeat_s": self.last_receive,
+                "heartbeat_age_s": None if self.last_receive is None else now - self.last_receive,
+                "freshness_s": self.freshness}
