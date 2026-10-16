@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "holoocean": {
+    "repository": "https://github.com/byu-holoocean/HoloOcean",
+    "tag": "v2.3.0",
+    "commit": "49e70552dfd97273b7dfbe755fbe65d7738b24b7",
+    "client_subdirectory": "client",
+    "world_package": "Ocean",
+    "world_version": "2.3.0",
+    "world_binaries": "Install separately for the host OS with the official package manager"
+  },
+  "desert": {
+    "repository": "https://github.com/signetlabdei/DESERT_Underwater",
+    "tag": "4.0.0",
+    "source_commit": "8991214a1379747a2450f0dc4dd69f9173128f90",
+    "image": "uwsignet/desert:4.0.0",
+    "image_digest": "sha256:59c734d2980de64e4b36429c3fb4a60aceb1cb7efc5f9d605f9b7781fbc51ca6",
+    "platform": "linux/amd64",
+    "upstream_patch": null
+  },
+  "host_python": ">=3.10,<3.13",
+  "host_dependency_lock": "requirements-lock.txt"
+}

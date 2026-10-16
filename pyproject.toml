@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools==78.1.0", "wheel==0.45.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "holoocean-desert"
+version = "0.1.0"
+description = "HoloOcean 2.3 and DESERT 4.0 acoustic co-simulation without ROS"
+requires-python = ">=3.10,<3.13"
+dependencies = ["PyYAML==6.0.2", "fastapi==0.115.12", "uvicorn==0.34.2", "pydantic==2.14.1"]
+
+[project.optional-dependencies]
+test = ["pytest==8.3.5", "httpx==0.28.1"]
+
+[project.scripts]
+holo-desert = "holo_desert.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+holo_desert = ["dashboard/static/*", "resources/examples/*/*.yaml", "resources/profiles/*.yaml", "resources/docker/*", "resources/desert/tcl/*", "resources/desert/extensions/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["desert: requires the real DESERT Docker service", "holoocean: requires Ocean and a GPU"]
