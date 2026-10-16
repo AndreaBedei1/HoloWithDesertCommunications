@@ -25,6 +25,7 @@ def parser():
     run.add_argument("--duration", type=float)
     run.add_argument("--fast", action="store_true", help="Skip wall-clock pacing; logical clocks remain synchronized")
     run.add_argument("--profile", choices=["acoustic_default", "acoustic_aloha"])
+    run.add_argument("--mac", choices=["csma_aloha", "aloha"], help="Change only MAC protocol, preserving other scenario parameters")
     run.add_argument("--persist", type=Path)
     run.add_argument("--port", type=int, default=8000)
     run.add_argument("--headless", action="store_true")
@@ -100,6 +101,10 @@ def main(argv=None):
                 import yaml
                 data = yaml.safe_load((RESOURCE_ROOT / "profiles" / (args.profile + ".yaml")).read_text())
                 overrides["network"] = Network.model_validate(data)
+            if args.mac:
+                network = Network.model_validate(overrides.get("network", scenario.network).model_dump())
+                network.mac.protocol = args.mac
+                overrides["network"] = network
             scenario = type(scenario).model_validate({**scenario.model_dump(), **overrides})
             run = SimulationOrchestrator(scenario, standalone=args.standalone,
                                           manage_docker=not args.no_manage_docker, persist=args.persist,

@@ -143,3 +143,24 @@ def test_barrier_prevents_wall_clock_advancement(engine):
         assert any(e["event"] == "rx" for e in backend.advance(5))
     finally:
         backend.stop()
+
+
+def test_multihop_requires_relay_under_validated_channel(engine):
+    scenario = ScenarioManager().load("e05_multihop")
+    backend = DESERTAdapter(manage_docker=False)
+    try:
+        backend.start(scenario)
+        for node in scenario.nodes:
+            backend.update_node_position(node.id, Pose(*node.position), 0)
+        message = Message("auv_01", "auv_03", b"relay proof", 0)
+        backend.send(message)
+        events = backend.advance(10)
+        assert any(e["event"] == "forward" and e["node"] == 2 for e in events)
+        assert any(e["event"] == "rx" and e["node"] == 3 for e in events)
+    finally:
+        backend.stop()
+    direct = ScenarioManager().load("e01_chat")
+    direct.network.acoustic.tx_power_db = scenario.network.acoustic.tx_power_db
+    received, events = exchange(direct, payload=b"direct control", distance=1000)
+    assert not received
+    assert any(e["event"] == "phy_rx_end" and e["outcome"] in ("noise_error", "not_synchronized") for e in events)

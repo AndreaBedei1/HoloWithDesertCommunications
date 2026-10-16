@@ -70,6 +70,7 @@ class SimulationOrchestrator:
                         "holoocean": None if self.standalone else importlib.metadata.version("holoocean"),
                         "engine": self.backend.versions}
             self.telemetry.emit("run_started", 0, versions=versions, seed=self.scenario.network.seed,
+                                rng_substream=self.scenario.network.seed,
                                 mode="desert_standalone" if self.standalone else "integrated",
                                 node_map=self.scenario.node_map)
             self.state = "running"
@@ -154,6 +155,9 @@ class SimulationOrchestrator:
                         self.services[name] = "stopped"
                 except Exception as exc:
                     self.telemetry.emit("cleanup_error", self.clock.time, service=name, reason=str(exc))
+                    self.services[name] = "cleanup_failed"
+                    self.error = self.error or f"Failed to stop {name}: {exc}"
+                    self.state = "failed"
 
     def stop(self):
         self.stop_event.set()

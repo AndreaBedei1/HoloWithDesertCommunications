@@ -60,7 +60,7 @@ def main():
     try:
         results = [measure(), measure(distance=500), measure(bitrate=1200),
                    measure(power=0), measure(concurrent=True)]
-        powers = (100, 105, 110, 115, 120, 125) if args.sweep else (115,)
+        powers = (100, 110, 120, 126, 128, 130, 132, 134, 136) if args.sweep else (132,)
         for power in powers:
             results.append(measure(distance=500, power=power, relay=True))
             results.append(measure(distance=1000, power=power))

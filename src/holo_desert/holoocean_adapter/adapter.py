@@ -1,7 +1,24 @@
 from __future__ import annotations
 
 import importlib.metadata
+import os
+import subprocess
 from ..common.models import Pose
+
+
+def _kernel_exit_code(process):
+    """Windows can publish termination before its process handle is signalled.
+
+    Query only our Popen handle. A STILL_ACTIVE result never counts as stopped.
+    """
+    if os.name != "nt" or not hasattr(process, "_handle"):
+        return None
+    import _winapi
+    try:
+        code = _winapi.GetExitCodeProcess(process._handle)
+        return None if code == _winapi.STILL_ACTIVE else code
+    except OSError:
+        return None
 
 
 class HoloOceanAdapter:
@@ -51,7 +68,26 @@ class HoloOceanAdapter:
 
     def stop(self):
         if self.env is not None:
-            self.env.__exit__(None, None, None)
+            try:
+                self.env.__exit__(None, None, None)
+            except subprocess.TimeoutExpired:
+                # The upstream Windows teardown allows only 10 seconds for
+                # Unreal/driver shutdown. Reap only our owned Popen, then let
+                # the official cleanup finish; do not kill by process name.
+                process = getattr(self.env, "_world_process", None)
+                if process is None:
+                    raise
+                code = _kernel_exit_code(process)
+                if code is None:
+                    try:
+                        process.wait(timeout=20)
+                    except subprocess.TimeoutExpired:
+                        code = _kernel_exit_code(process)
+                        if code is None:
+                            raise
+                if code is not None:
+                    process.returncode = code
+                self.env.__exit__(None, None, None)
             self.env = None
 
 

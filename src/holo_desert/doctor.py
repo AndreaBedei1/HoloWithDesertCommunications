@@ -46,8 +46,19 @@ def doctor():
     check("gpu", gpu)
     for port in (8000, 5555):
         def available(port=port):
-            with socket.socket() as s:
-                s.bind(("127.0.0.1", port))
+            try:
+                with socket.socket() as s:
+                    s.bind(("127.0.0.1", port))
+            except OSError:
+                if port == 5555 and DESERTAdapter().health():
+                    return "Port belongs to healthy DESERT service"
+                if port == 8000:
+                    import json
+                    import urllib.request
+                    with urllib.request.urlopen("http://127.0.0.1:8000/openapi.json", timeout=2) as r:
+                        if json.load(r).get("info", {}).get("title") == "HoloOcean-DESERT":
+                            return "Port belongs to HoloOcean-DESERT dashboard"
+                raise RuntimeError(f"Port {port} is occupied by another service")
             return f"127.0.0.1:{port} available"
         check(f"port_{port}", available)
     def image():
