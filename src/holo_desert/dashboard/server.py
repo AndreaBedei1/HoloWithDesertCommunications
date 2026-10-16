@@ -21,6 +21,16 @@ class StartRequest(BaseModel):
     configuration: dict | None = None
 
 
+class DashboardAssets(StaticFiles):
+    """ES modules require a JavaScript MIME even with a broken Windows registry."""
+    def file_response(self, full_path, stat_result, scope, status_code=200):
+        response = super().file_response(full_path, stat_result, scope, status_code)
+        media = {".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8"}
+        if Path(full_path).suffix in media:
+            response.headers["content-type"] = media[Path(full_path).suffix]
+        return response
+
+
 class DashboardServer:
     def __init__(self, *, manage_docker=True, initial_run=None):
         self.manager = ScenarioManager()
@@ -38,7 +48,7 @@ class DashboardServer:
 
         app = FastAPI(title="HoloOcean-DESERT", lifespan=lifespan)
         static = Path(__file__).parent / "static"
-        app.mount("/static", StaticFiles(directory=static), name="static")
+        app.mount("/static", DashboardAssets(directory=static), name="static")
 
         @app.get("/")
         def index():

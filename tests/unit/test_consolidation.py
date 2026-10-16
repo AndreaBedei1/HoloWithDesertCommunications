@@ -117,7 +117,7 @@ def test_terminal_state_waits_for_cleanup_and_factory_needs_no_engine_api():
     class Application:
         def update(self, now, own_pose, received): return None
 
-    run = SimulationOrchestrator(scenario, backend=Backend(), physics=Physics(),
+    run = SimulationOrchestrator(scenario, backend=Backend(), physics=Physics(), standalone=True,
                                  application_factory=lambda node, comm, cfg: Application())
     try:
         run.start_background()
@@ -172,3 +172,12 @@ def test_occupied_dashboard_port_cannot_start_simulators():
         with pytest.raises(OSError):
             serve_dashboard(None, occupied.getsockname()[1], lambda: calls.append("started"))
     assert calls == []
+
+
+def test_frontend_module_mime_does_not_depend_on_windows_registry(monkeypatch):
+    import starlette.responses
+    monkeypatch.setattr(starlette.responses, "guess_type", lambda path: ("text/plain", None))
+    with TestClient(DashboardServer().application()) as client:
+        for name in ("app", "ui", "charts", "maps", "configuration", "packets"):
+            assert client.get(f"/static/{name}.js").headers["content-type"].startswith("text/javascript")
+        assert client.get("/static/style.css").headers["content-type"].startswith("text/css")
