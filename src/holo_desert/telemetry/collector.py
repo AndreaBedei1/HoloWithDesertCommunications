@@ -39,6 +39,7 @@ class TelemetryCollector:
         self.last_sample = 0.0
         self.last_bytes = self.last_wire_bytes = 0
         self.time = 0.0
+        self.phy_errors = {"noise_error": 0, "interference_error": 0, "not_synchronized": 0}
 
     def emit(self, event, timestamp, **fields):
         data = {"event": event, "time": timestamp, "wall_time": time.time(), **fields}
@@ -82,9 +83,14 @@ class TelemetryCollector:
                     if event["event"] == "app_tx":
                         row["status"] = "in_flight"
                         row["network_tx_time"] = event["time"]
+                    if event["event"] == "phy_tx_start":
+                        row.setdefault("physical_tx_time", event["time"])
+                    if event["event"] == "phy_rx_end" and event.get("outcome") in self.phy_errors:
+                        self.phy_errors[event["outcome"]] += 1
             if event["event"] == "stats":
                 self.stats[inverse[event["node"]]] = data
-            self.emit(data.pop("event"), data.pop("time"), **data, origin="desert")
+            self.emit(data["event"], data["time"],
+                      **{k: v for k, v in data.items() if k not in ("event", "time")}, origin="desert")
 
     def received(self, delivery: Delivery):
         message = delivery.message
@@ -130,7 +136,10 @@ class TelemetryCollector:
                          "mean_latency_s": self.delay_sum / self.received_count if self.received_count else None,
                          "generated": self.generated_count, "received": self.received_count,
                          "timed_out": self.expired_count,
-                         "pending": self.generated_count - resolved, "wall_drift_s": drift}
+                         "pending": self.generated_count - resolved, "wall_drift_s": drift,
+                         "phy_noise_observations": self.phy_errors["noise_error"],
+                         "phy_interference_observations": self.phy_errors["interference_error"],
+                         "phy_unsynced_observations": self.phy_errors["not_synchronized"]}
                 self.series.append(point)
                 self.emit("metrics", timestamp, **{k: v for k, v in point.items() if k != "time"})
                 self.last_sample, self.last_bytes, self.last_wire_bytes = timestamp, self.received_bytes, self.wire_received_bytes
