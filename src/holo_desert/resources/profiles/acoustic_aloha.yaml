@@ -1,0 +1,4 @@
+backend: desert
+acoustic: {bitrate_bps: 4800, tx_power_db: 135, frequency_hz: 25000, bandwidth_hz: 5000, propagation: underwater, interference: miv}
+mac: {protocol: aloha, ack: false, max_tx_tries: 3, buffer_packets: 100}
+routing: static

@@ -1,0 +1,10 @@
+name: e06_coordination
+description: Heartbeat-driven follower holds on stale messages. DESERT transmitter power is reduced and restored to create a real acoustic outage.
+duration: 30
+coordination: true
+nodes:
+  - {id: auv_01, position: [0, 0, -20]}
+  - {id: auv_02, position: [30, 0, -20]}
+power_events:
+  - {time: 8, node: auv_01, tx_power_db: 0}
+  - {time: 18, node: auv_01, tx_power_db: 135}

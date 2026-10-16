@@ -1,0 +1,9 @@
+name: e01_chat
+description: Two stationary HoloOcean AUVs exchange a request and reply through DESERT.
+duration: 16
+physics_hz: 30
+nodes:
+  - {id: auv_01, position: [0, 0, -20]}
+  - {id: auv_02, position: [30, 0, -20]}
+flows:
+  - {source: auv_01, destination: auv_02, start: 1, stop: 2, interval: 5, payload_bytes: 16, reply: true, ttl: 12}

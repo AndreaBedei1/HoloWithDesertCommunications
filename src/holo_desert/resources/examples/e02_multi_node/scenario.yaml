@@ -1,0 +1,13 @@
+name: e02_multi_node
+description: Four AUVs generate simultaneous acoustic traffic. Delivery is observed; collisions are not inferred from absence.
+duration: 25
+nodes:
+  - {id: auv_01, position: [0, 0, -20]}
+  - {id: auv_02, position: [40, 0, -20]}
+  - {id: auv_03, position: [40, 40, -20]}
+  - {id: auv_04, position: [0, 40, -20]}
+flows:
+  - {source: auv_01, destination: auv_02, interval: 2, stop: 12, payload_bytes: 64, ttl: 10}
+  - {source: auv_02, destination: auv_03, interval: 2, stop: 12, payload_bytes: 64, ttl: 10}
+  - {source: auv_03, destination: auv_04, interval: 2, stop: 12, payload_bytes: 64, ttl: 10}
+  - {source: auv_04, destination: auv_01, interval: 2, stop: 12, payload_bytes: 64, ttl: 10}

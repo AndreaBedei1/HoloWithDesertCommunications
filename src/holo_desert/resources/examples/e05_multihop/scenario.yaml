@@ -1,0 +1,14 @@
+name: e05_multihop
+description: Static routing forces A-B-C forwarding. Physical exclusion of the direct A-C path must be verified with the direct-path control experiment.
+duration: 30
+nodes:
+  - {id: auv_01, position: [-500, 0, -100]}
+  - {id: auv_02, position: [0, 0, -100]}
+  - {id: auv_03, position: [500, 0, -100]}
+network:
+  acoustic: {tx_power_db: 115}
+  routes:
+    auv_01: {auv_03: auv_02}
+    auv_03: {auv_01: auv_02}
+flows:
+  - {source: auv_01, destination: auv_03, start: 1, stop: 12, interval: 5, payload_bytes: 16, ttl: 16}

@@ -13,6 +13,7 @@
     "repository": "https://github.com/signetlabdei/DESERT_Underwater",
     "tag": "4.0.0",
     "source_commit": "8991214a1379747a2450f0dc4dd69f9173128f90",
+    "image_source_commit": "12203f3cdba7d85bac78074d1f2ccfddbfb08021",
     "image": "uwsignet/desert:4.0.0",
     "image_digest": "sha256:59c734d2980de64e4b36429c3fb4a60aceb1cb7efc5f9d605f9b7781fbc51ca6",
     "platform": "linux/amd64",

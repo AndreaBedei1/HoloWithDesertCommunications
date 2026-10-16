@@ -1,0 +1,17 @@
+services:
+  desert:
+    image: holo-desert-engine:4.0.0-v1
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        DESERT_IMAGE: ${DESERT_IMAGE:-uwsignet/desert:4.0.0@sha256:59c734d2980de64e4b36429c3fb4a60aceb1cb7efc5f9d605f9b7781fbc51ca6}
+    ports:
+      - "127.0.0.1:${DESERT_PORT:-5555}:5555"
+    init: true
+    restart: "no"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import socket; s=socket.create_connection(('127.0.0.1',5555),2); s.sendall(b'HEALTH\\n'); assert b'health' in s.recv(1024)"]
+      interval: 10s
+      timeout: 3s
+      retries: 3

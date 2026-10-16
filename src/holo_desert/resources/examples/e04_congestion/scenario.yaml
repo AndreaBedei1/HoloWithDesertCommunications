@@ -1,0 +1,14 @@
+name: e04_congestion
+description: Three sources progressively increase offered load toward a sink; repeat with the alternative MAC profile.
+duration: 45
+nodes:
+  - {id: auv_01, position: [0, 0, -20]}
+  - {id: auv_02, position: [30, 0, -20]}
+  - {id: auv_03, position: [0, 30, -20]}
+  - {id: auv_04, position: [30, 30, -20]}
+network:
+  mac: {protocol: csma_aloha, buffer_packets: 20}
+flows:
+  - {source: auv_01, destination: auv_04, interval: 3, final_interval: 0.15, stop: 30, payload_bytes: 256, ttl: 12}
+  - {source: auv_02, destination: auv_04, interval: 3, final_interval: 0.15, stop: 30, payload_bytes: 256, ttl: 12}
+  - {source: auv_03, destination: auv_04, interval: 3, final_interval: 0.15, stop: 30, payload_bytes: 256, ttl: 12}

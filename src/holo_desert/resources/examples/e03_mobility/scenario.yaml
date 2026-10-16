@@ -1,0 +1,10 @@
+name: e03_mobility
+description: Actual HoloOcean positions update DESERT while AUVs move apart and return. Range degradation requires validating the selected channel profile.
+duration: 90
+nodes:
+  - {id: auv_01, position: [0, 0, -20], waypoints: [[35, -160, 0, -20], [75, 0, 0, -20]]}
+  - {id: auv_02, position: [20, 0, -20], waypoints: [[35, 180, 0, -20], [75, 20, 0, -20]]}
+network:
+  acoustic: {tx_power_db: 105}
+flows:
+  - {source: auv_01, destination: auv_02, interval: 2, stop: 78, payload_bytes: 16, ttl: 10}
