@@ -55,3 +55,32 @@ non vengono dedotti da timeout o dal numero di messaggi ricevuti.
 I contatori PHY `getErrorPktsNoise` e `getErrorPktsInterf` sono esposti. Le osservazioni per pacchetto registrano sincronizzazione, SNR e inizio/durata TX, delegando tutte le decisioni al modello originale.
 Il campo `forward` indica il passaggio sotto IP di un pacchetto, anche su un
 relay; la ricezione finale conferma il completamento end-to-end.
+
+## Configurazione e valutazione di altri protocolli
+
+Il modulo dashboard espone i parametri della tabella e gli override delle route
+con validazione prima dell'avvio. ALOHA e CSMA-ALOHA sono stati provati anche
+con ACK abilitati. Non è disponibile la correlazione di ogni ACK al UUID nella
+dashboard: i trace per pacchetto descrivono i frame DATA applicativi. I contatori
+MAC restano aggregati. Senza ACK, `max_tx_tries` non promette ritrasmissioni in
+seguito a una mancata consegna applicativa.
+
+L'immagine fissata contiene anche `libuwtdma.so`, `libuwtdma_frame.so`,
+`libuwtokenbus.so`, `libuwcsmaca.so`, `libuwdacap.so`, `libuwflooding.so` e
+`libuwposbasedrt.so`, riscontrate con `ls` nel container. Sono disponibilità di
+librerie, non compatibilità certificata con questo bridge.
+
+Valutati i campioni ufficiali locali `samples/desert_samples/MAC/test_uwtdma.tcl`
+e `Network/test_uwflooding.tcl` del tag 4.0.0. TDMA richiede durata frame,
+guard time, numero/assegnazione slot e avvio esplicito dei timer MAC: non è una
+sostituzione della sola classe ALOHA. Il flooding introduce TTL e cache propri
+e inoltri multipli, con semantica diversa dalle route statiche e dal TTL
+applicativo. Una configurazione sicura richiederebbe schema e prove aggiuntive
+su tempi, duplicati e telemetria. In questa fase si mantengono i due MAC
+consolidati e il routing statico, senza aggiungere opzioni non verificate.
+
+Per confronto E04 usare il selettore MAC e due riepiloghi della dashboard:
+[procedura e significato delle metriche](dashboard.md). Il controllo include
+ACK, tentativi, buffer, seed, flussi, geometria e ogni altro campo, escluso il
+nome del MAC. Una differenza di bitrate o di durata rende il confronto non
+controllato e viene segnalata.

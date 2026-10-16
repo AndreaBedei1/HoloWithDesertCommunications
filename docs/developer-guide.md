@@ -24,6 +24,60 @@ Un backend deve implementare `CommunicationBackend` e riportare tempi simulati
 autentici. La CLI iniziale ammette solo il backend DESERT; non esiste un fallback
 che simuli consegne in Python.
 
+L'orchestratore accetta `application_factory(node, communication, scenario)`
+per costruire applicazioni personalizzate senza cambiare il suo ciclo:
+
+```python
+from holo_desert.core.orchestrator import SimulationOrchestrator
+from holo_desert.scenarios.config import ScenarioManager
+
+class DepthReporter:
+    def __init__(self, comm, peer):
+        self.comm, self.peer, self.next_send = comm, peer, 1.0
+
+    def update(self, now, own_pose, received):
+        if now >= self.next_send:
+            self.comm.send(self.peer, {"depth_m": -own_pose.z}, ttl=8)
+            self.next_send = now + 3
+        return None
+
+scenario = ScenarioManager().load("e01_chat")
+def factory(node, comm, configuration):
+    peer = next(n.id for n in configuration.nodes if n.id != node.id)
+    return DepthReporter(comm, peer)
+
+run = SimulationOrchestrator(scenario, application_factory=factory)
+try:
+    run.run()
+finally:
+    run.close()
+```
+
+La factory riceve configurazione statica per il wiring; l'applicazione conserva
+solo il proprio handle e i parametri necessari. `update` non riceve backend,
+collector o ground truth altrui. Un eventuale `snapshot(now)` restituisce
+metadati locali leggibili dalla dashboard; non deve mutare stato applicativo.
+Il limite dell'envelope è passato al CommunicationManager come configurazione
+generica: gli algoritmi non consultano più proprietà dell'adattatore DESERT.
+
+## Profili di rete e veicoli
+
+Un profilo YAML è validato da `Network`. Copiare un profilo esistente e
+modificare solo parametri realmente collegati alle proprietà Tcl documentate.
+La CLI `--profile` sostituisce tutto `network`; `--mac` e il selettore della
+dashboard cambiano soltanto il MAC. Per un protocollo aggiuntivo servono schema
+dedicato, mapping esplicito nel server Docker, librerie reali, test di consegna
+e compatibilità PHY/ACK/queue. Aggiungere un nome al menu non è un'integrazione.
+
+`Node.vehicle` è opzionale e default `HoveringAUV`: gli YAML precedenti restano
+validi. `holoocean_adapter/vehicles.py` isola configurazione HoloOcean, decoding
+del sensore e conversione dell'azione. Per un veicolo futuro aggiungere un
+profilo con `configuration(node)`, `pose(sensors)`, `action(target)` e aggiornare
+lo schema dei valori ammessi. Non occorre cambiare l'orchestratore. Verificare
+unità, orientamento, frame, sensori e controller con il vero nuovo veicolo.
+Al momento viene accettato soltanto HoveringAUV; nessun modello aggiuntivo è
+stato introdotto o dichiarato verificato.
+
 ## Estensione DESERT
 
 `resources/desert/extensions/bridge.cc` deriva dall'applicazione ufficiale.
@@ -45,3 +99,10 @@ rete reale DESERT) e `scripts/validate_examples.py` (droni HoloOcean reali).
 Richiedono prima `holo-desert engine up`. `--output` salva solo un riepilogo
 compatto esplicito; i log delle esecuzioni rimangono temporanei.
 Per il confronto controllato: `python scripts/validate_examples.py e04_congestion --mac aloha`.
+
+Per verificare lo stesso percorso HTTP dell'interfaccia: avviare la dashboard
+inattiva, poi `python scripts/validate_dashboard.py`. Esegue solo E03, le due
+varianti MAC di E04, E05 ed E06, in sequenza. Controlla pausa, reset, identità
+dei next hop, eventi/ZIP e confronto; non è una prova del rendering browser.
+`--output file.json` è l'unico salvataggio esplicito. Non eseguirlo mentre altre
+simulazioni usano il servizio DESERT.

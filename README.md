@@ -9,8 +9,8 @@ Il motore DESERT gira in Docker. HoloOcean resta sull'host con accesso alla GPU.
 Su Windows non è richiesta una distribuzione Ubuntu personale: si usa Docker
 Desktop con il suo normale backend per container Linux.
 
-Verificati: chat end-to-end, sei demo eseguite, due MAC e 31 test superati.
-Numeri, esperimenti di controllo e confini della verifica: [validazione](docs/validation.md).
+Sei demo, due MAC e routing statico. Prove e limiti:
+[validazione originale](docs/validation.md), [consolidamento](docs/consolidation-validation.md).
 
 ## Avvio Windows
 
@@ -19,12 +19,13 @@ Da questa directory, con Python 3.10 e Docker Desktop Linux containers:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup.ps1 -HoloOceanClient "<HoloOcean-2.3.0>\client"
 .venv\Scripts\holo-desert.exe doctor
-.venv\Scripts\holo-desert.exe run e01_chat
+.venv\Scripts\holo-desert.exe dashboard
 ```
 
 Ocean 2.3.0 deve essere già installato nel percorso ufficiale HoloOcean.
-Aprire **http://127.0.0.1:8000**. Il primo avvio scarica l'immagine DESERT
-e compila l'estensione; non servono terminali separati per motore e dashboard.
+Aprire **http://127.0.0.1:8000**, scegliere scenario e MAC, eventualmente
+**Configura rete**, poi **Avvia**. Il primo avvio scarica l'immagine DESERT e
+compila l'estensione; non servono terminali separati per motore e dashboard.
 
 ## Avvio Ubuntu 24.04
 
@@ -35,13 +36,28 @@ bash scripts/setup.sh
 .venv/bin/python scripts/install_holoocean.py
 .venv/bin/python -c 'import holoocean; holoocean.install("Ocean")'
 .venv/bin/holo-desert doctor
-.venv/bin/holo-desert run e01_chat
+.venv/bin/holo-desert dashboard
 ```
 
 Dettagli, client locale alternativo e troubleshooting: [installazione](docs/installation.md).
 La matrice delle prove realmente eseguite è in [validazione](docs/validation.md).
 
 ## Uso
+
+| Scenario | Cosa osservare |
+|---|---|
+| E01 Chat | Request/reply tra due droni |
+| E02 Multi-node | Quattro nodi sullo stesso canale |
+| E03 Mobility | Allontanamento/ritorno, distanza e PDR |
+| E04 Congestion | Code, interferenza e confronto dei MAC |
+| E05 Multi-hop | Tratte A→B→C reali, route e consegna distinte |
+| E06 Coordination | Heartbeat, HOLD/PROCEED e blackout acustico |
+
+La dashboard offre zoom/pan, dettagli per nodo, topologia per messaggio,
+timeline filtrabile, metriche per gruppi e configurazione di MAC, acustica,
+ACK, route e flussi. Per E04 completare una corsa, conservarne il riepilogo,
+cambiare **solo MAC** e ripetere: la scheda confronto verifica l'equivalenza.
+[Guida alla dashboard e alle metriche](docs/dashboard.md).
 
 ```text
 holo-desert examples
@@ -67,11 +83,16 @@ I risultati ordinari sono temporanei. Il pulsante **Export** scarica ZIP con
 JSONL, CSV e configurazione; `--persist results/nome-esperimento` abilita il
 salvataggio esplicito. I messaggi in volo restano pending fino al proprio TTL.
 I timeout non vengono automaticamente attribuiti a collisioni o rumore.
+PDR: ricevuti / (ricevuti + scaduti), pending esclusi. Goodput: payload
+consegnato; throughput envelope: include JSON/base64, esclude header e retry
+PHY/MAC. I valori non osservabili sono indicati N/D.
 
 ## Esperimenti e sviluppo
 
 Gli scenari sono YAML sotto `src/holo_desert/resources/examples/`, i profili
 MAC sotto `resources/profiles/`, Tcl e C++ sotto `resources/desert/`.
+Per un proprio esperimento copiare uno YAML fuori dagli esempi originali e
+avviarlo con `holo-desert run percorso/scenario.yaml`.
 Gli studenti lavorano tramite `CommunicationManager`, senza accedere a Tcl:
 
 ```python

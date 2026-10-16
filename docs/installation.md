@@ -32,7 +32,7 @@ per quel processo: non modifica la policy di sistema.
 
 Prerequisiti host: Python 3.12 con venv, Git, driver GPU adatti al rendering
 HoloOcean, Docker Engine e Compose con accesso al daemon. Per compilare
-`posix_ipc` possono servire `build-essential` e `python3-dev`.
+`posix_ipc` dal lock su Ubuntu 24.04 servono `build-essential` e `python3-dev`.
 I prerequisiti di sistema vanno installati seguendo le istruzioni ufficiali;
 gli script del progetto non cambiano gruppi, servizi o policy dell'host.
 
@@ -98,3 +98,5 @@ Lo stato preciso delle verifiche è in [validation.md](validation.md).
 Il setup host Python e i test senza rendering sono stati eseguiti anche in
 un container Ubuntu 24.04 pulito tramite `scripts/check_linux_package.sh`.
 Questa prova non certifica il rendering GPU HoloOcean nativo su Linux.
+Le correzioni del setup pulito e le nuove prove sono riportate in
+[consolidation-validation.md](consolidation-validation.md).

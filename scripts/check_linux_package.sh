@@ -7,7 +7,7 @@ if [ ! -f /.dockerenv ]; then
     exit 2
 fi
 apt-get update -qq
-DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3-venv python3-dev
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3-venv python3-dev build-essential
 mkdir -p /tmp/holo-desert-check
 cp /input/pyproject.toml /input/requirements-lock.txt /input/LICENSE /tmp/holo-desert-check/
 cp -r /input/src /input/tests /input/scripts /tmp/holo-desert-check/
