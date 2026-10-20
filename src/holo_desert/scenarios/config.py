@@ -131,13 +131,29 @@ class Scenario(Strict):
 
 
 class ScenarioManager:
-    def __init__(self, root: Path | None = None):
+    def __init__(self, root: Path | None = None, user_root: Path | None = None):
         self.root = root or RESOURCE_ROOT / "examples"
+        from .library import ScenarioLibrary
+        self.library = ScenarioLibrary(user_root, self.list())
+
+    def list_user(self):
+        return self.library.list()
+
+    def get_user(self, identifier):
+        return self.library.get(identifier)
+
+    def save_user(self, configuration, identifier=None, expected_revision=None):
+        return self.library.save(configuration, identifier, expected_revision)
+
+    def delete_user(self, identifier, expected_revision):
+        return self.library.delete(identifier, expected_revision)
 
     def list(self):
         return sorted(p.parent.name for p in self.root.glob("*/scenario.yaml"))
 
     def load(self, name_or_path: str) -> Scenario:
+        if name_or_path.startswith("user_") and self.library.ID.fullmatch(name_or_path):
+            return Scenario.model_validate(self.get_user(name_or_path)["configuration"])
         path = Path(name_or_path)
         if not path.is_file():
             if name_or_path not in self.list():
