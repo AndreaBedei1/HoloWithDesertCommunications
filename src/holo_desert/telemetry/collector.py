@@ -34,6 +34,7 @@ class TelemetryCollector:
         self.trails = {}
         self.edges = {}
         self.stats = {}
+        self.mac_specific_stats = {}
         self.application_states = {}
         self.transitions = deque(maxlen=100)
         self.observations = deque(maxlen=300)
@@ -47,11 +48,18 @@ class TelemetryCollector:
         self.last_sample = 0.0
         self.last_bytes = self.last_wire_bytes = 0
         self.time = 0.0
+        self.network_metrics = dict(data_tx_frames=0,control_tx_frames=0,data_tx_bits=0,control_tx_bits=0,data_airtime_s=0,control_airtime_s=0,late_received=0)
         self.phy_errors = {"noise_error": 0, "interference_error": 0, "not_synchronized": 0}
 
     def emit(self, event, timestamp, **fields):
         data = {"event": event, "time": timestamp, "wall_time": time.time(), **fields}
         with self.lock:
+            if event == 'late_receive':
+                self.network_metrics['late_received'] += 1
+                row=self.packets.get(fields.get('packet_id'))
+                if row:
+                    row['late_receive_time']=timestamp
+                    self._packet_event(row,data)
             self.events.append(data)
             if event in ("application_state", "power_applied"):
                 self.transitions.append(data)
@@ -81,6 +89,12 @@ class TelemetryCollector:
 
     def engine_event(self, event, inverse):
         with self.lock:
+            if event['event'] in ('phy_tx_start','phy_control_tx_start'):
+                prefix='control' if event['event']=='phy_control_tx_start' else 'data'
+                self.network_metrics[prefix+'_tx_frames'] += 1
+                for suffix, source in (('_tx_bits','phy_bits'),('_airtime_s','duration_s')):
+                    key=prefix+suffix
+                    self.network_metrics[key]=(self.network_metrics[key]+event[source] if self.network_metrics[key] is not None and source in event else None)
             data = {k: v for k, v in event.items() if k != "wire_hex"}
             if "node" in data:
                 data["node_id"] = inverse[data["node"]]
@@ -113,6 +127,8 @@ class TelemetryCollector:
                     counters = self.node_phy.setdefault(data["node_id"], {})
                     outcome = event["outcome"]
                     counters[outcome] = counters.get(outcome, 0) + 1
+            if event['event']=='mac_specific_stats':
+                self.mac_specific_stats[data['node_id']]=data['values']
             if event["event"] == "stats":
                 self.stats[inverse[event["node"]]] = data
                 if data.get("mac_queue") is not None:
@@ -184,10 +200,10 @@ class TelemetryCollector:
         with self.lock:
             return copy.deepcopy({"time": self.time, "fleet": dict(self.fleet),
                     "trails": {k: list(v) for k, v in self.trails.items()},
-                    "edges": list(self.edges.values()), "stats": dict(self.stats),
+                    "edges": list(self.edges.values()), "stats": dict(self.stats), "mac_specific_stats":self.mac_specific_stats,
                     "observations": list(self.observations), "configured_routes": self.configured_routes(),
                     "applications": self.application_states, "transitions": list(self.transitions),
-                    "distances_m": self._distances(), "node_phy": self.node_phy,
+                    "distances_m": self._distances(), "node_phy": self.node_phy, "network_metrics": self.network_metrics,
                     "packets": [dict(self.packets[k]) for k in list(self.packet_order)[-500:]],
                     "events": list(self.events)[-100:], "series": list(self.series),
                     "counts": {"generated": self.generated_count, "received": self.received_count,
@@ -212,6 +228,8 @@ class TelemetryCollector:
                 for i, a in enumerate(nodes) for b in nodes[i + 1:]}
 
     def configured_routes(self):
+        if self.config["network"].get("routing", "static") != "static":
+            return []
         ids = [n["id"] for n in self.config["nodes"]]
         routes = self.config["network"]["routes"]
         return [{"source": src, "destination": dst,
@@ -229,7 +247,7 @@ class TelemetryCollector:
                     "goodput_bps": 8 * self.received_bytes / self.time if self.time else None,
                     "application_wire_throughput_bps": 8 * self.wire_received_bytes / self.time if self.time else None,
                     "mean_latency_s": self.delay_sum / self.received_count if self.received_count else None,
-                    "phy_observations": dict(self.phy_errors), "mac_queue_peak": self.queue_peak}
+                    "phy_observations": dict(self.phy_errors), "mac_queue_peak": self.queue_peak, "network_metrics": dict(self.network_metrics), "mac_stats": copy.deepcopy(self.stats), "mac_specific_stats":copy.deepcopy(self.mac_specific_stats)}
 
     def export(self):
         with self.lock:

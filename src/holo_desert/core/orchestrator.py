@@ -52,7 +52,8 @@ class SimulationOrchestrator:
                 target = (node.position[0] + 20, node.position[1], node.position[2])
                 self.applications[node.id] = HeartbeatCoordinator(comm, peer, target, leader=i == 0)
             else:
-                self.applications[node.id] = TrafficApplication(comm, [f for f in self.scenario.flows if f.source == node.id])
+                self.applications[node.id] = TrafficApplication(comm, [f for f in self.scenario.flows if f.source == node.id],
+                                                               seed=self.scenario.network.seed)
 
     def start_background(self):
         with self.lock:
@@ -79,9 +80,11 @@ class SimulationOrchestrator:
             self.clock = ClockSynchronizer(self.scenario.physics_hz, self.scenario.realtime)
             self.communication.clock = self.clock
             versions = {"platform": importlib.metadata.version("holoocean-desert"), "desert": "4.0.0",
+                        "holoocean_adapter_patch":getattr(self.physics,'runtime_patch',None),
                         "holoocean": None if self.standalone else importlib.metadata.version("holoocean"),
                         "engine": self.backend.versions}
             self.telemetry.emit("run_started", 0, versions=versions, seed=self.scenario.network.seed,
+                                scenario_name=self.scenario.name,profile_id=self.scenario.network.profile_id,
                                 rng_substream=self.scenario.network.seed,
                                 mode="desert_standalone" if self.standalone else "integrated",
                                 node_map=self.scenario.node_map)
@@ -192,7 +195,7 @@ class SimulationOrchestrator:
         self.telemetry.applications({node: app.snapshot(self.clock.time)
                                      for node, app in self.applications.items() if hasattr(app, "snapshot")})
         return {"state": self.state, "error": self.error, "services": dict(self.services),
-                "run_id": self.run_id,
+                "run_id": self.run_id, "scenario_id":getattr(self,"scenario_id",self.scenario.name), "engine_info": dict(self.backend.versions),
                 "standalone": self.standalone, "configuration": self.scenario.model_dump(),
                 "pause_supported": self.backend.pause_supported, **self.telemetry.snapshot()}
 

@@ -20,3 +20,5 @@ dialog{border:1px solid var(--line);border-radius:14px;color:var(--ink);padding:
 /* Keep short tables and contextual cards at their natural height. */
 .messages-layout,.activity-layout{align-items:start}.context-panel{min-height:0}.timeline .event-level{display:inline-block;margin-left:6px}
 .library-layout.is-empty{grid-template-columns:1fr;min-height:300px}.library-layout.is-empty .library-empty{max-width:480px;margin:auto;padding:50px 20px}.library-layout.is-empty .scenario-list{display:block}
+.designer-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:16px 0}.designer-heading h3{margin:0}.catalog-module{padding:14px 0;border-bottom:1px solid var(--border,#dde3eb)}.catalog-module h3 small{font-weight:400;color:var(--muted,#617185)}.catalog-module p{margin:6px 0;font-size:14px}.traffic-pattern{margin:12px 0}#network-profiles-dialog [data-network]{min-height:240px;font-family:monospace}#network-profiles-dialog .dialog-footer{flex-wrap:wrap}#network-form>details>details{margin-top:12px}
+#comparison .table-scroll{max-height:none}

@@ -157,7 +157,7 @@ def test_dashboard_validation_comparison_equivalence_and_reset():
         server.run.scenario.network.acoustic.bitrate_bps = 2400
         assert client.post("/api/comparison").status_code == 200
         result = client.get("/api/comparisons").json()
-        assert len(result["runs"]) == 2 and not result["equivalent"]
+        assert len(result["runs"]) == 3 and not result["equivalent"]
         server.run.state = "stopping"
         assert client.post("/api/reset").status_code == 409
         assert client.post("/api/start", json={}).status_code == 409

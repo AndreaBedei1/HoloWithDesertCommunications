@@ -13,6 +13,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from ..core.orchestrator import SimulationOrchestrator
 from ..scenarios.config import ScenarioManager, Scenario
 from ..scenarios.library import ScenarioConflict
+from ..scenarios.profiles import ProfileLibrary, builtin_profiles
+from ..scenarios.network import CommunicationProfile
+from ..resources.docker.stack_builder import catalog
 
 
 class StartRequest(BaseModel):
@@ -46,6 +49,8 @@ class DashboardAssets(StaticFiles):
 class DashboardServer:
     def __init__(self, *, manage_docker=True, initial_run=None, scenario_directory=None):
         self.manager = ScenarioManager(user_root=scenario_directory)
+        self.profiles = ProfileLibrary(self.manager.library.directory / 'profiles',
+                                       [p['name'] for p in builtin_profiles()])
         self.run = initial_run
         self.manage_docker = manage_docker
         self.control_lock = threading.Lock()
@@ -89,6 +94,68 @@ class DashboardServer:
             if isinstance(exc, FileNotFoundError):
                 raise HTTPException(404, "Scenario personale non trovato") from exc
             raise HTTPException(422, str(exc)) from exc
+
+        @app.get('/api/network-catalog')
+        def network_catalog():
+            return catalog()
+
+        @app.get('/api/network-inventory')
+        def network_inventory():
+            path = Path(__file__).parents[1] / 'resources/docker/desert-inventory.json'
+            return json.loads(path.read_text(encoding='utf-8'))
+
+        @app.get('/api/network-profiles')
+        def network_profiles():
+            return {'builtins': builtin_profiles(),
+                    'personal': [self.profiles.public(p) for p in self.profiles.list()]}
+
+        @app.post('/api/network-profiles/import')
+        def import_profile(request: ImportScenarioRequest):
+            try:
+                return self.profiles.parse_yaml(request.yaml)
+            except (ValueError, OSError) as exc:
+                storage_error(exc)
+
+        @app.post('/api/network-profiles')
+        def create_profile(request: dict):
+            with self.control_lock:
+                editable()
+                try:
+                    data={k:v for k,v in request.items() if k!='revision'}
+                    return self.profiles.public(self.profiles.save(data))
+                except (ValueError,OSError) as exc:
+                    storage_error(exc)
+
+        @app.put('/api/network-profiles/{identifier}')
+        def update_profile(identifier: str, request: dict):
+            with self.control_lock:
+                editable()
+                try:
+                    data={k:v for k,v in request.items() if k!='revision'}
+                    return self.profiles.public(self.profiles.save(data,identifier,request.get('revision')))
+                except (ValueError,OSError) as exc:
+                    storage_error(exc)
+
+        @app.delete('/api/network-profiles/{identifier}')
+        def delete_profile(identifier: str, revision: str):
+            with self.control_lock:
+                editable()
+                try:
+                    self.profiles.delete(identifier,revision)
+                    return {'ok':True}
+                except (ValueError,OSError) as exc:
+                    storage_error(exc)
+
+        @app.get('/api/network-profiles/{identifier}/yaml')
+        def export_profile(identifier: str):
+            try:
+                import yaml
+                predefined=next((p for p in builtin_profiles() if p['id']==identifier),None)
+                data=({k:predefined[k] for k in ('name','description','network')} if predefined else self.profiles.get(identifier)['configuration'])
+                return Response(yaml.safe_dump(data,allow_unicode=True,sort_keys=False),
+                    media_type='application/yaml',headers={'Content-Disposition':'attachment; filename="network-profile.yaml"'})
+            except (ValueError,OSError) as exc:
+                storage_error(exc)
 
         @app.get("/api/capabilities")
         def capabilities():
@@ -174,28 +241,29 @@ class DashboardServer:
         @app.get("/api/comparisons")
         def comparisons():
             with self.control_lock:
-                equivalent = (len(self.comparisons) == 2 and
-                              self.comparisons[0]["fingerprint"] == self.comparisons[1]["fingerprint"] and
-                              self.comparisons[0]["mac"] != self.comparisons[1]["mac"])
+                equivalent = (len(self.comparisons) >= 2 and
+                              len({r["fingerprint"] for r in self.comparisons}) == 1 and
+                              len({r["mac"] for r in self.comparisons}) == len(self.comparisons))
                 return {"runs": self.comparisons, "equivalent": equivalent,
-                        "note": "Equivalent means only MAC protocol differs; same configured seed and geometry, not identical measured trajectories."}
+                        "note": "Common inputs match; protocol-specific parameters remain in each configuration. Same configured seed and geometry do not imply identical measured trajectories."}
 
         @app.post("/api/comparison")
         def retain_comparison():
             with self.control_lock:
                 if not self.run or self.run.state != "finished" or self.run.standalone:
-                    raise HTTPException(409, "Complete an integrated E04 run before retaining its summary")
+                    raise HTTPException(409, "Complete an integrated run before retaining its summary")
                 config = self.run.scenario.model_dump()
-                if config["name"] != "e04_congestion":
-                    raise HTTPException(422, "Comparison is limited to E04")
                 if any(r["run_id"] == self.run.run_id for r in self.comparisons):
                     return {"ok": True}
-                mac = config["network"]["mac"].pop("protocol")
+                mac_config = config['network']['mac']
+                mac = mac_config['protocol']
+                config['network']['mac'] = {key:mac_config[key] for key in ('ack','buffer_packets','max_tx_tries')}
+                config['network'].pop('profile_id',None)
                 fingerprint = hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()
                 self.comparisons.append({"run_id": self.run.run_id, "mac": mac, "fingerprint": fingerprint,
                                          "configuration": self.run.scenario.model_dump(),
                                          "summary": self.run.telemetry.summary()})
-                self.comparisons = self.comparisons[-2:]
+                self.comparisons = self.comparisons[-6:]
                 return {"ok": True}
 
         @app.post("/api/start")
@@ -211,6 +279,9 @@ class DashboardServer:
                         self.run.close()
                     self.run = SimulationOrchestrator(scenario, standalone=request.standalone,
                                                        manage_docker=self.manage_docker)
+                    self.run.scenario_id=request.scenario
+                    self.run.telemetry.emit('run_selection',0,scenario_id=request.scenario,
+                                            profile_id=scenario.network.profile_id)
                     self.run.start_background()
                 except (ValueError, RuntimeError) as exc:
                     raise HTTPException(422, str(exc)) from exc

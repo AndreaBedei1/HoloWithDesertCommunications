@@ -10,10 +10,10 @@ export const SCENARIOS = {
 };
 export const HELP = {
   PDR:'Percentuale di messaggi consegnati tra quelli già ricevuti o scaduti. I messaggi ancora in attesa sono esclusi.',
-  MAC:'Regola usata dai droni per accedere al canale condiviso. Sono disponibili ALOHA e CSMA-ALOHA.',
+  MAC:'Regola usata dai droni per accedere al canale condiviso. Il Designer mostra i moduli verificati nel catalogo DESERT.',
   Latenza:'Tempo simulato dalla generazione alla consegna di un messaggio. La media include solo i messaggi consegnati.',
   Relay:'Drone intermedio che inoltra un messaggio verso la destinazione finale attraverso lo stack di rete.',
-  Interferenza:'Errore segnalato dal modello acustico quando altri segnali disturbano una ricezione. Non viene dedotto da un timeout.',
+  Interferenza:'Il contatore registra esiti del ramo PHY interferenza. Nel modello BPSK originale il secondo test può fallire anche senza interferenza. Leggi potenze, patch ed esito dell’evento; un timeout non dimostra una collisione.',
   Scadenza:'Il messaggio non è stato consegnato entro il proprio TTL. La causa è ignota; non significa necessariamente collisione o perdita fisica.',
   Goodput:'Bit di payload applicativo consegnati per secondo nell’intervallo campionato.',
   Throughput:'Bit dell’envelope applicativo consegnato al secondo, inclusi JSON e base64. Esclude header PHY/MAC, ACK e ritrasmissioni.',
@@ -23,7 +23,13 @@ export const HELP = {
 export const help = term => '<button type="button" class="help" data-help="'+esc(term)+'" aria-label="Spiega '+esc(term)+'">?</button>';
 export const drone = id => id ? 'Drone '+id.replace(/^auv_/, '') : '—';
 export const typeName = type => ({data:'Dati',binary:'Dati binari',json:'Dati JSON',request:'Richiesta',reply:'Risposta',heartbeat:'Heartbeat'}[type]||type);
-export const eventLabel = e => ({generated:'Messaggio generato',app_tx:'Inserito nella rete',forward:'Inoltro di rete',phy_tx_start:'Trasmissione acustica iniziata',phy_rx_start:'Segnale acustico osservato',phy_rx_end:e.outcome==='decoded'?'Segnale acustico decodificato':e.outcome==='interference_error'?'Errore di interferenza':e.outcome==='noise_error'?'Errore dovuto al rumore':'Ricezione non sincronizzata',rx:'Ricezione nello stack applicativo',delivered:'Consegnato all’applicazione',ttl_expired:'Tempo di validità scaduto',application_state:'Stato del drone',power_applied:'Potenza applicata'}[e.event]||e.event);
+export function interferenceLabel(e){
+  const patch=e.phy_patch_id||'',zero=e.positive_interference===false||e.pi===0,positive=e.positive_interference===true||e.pi>0;
+  if(zero&&/upstream/.test(patch))return 'Secondo test PHY fallito (interferenza nulla)';
+  if(!zero&&positive&&/conditional|corrected/.test(patch))return 'Errore di interferenza';
+  return 'Errore nel ramo PHY interferenza (causa non misurata)';
+}
+export const eventLabel = e => ({late_receive:'Ricevuto dopo il TTL (non consegnato)',duplicate:'Duplicato applicativo ignorato',generated:'Messaggio generato',app_tx:'Inserito nella rete',forward:'Inoltro di rete',phy_tx_start:'Trasmissione acustica iniziata',phy_tx_end:'Trasmissione acustica terminata',phy_rx_start:'Segnale acustico osservato',phy_rx_end:e.outcome==='decoded'?'Segnale acustico decodificato':e.outcome==='interference_error'?interferenceLabel(e):e.outcome==='noise_error'?'Errore dovuto al rumore':'Ricezione non sincronizzata',rx:'Ricezione nello stack applicativo',delivered:'Consegnato all’applicazione',ttl_expired:'Tempo di validità scaduto',application_state:'Stato del drone',power_applied:'Potenza applicata'}[e.event.replace('phy_control_','phy_')]||e.event)+(e.event.startsWith('phy_control_')?' (controllo MAC)':'');
 export function eventTone(e) {
   if(e.event==='delivered')return 'success';
   if(e.event==='ttl_expired')return 'warning';
@@ -36,11 +42,11 @@ export function scenarioInfo(id,configuration) {
 }
 export function bindHelp() {
   const box=document.querySelector('#tooltip');let pinned=false;
-  const show=target=>{box.textContent=HELP[target.dataset.help]||target.dataset.help;box.hidden=false;const r=target.getBoundingClientRect();box.style.left=Math.max(12,Math.min(innerWidth-300,r.left-120))+'px';box.style.top=Math.min(innerHeight-box.offsetHeight-12,r.bottom+8)+'px';target.setAttribute('aria-describedby','tooltip')};
+  const show=target=>{(target.closest('dialog')||document.body).append(box);box.textContent=HELP[target.dataset.help]||target.dataset.help;box.hidden=false;const r=target.getBoundingClientRect();box.style.left=Math.max(12,Math.min(innerWidth-300,r.left-120))+'px';box.style.top=Math.min(innerHeight-box.offsetHeight-12,r.bottom+8)+'px';target.setAttribute('aria-describedby','tooltip')};
   document.addEventListener('pointerover',e=>{const target=e.target.closest('[data-help]');if(target&&!pinned)show(target)});
   document.addEventListener('pointerout',e=>{if(e.target.closest('[data-help]')&&!pinned)box.hidden=true});
   document.addEventListener('focusin',e=>{if(e.target.matches('[data-help]'))show(e.target)});
   document.addEventListener('focusout',()=>{if(!pinned)box.hidden=true});
   document.addEventListener('click',e=>{const target=e.target.closest('[data-help]');if(target){pinned=!pinned;if(pinned)show(target);else box.hidden=true}else{pinned=false;box.hidden=true}});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'){pinned=false;box.hidden=true}});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!box.hidden)e.preventDefault();pinned=false;box.hidden=true}});
 }

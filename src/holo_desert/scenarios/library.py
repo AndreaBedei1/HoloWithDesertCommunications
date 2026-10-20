@@ -30,6 +30,8 @@ def default_directory():
 class ScenarioLibrary:
     MAX_BYTES = 262144
     ID = re.compile(r"user_[0-9a-f]{32}\Z")
+    PREFIX = 'user_'
+    MODEL = Scenario
 
     def __init__(self, directory=None, reserved_names=()):
         self.directory = Path(directory or default_directory()).expanduser().resolve()
@@ -89,7 +91,7 @@ class ScenarioLibrary:
         if path.stat().st_size > self.MAX_BYTES:
             raise ValueError("Scenario troppo grande (massimo 256 KiB)")
         raw = path.read_bytes()
-        config = Scenario.model_validate(yaml.safe_load(raw))
+        config = self.MODEL.model_validate(yaml.safe_load(raw))
         return {"id": identifier, "kind": "user", "revision": hashlib.sha256(raw).hexdigest(),
                 "configuration": config.model_dump()}
 
@@ -106,7 +108,7 @@ class ScenarioLibrary:
 
     def _list_unlocked(self):
         records = []
-        for path in sorted(self.directory.glob("user_*.yaml")):
+        for path in sorted(self.directory.glob(self.PREFIX + "*.yaml")):
             try:
                 records.append(self._read_record(path.stem))
             except (ValueError, OSError, yaml.YAMLError):
@@ -115,7 +117,7 @@ class ScenarioLibrary:
         return sorted(records, key=lambda r: self._key(r["configuration"]["name"]))
 
     def save(self, configuration, identifier=None, expected_revision=None):
-        scenario = Scenario.model_validate(configuration)
+        scenario = self.MODEL.model_validate(configuration)
         name = scenario.name.strip()
         if not 1 <= len(name) <= 100 or any(ord(c) < 32 for c in name):
             raise ValueError("Il nome deve contenere da 1 a 100 caratteri leggibili")
@@ -131,7 +133,7 @@ class ScenarioLibrary:
             key = self._key(name)
             if key in self.reserved or any(self._key(r["configuration"]["name"]) == key and r["id"] != identifier for r in self._list_unlocked()):
                 raise ScenarioConflict("Esiste già uno scenario con questo nome")
-            identifier = identifier or "user_" + uuid.uuid4().hex
+            identifier = identifier or self.PREFIX + uuid.uuid4().hex
             target = self._path(identifier)
             descriptor, temporary = tempfile.mkstemp(prefix=".scenario-", suffix=".tmp", dir=self.directory)
             try:
@@ -154,6 +156,6 @@ class ScenarioLibrary:
         if len(text.encode("utf-8")) > self.MAX_BYTES:
             raise ValueError("Scenario troppo grande (massimo 256 KiB)")
         try:
-            return Scenario.model_validate(yaml.safe_load(text)).model_dump()
+            return self.MODEL.model_validate(yaml.safe_load(text)).model_dump()
         except yaml.YAMLError as exc:
             raise ValueError("YAML non valido: controlla sintassi e indentazione") from exc

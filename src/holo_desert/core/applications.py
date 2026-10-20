@@ -1,12 +1,19 @@
 """Small applications: only local state, own communication handle and time."""
 from __future__ import annotations
+import random
 
 
 class TrafficApplication:
-    def __init__(self, communication, flows):
+    def __init__(self, communication, flows, seed=1):
         self.communication = communication
         self.flows = flows
         self.next_send = [f.start for f in flows]
+        self.emitted = [0 for _ in flows]
+        self.random = [random.Random(seed * 100000 + int(f.source[-2:]) * 100 + i)
+                       for i, f in enumerate(flows)]
+        for i, flow in enumerate(flows):
+            if flow.pattern == 'events':
+                self.next_send[i] = flow.events[0] if flow.events else float('inf')
 
     def update(self, now, own_pose, received):
         for delivery in received:
@@ -18,11 +25,20 @@ class TrafficApplication:
                 continue
             self.communication.send(flow.destination, b"x" * flow.payload_bytes,
                                     message_type="request" if flow.reply else flow.message_type, ttl=flow.ttl)
+            self.emitted[i] += 1
+            if flow.pattern == 'events':
+                self.next_send[i] = flow.events[self.emitted[i]] if self.emitted[i] < len(flow.events) else float('inf')
+                continue
+            if flow.pattern == 'burst':
+                cycle, offset = divmod(self.emitted[i], flow.burst_count)
+                self.next_send[i] = flow.start + cycle * flow.burst_period_s + offset * flow.burst_interval_s
+                continue
             interval = flow.interval
             if flow.final_interval is not None and flow.stop is not None:
                 fraction = min(1, max(0, (now - flow.start) / (flow.stop - flow.start)))
                 interval += fraction * (flow.final_interval - interval)
-            self.next_send[i] = now + interval
+            self.next_send[i] = now + (self.random[i].expovariate(1 / interval)
+                                       if flow.pattern == 'poisson' else interval)
         return None
 
 

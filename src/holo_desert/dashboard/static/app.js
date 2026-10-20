@@ -1,7 +1,7 @@
 import {$,esc,number,api,choices,fields} from './ui.js';
 import {chart} from './charts.js';
 import {drawMap,bindMap,resetMaps} from './maps.js';
-import {bindConfiguration} from './configuration.js';
+import {bindConfiguration,setNetworkCatalog,moduleName} from './configuration.js';
 import {renderPackets,packetDetails,packetTone,stateHTML,eventTimeline} from './packets.js';
 import {SCENARIOS,scenarioInfo,drone,typeName,help,bindHelp} from './presentation.js';
 import {bindScenarioEditor} from './scenario-editor.js';
@@ -10,11 +10,12 @@ const activeStates=['starting','running','paused','stopping'];
 const palette={blue:'#3165cf',green:'#237454',amber:'#ad741f',red:'#b44343',gray:'#8795a8'};
 let latest={state:'idle'},configuration=null,selectedId='e01_chat',catalog=[],libraryTab='example',view='home',analysisGroup='delivery';
 let selectedNode=null,selectedPacket=null,busy=false,executionMode='integrated',homeKey='',toastTimer;
+let configuredRerun=null;
 const active=()=>activeStates.includes(latest.state);
 const byId=id=>catalog.find(s=>s.id===id);
 const names={idle:'Nessuna simulazione',starting:'Avvio in corso',running:'Simulazione attiva',paused:'In pausa',stopping:'Arresto dei motori',finished:'Simulazione completata',stopped:'Simulazione interrotta',failed:'La simulazione richiede attenzione'};
 const serviceNames={not_started:'Non avviato',starting:'Inizializzazione',running:'Attivo',stopped:'Arrestato',standalone_fixture:'Posizioni fisse',cleanup_failed:'Errore di arresto'};
-const nodeStatsLabels={app_sent:'Inviati nello stack applicativo',app_received:'Ricevuti nello stack applicativo',mac_queue:'Pacchetti in coda MAC',mac_data_tx:'Frame dati trasmessi dal MAC',mac_data_rx:'Frame dati ricevuti dal MAC',mac_discarded_tx:'Scarti MAC aggregati',mac_error_rx:'Errori MAC aggregati',phy_noise_errors:'Errori dovuti al rumore',phy_interference_errors:'Errori di interferenza'};
+const nodeStatsLabels={app_sent:'Inviati nello stack applicativo',app_received:'Ricevuti nello stack applicativo',mac_queue:'Pacchetti in coda MAC',mac_data_tx:'Frame dati trasmessi dal MAC',mac_data_rx:'Frame dati ricevuti dal MAC',mac_discarded_tx:'Scarti MAC aggregati',mac_error_rx:'Errori MAC aggregati',phy_noise_errors:'Errori dovuti al rumore',phy_interference_errors:'Esiti errore nel ramo PHY interferenza'};
 
 function notify(message){clearTimeout(toastTimer);$('#toast').textContent=message;$('#toast').hidden=false;toastTimer=setTimeout(()=>$('#toast').hidden=true,4500)}
 function showError(error){
@@ -42,11 +43,12 @@ async function loadCatalog(){const [examples,personal]=await Promise.all([api('/
 async function selectScenario(id){selectedId=id;configuration=await api('/api/scenarios/'+encodeURIComponent(id));executionMode='integrated';homeKey='';render()}
 function uniqueName(base){const taken=new Set(catalog.map(x=>(x.name||x.id).normalize('NFKC').toLocaleLowerCase('it')));let name=base,index=2;while(taken.has(name.normalize('NFKC').toLocaleLowerCase('it')))name=base+' ('+index+++')';return name}
 async function startRun(config=configuration,id=selectedId){
+  configuredRerun=null;
   selectedNode=null;selectedPacket=null;resetMaps();
   await api('/api/start',{scenario:id,configuration:config,standalone:executionMode==='standalone'});
   latest=await api('/api/state');showView('simulation');
 }
-bindConfiguration(()=>configuration,(value,mode)=>{setConfiguration(value,mode);notify('Impostazioni applicate alla prossima simulazione.')},()=>executionMode);
+bindConfiguration(()=>configuration,(value,mode)=>{if(view!=='home'&&latest.run_id)configuredRerun={run_id:latest.run_id,configuration:value,scenario_id:latest.scenario_id||selectedId};setConfiguration(value,mode);notify('Impostazioni applicate alla prossima simulazione.')},()=>executionMode);
 const editor=bindScenarioEditor({onOpen:()=>showView('editor'),onClose:()=>showView('home'),confirm,notify,onStart:async(config,id)=>action(()=>startRun(config,id)),onSaved:async record=>{await loadCatalog();libraryTab='user';selectedId=record.id;setConfiguration(record.configuration);showView('home');notify('Scenario salvato nella tua libreria.')}});
 
 function renderHome(){
@@ -62,7 +64,7 @@ function renderHome(){
   $('#scenario-title').textContent=info.title;$('#description').textContent=info.description;$('#scenario-observe').textContent=info.observe;
   const diagram=info.diagram.length?info.diagram:configuration.nodes.slice(0,5).map(n=>drone(n.id));
   $('#scenario-diagram').innerHTML=diagram.map(x=>/[→←]/.test(x)?'<span class="diagram-arrow" aria-hidden="true">'+esc(x)+'</span>':'<span class="diagram-node '+(x.length>2?'wide':'')+'">'+esc(x)+'</span>').join('');
-  $('#scenario-meta').innerHTML='<span><strong>'+configuration.nodes.length+'</strong> droni</span><span><strong>'+number(configuration.duration,0)+' s</strong> di simulazione</span><span>'+esc(configuration.network.mac.protocol==='aloha'?'ALOHA':'CSMA-ALOHA')+'</span>';
+  $('#scenario-meta').innerHTML='<span><strong>'+configuration.nodes.length+'</strong> droni</span><span><strong>'+number(configuration.duration,0)+' s</strong> di simulazione</span><span>'+esc(moduleName('mac',configuration.network.mac.protocol))+'</span>';
   $('#start').disabled=busy||active();$('#start').title=active()?'Una simulazione è già in corso: apri Simulazione per seguirla.':'';
   $('#edit-scenario').hidden=item?.kind!=='user';$('#delete-scenario').hidden=item?.kind!=='user';
   for(const id of ['edit-scenario','duplicate-scenario','new-scenario','import-scenario','delete-scenario']){$('#'+id).disabled=busy||active();$('#'+id).title=active()?'Arresta la simulazione prima di modificare gli scenari':''}
@@ -70,8 +72,10 @@ function renderHome(){
   $('#setup-note').textContent=active()?'Una simulazione è in corso. Seguila dalla scheda Simulazione.':'I parametri predefiniti sono pronti. Puoi modificarli in Impostazioni.';
 }
 function renderServices(){
+  const config=latest.configuration,base=config?.network?.acoustic?.phy||'bpsk_upstream',models=(config?.nodes||[]).map(n=>({node:n.id,phy:n.communication?.acoustic?.phy||base})),mixed=new Set(models.map(n=>n.phy)).size>1,patch=latest.engine_info?.phy_patch;
+  const phy=config?' · '+(mixed?'PHY misto: '+models.map(n=>drone(n.node)+' = '+n.phy).join('; '):'PHY: '+moduleName('phy',models[0]?.phy||base)+' ('+(models[0]?.phy||base)+')')+(patch?' · Patch motore: '+patch:''):'';
   for(const [name,prefix]of [['holoocean','holo'],['desert','desert']]){const state=latest.services?.[name]||'not_started';$('#'+prefix+'-status').textContent=serviceNames[state]||state;$('#'+prefix+'-dot').className='status-dot '+(state==='running'?'success':state==='starting'?'info':state==='cleanup_failed'?'error':'')}
-  $('#run-services').textContent='HoloOcean: '+(serviceNames[latest.services?.holoocean]||'non avviato')+' · DESERT: '+(serviceNames[latest.services?.desert]||'non avviato')+(latest.standalone?' · Modalità solo rete, posizioni fisse':'');
+  $('#run-services').textContent='HoloOcean: '+(serviceNames[latest.services?.holoocean]||'non avviato')+' · DESERT: '+(serviceNames[latest.services?.desert]||'non avviato')+(latest.standalone?' · Modalità solo rete, posizioni fisse':'')+phy;
 }
 function context(){
   const s=latest,packet=(s.packets||[]).find(p=>p.id===selectedPacket),pose=s.fleet?.[selectedNode];
@@ -94,7 +98,7 @@ function recentMessages(){
 function insight(){
   const s=latest,c=s.configuration,distance=Object.values(s.distances_m||{})[0],series=s.series||[],last=series.at(-1);let html='';
   if(c?.name==='e03_mobility'){html='<p>I droni sono a <strong>'+number(distance,1)+' m</strong> di distanza. Confronta il movimento con le consegne osservate.</p><canvas id="insight-chart" class="chart"></canvas><p class="micro">Distanza misurata nel tempo [m].</p>'}
-  else if(c?.name==='e04_congestion'){const queues=Object.values(s.stats||{}).map(v=>v.mac_queue).filter(v=>v!=null),max=queues.length?Math.max(...queues):null;html='<p>Coda più lunga osservata: <strong>'+number(max,0)+' pacchetti</strong>.</p><p style="margin-top:8px">Errori di interferenza: <strong>'+number(last?.phy_interference_observations,0)+'</strong> '+help('Interferenza')+'</p><p class="micro" style="margin-top:8px">Le scadenze restano distinte dagli errori del canale.</p>'}
+  else if(c?.name==='e04_congestion'){const queues=Object.values(s.stats||{}).map(v=>v.mac_queue).filter(v=>v!=null),max=queues.length?Math.max(...queues):null;html='<p>Coda più lunga osservata: <strong>'+number(max,0)+' pacchetti</strong>.</p><p style="margin-top:8px">Esiti errore nel ramo PHY interferenza: <strong>'+number(last?.phy_interference_observations,0)+'</strong> '+help('Interferenza')+'</p><p class="micro" style="margin-top:8px">Le scadenze restano distinte dagli errori del canale.</p>'}
   else if(c?.name==='e05_multihop'){const p=(s.packets||[]).at(-1),relays=p?[...new Set(p.events.filter(e=>e.event==='forward'&&e.node_id!==p.source).map(e=>e.node_id))]:[];html='<p>Il messaggio è destinato a C tramite B. '+help('Relay')+'</p><p style="margin-top:10px">Relay osservati nell’ultimo messaggio: <strong>'+esc(relays.map(drone).join(', ')||'in attesa del primo inoltro')+'</strong>.</p><p class="micro" style="margin-top:9px">Seleziona il messaggio per isolare le due tratte sulla mappa.</p>'}
   else if(c?.coordination){html=Object.entries(s.applications||{}).map(([node,a])=>'<div class="heartbeat-row"><span>'+esc(a.role==='leader'?'Leader':'Follower')+' · '+esc(drone(node))+'</span><b>'+esc(a.state==='HOLD'?'In attesa':a.state==='PROCEED'?'Procede':'Invia heartbeat')+'</b></div>').join('');const follower=Object.values(s.applications||{}).find(a=>a.role==='follower');html+='<p class="micro" style="margin-top:7px">Età dell’ultimo heartbeat: '+number(follower?.heartbeat_age_s,2)+' s.</p>'}
   else html='<p>'+esc(scenarioInfo(c?.name,c).observe)+'</p><p class="micro" style="margin-top:10px">I messaggi in attesa non sono ancora inclusi nella percentuale di consegna.</p>';
@@ -102,11 +106,12 @@ function insight(){
   if($('#insight-chart'))chart('#insight-chart',series,[{value:p=>Object.values(p.distances_m||{})[0],color:palette.blue}]);
 }
 function metrics(){
+  const accounting=latest.network_metrics;preserve($('#network-accounting'),accounting?'<h3>Contabilità della rete osservata</h3>'+fields(Object.fromEntries([['data_tx_frames','Frame dati TX',0],['control_tx_frames','Frame controllo TX',0],['data_tx_bits','Bit dati TX',0],['control_tx_bits','Bit controllo TX',0],['data_airtime_s','Tempo dati sul mezzo [s]',6],['control_airtime_s','Tempo controllo sul mezzo [s]',6],['late_received','Ricevuti dopo TTL',0]].map(([key,label,digits])=>[label,number(accounting[key],digits)])))+'<p class="micro">Totali dagli eventi PHY osservati, incluse le ritrasmissioni. I messaggi ricevuti dopo TTL restano separati dalle consegne valide.</p>':'');
   const s=latest,series=s.series||[],node=$('#metric-node').value,pair=$('#metric-pair').value,opts={window:Number($('#metric-window').value)};
   $('#analysis-empty').hidden=series.length>0||analysisGroup==='compare';$('#analysis-charts').hidden=!series.length||analysisGroup==='compare';$('#compare-panel').hidden=analysisGroup!=='compare';
   $('#metric-window').disabled=analysisGroup==='compare';$('#node-filter-label').hidden=analysisGroup!=='channel';$('#pair-filter-label').hidden=analysisGroup!=='geometry';
   document.querySelectorAll('.metric-panel').forEach(p=>p.hidden=p.dataset.group!==analysisGroup);
-  if(analysisGroup==='compare'){const allowed=s.state==='finished'&&!s.standalone&&s.configuration?.name==='e04_congestion';$('#retain').disabled=!allowed||busy;$('#retain').title=allowed?'':'Completa una corsa integrata dello scenario Congestione della rete.';$('#compare-note').textContent=allowed?'Puoi conservare il riepilogo di questa corsa.':'Il riepilogo si può conservare dopo una corsa E04 integrata e completata. Nessun confronto parte automaticamente.';return}
+  if(analysisGroup==='compare'){const allowed=s.state==='finished'&&!s.standalone&&!!s.configuration;$('#retain').disabled=!allowed||busy;$('#retain').title=allowed?'':'Completa una corsa integrata per conservarne il riepilogo.';$('#compare-note').textContent=allowed?'Puoi conservare il riepilogo di questa corsa.':'Il riepilogo si può conservare dopo una corsa integrata e completata. Nessun confronto parte automaticamente.';return}
   if(!series.length)return;
   const line=(key,color)=>({value:p=>p[key],color});
   if(analysisGroup==='delivery'){
@@ -119,15 +124,18 @@ function metrics(){
     chart('#phy-chart',series,['noise_error','interference_error','not_synchronized'].map((key,i)=>({value:p=>p.nodes?.[node]?.phy?.[key]??(p.nodes?.[node]?0:null),color:[palette.amber,palette.red,palette.gray][i]})),opts);
   }else{chart('#distance-chart',series,[{value:p=>p.distances_m?.[pair],color:palette.blue}],opts);chart('#drift-chart',series,[line('wall_drift_s',palette.gray)],opts)}
   const keys=Object.keys(nodeStatsLabels);$('#mac-stats').innerHTML='<table><thead><tr><th>Drone</th>'+keys.map(k=>'<th>'+esc(nodeStatsLabels[k])+'</th>').join('')+'</tr></thead><tbody>'+Object.entries(s.stats||{}).map(([n,values])=>'<tr><td>'+esc(drone(n))+'</td>'+keys.map(k=>'<td>'+number(values[k],0)+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
+  $('#mac-stats').insertAdjacentHTML('beforeend',Object.entries(s.mac_specific_stats||{}).filter(([node,values])=>Object.keys(values).length).map(([node,values])=>'<details><summary>Contatori nativi '+esc(drone(node))+'</summary>'+fields(values)+'</details>').join(''));
   $('#application-history').hidden=!(s.transitions||[]).length;
   preserve($('#application-events'),eventTimeline(s.transitions||[]));
+  $('#configured-route-details').previousElementSibling.textContent=s.configuration?.network?.routing==='flooding'?'Flooding nativo: nessuna tabella statica':'Route configurate (default diretto)';
   $('#configured-route-details').innerHTML=(s.configured_routes||[]).map(r=>'<div class="distance-row"><span>'+esc(drone(r.source)+' → '+drone(r.destination))+'</span><b>via '+esc(drone(r.next_hop))+'</b></div>').join('');
   preserve($('#channel-events'),eventTimeline((s.observations||[]).slice(-25).reverse()).replace(/^<ol[^>]*>|<\/ol>$/g,''));
 }
 async function loadComparisons(){
-  const data=await api('/api/comparisons'),runs=data.runs;if(!runs.length){$('#comparison').innerHTML='<p>Nessun riepilogo conservato. Parti dalla prima corsa di Congestione della rete.</p>';return}
-  const rows=[['Messaggi generati',x=>x.generated],['Messaggi consegnati',x=>x.received],['Messaggi scaduti',x=>x.timed_out],['In attesa',x=>x.pending],['Consegna riuscita',x=>x.pdr_resolved==null?'N/D':number(x.pdr_resolved*100,1)+'%'],['Goodput medio [bit/s]',x=>number(x.goodput_bps,1)],['Throughput envelope [bit/s]',x=>number(x.application_wire_throughput_bps,1)],['Latenza media [s]',x=>number(x.mean_latency_s,3)],['Errori PHY di interferenza',x=>x.phy_observations.interference_error],['Errori PHY di rumore',x=>x.phy_observations.noise_error],['PHY non sincronizzati',x=>x.phy_observations.not_synchronized],['Picco coda MAC campionato',x=>x.mac_queue_peak??'N/D']];
-  $('#comparison').innerHTML='<p>'+esc(data.equivalent?'Le configurazioni coincidono: cambia solo il MAC.':runs.length===1?'Primo riepilogo conservato. Esegui la seconda corsa cambiando solo MAC.':'Le configurazioni differiscono o usano lo stesso MAC: il confronto non è controllato.')+'</p><div class="table-scroll"><table><thead><tr><th>Metrica</th>'+runs.map(r=>'<th>'+esc(r.mac==='aloha'?'ALOHA':'CSMA-ALOHA')+'</th>').join('')+'</tr></thead><tbody>'+rows.map(([name,read])=>'<tr><td>'+name+'</td>'+runs.map(r=>'<td>'+esc(read(r.summary))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div><p class="micro">Solo due riepiloghi in memoria. I risultati negativi restano visibili. Geometria configurata e seed uguali non garantiscono traiettorie misurate identiche.</p>';
+  const data=await api('/api/comparisons'),runs=data.runs;if(!runs.length){$('#comparison').innerHTML='<p>Nessun riepilogo conservato. Completa una corsa integrata per iniziare il confronto.</p>';return}
+  const rows=[['Messaggi generati',x=>x.generated],['Messaggi consegnati',x=>x.received],['Messaggi scaduti',x=>x.timed_out],['In attesa',x=>x.pending],['Consegna riuscita',x=>x.pdr_resolved==null?'N/D':number(x.pdr_resolved*100,1)+'%'],['Goodput medio [bit/s]',x=>number(x.goodput_bps,1)],['Throughput envelope [bit/s]',x=>number(x.application_wire_throughput_bps,1)],['Latenza media [s]',x=>number(x.mean_latency_s,3)],['Esiti del ramo PHY interferenza',x=>x.phy_observations.interference_error],['Errori PHY di rumore',x=>x.phy_observations.noise_error],['PHY non sincronizzati',x=>x.phy_observations.not_synchronized],['Picco coda MAC campionato',x=>x.mac_queue_peak??'N/D']];
+  rows.push(['Frame dati PHY TX',x=>x.network_metrics?.data_tx_frames??'N/D'],['Frame controllo PHY TX',x=>x.network_metrics?.control_tx_frames??'N/D'],['Bit dati PHY TX',x=>x.network_metrics?.data_tx_bits??'N/D'],['Bit controllo PHY TX',x=>x.network_metrics?.control_tx_bits??'N/D'],['Tempo dati sul mezzo [s]',x=>number(x.network_metrics?.data_airtime_s,6)],['Tempo controllo sul mezzo [s]',x=>number(x.network_metrics?.control_airtime_s,6)],['Arrivi dopo TTL',x=>x.network_metrics?.late_received??'N/D'],['Scarti MAC aggregati',x=>{const values=Object.values(x.mac_stats||{}).map(n=>n.mac_discarded_tx);return values.length&&values.every(Number.isFinite)?values.reduce((a,b)=>a+b,0):'N/D'}]);
+  $('#comparison').innerHTML='<p>'+esc(data.equivalent?'I parametri comuni coincidono: cambia il MAC.':runs.length===1?'Primo riepilogo conservato. Esegui un’altra corsa cambiando solo MAC.':'I parametri comuni differiscono o il MAC coincide: il confronto non è controllato.')+'</p><div class="table-scroll"><table><thead><tr><th>Metrica</th>'+runs.map(r=>'<th>'+esc(moduleName('mac',r.mac))+'</th>').join('')+'</tr></thead><tbody>'+rows.map(([name,read])=>'<tr><td>'+name+'</td>'+runs.map(r=>'<td>'+esc(read(r.summary))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div><p class="micro">Al massimo sei riepiloghi in memoria. I risultati negativi restano visibili. Geometria configurata e seed uguali non garantiscono traiettorie misurate identiche.</p>';
 }
 function render(){
   const s=latest,hasRun=s.state!=='idle'&&!!s.configuration;renderServices();
@@ -162,7 +170,7 @@ document.addEventListener('change',e=>{if(e.target.matches('[data-node-choice]')
 $('.brand').onclick=async e=>{e.preventDefault();if(view==='editor'&&!await editor.close())return;showView('home')};
 function switchLibrary(kind){return action(async()=>{libraryTab=kind;const first=catalog.find(s=>s.kind===kind);if(first&&byId(selectedId)?.kind!==kind)await selectScenario(first.id);homeKey='';render()})}
 $('#examples-tab').onclick=()=>switchLibrary('example');$('#personal-tab').onclick=()=>switchLibrary('user');
-$('#start').onclick=()=>action(()=>startRun());$('#rerun').onclick=()=>action(()=>startRun(latest.configuration,selectedId));
+$('#start').onclick=()=>action(()=>startRun());$('#rerun').onclick=()=>action(()=>{const next=configuredRerun?.run_id===latest.run_id?configuredRerun:null;return startRun(next?.configuration||latest.configuration,next?.scenario_id||latest.scenario_id||selectedId)});
 $('#pause').onclick=()=>action(async()=>{await api('/api/'+(latest.state==='paused'?'resume':'pause'),{});latest=await api('/api/state')});
 $('#stop').onclick=()=>action(()=>api('/api/stop',{}));
 $('#reset').onclick=()=>action(async()=>{await api('/api/reset',{});latest=await api('/api/state');selectedNode=null;selectedPacket=null;resetMaps();showView('home')});
@@ -180,4 +188,4 @@ $('#delete-scenario').onclick=()=>action(async()=>{if(!await confirm('Eliminare 
 $('#import-scenario').onclick=()=>$('#import-file').click();$('#import-file').onchange=()=>action(async()=>{const file=$('#import-file').files[0];if(!file)return;try{const config=await api('/api/user-scenarios/import',{yaml:await file.text()});if(SCENARIOS[config.name])config.name=uniqueName(SCENARIOS[config.name].title+' · importato');await editor.open(config);notify('YAML importato nell’editor. Controlla i dati prima di salvare.')}finally{$('#import-file').value=''}});
 window.addEventListener('resize',()=>{if(view==='editor')editor.resize();else render()});
 async function poll(){try{const state=await api('/api/state');if(state.run_id!==latest.run_id){selectedNode=null;selectedPacket=null;resetMaps()}latest=state;if(state.error)showError(state.error);render();$('#updated').textContent='Aggiornato alle '+new Date().toLocaleTimeString('it-IT')}catch(e){showError(e)}setTimeout(poll,500)}
-(async()=>{await loadCatalog();await selectScenario('e01_chat');latest=await api('/api/state');if(latest.configuration&&latest.state!=='idle'){const known=catalog.find(x=>x.id===latest.configuration.name||x.name===latest.configuration.name);selectedId=known?.id||'e01_chat';configuration=latest.configuration;executionMode=latest.standalone?'standalone':'integrated';showView('simulation')}else showView('home');poll()})().catch(showError);
+(async()=>{setNetworkCatalog(await api('/api/network-catalog'));await loadCatalog();await selectScenario('e01_chat');latest=await api('/api/state');if(latest.configuration&&latest.state!=='idle'){const known=catalog.find(x=>x.id===latest.configuration.name||x.name===latest.configuration.name);selectedId=known?.id||'e01_chat';configuration=latest.configuration;executionMode=latest.standalone?'standalone':'integrated';showView('simulation')}else showView('home');poll()})().catch(showError);
