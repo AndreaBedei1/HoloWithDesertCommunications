@@ -47,6 +47,10 @@ portabile. [Dettagli di utilizzo e salvataggio](docs/dashboard.md).
 
 ## Installazione
 
+Dopo l'aggiornamento al laboratorio modulare, ricostruisci una volta il motore:
+`.venv\Scripts\holo-desert.exe engine up`. Il client segnala immagini precedenti
+invece di ignorare nuove opzioni.
+
 Servono Python 3.10–3.12, HoloOcean/Ocean **2.3.0**, GPU adatta al rendering e
 Docker con container Linux. HoloOcean rimane sull'host, DESERT gira in Docker;
 non serve gestire una distribuzione WSL personale.
@@ -72,9 +76,20 @@ Il primo avvio può scaricare l'immagine DESERT e compilare l'estensione.
 | E05 | Comunicazione tramite relay | Due tratte osservate A → B → C |
 | E06 | Coordinamento tra droni | Heartbeat, attesa e ripresa del follower |
 
-In **Analisi → Confronto MAC**, conserva due riepiloghi E04 cambiando soltanto
-il protocollo tra ALOHA e CSMA-ALOHA. Il controllo segnala configurazioni non
-equivalenti e mantiene anche i risultati negativi.
+In **Impostazioni → Network Designer**, scegli fra sei MAC reali, routing
+statico/Flooding e BPSK originale/corretto sperimentale. I parametri avanzati
+comprendono canale, slot, traffico e override acustici per drone; le icone `?`
+spiegano significato e vincoli. **Profili di comunicazione** permette di salvare,
+duplicare, importare ed esportare la rete separatamente dallo scenario.
+
+In **Analisi → Confronto MAC**, conserva fino a sei riepiloghi integrati
+cambiando il MAC sullo stesso esperimento. Il controllo segnala differenze
+nei parametri comuni e mantiene anche i risultati negativi.
+
+[Guida al Designer](docs/network-designer.md) ·
+[Catalogo e limiti dei moduli](docs/desert-capabilities.md) ·
+[Implementazione e prove reali](docs/desert-laboratory.md).
+WOSS, ottico/EM, multi-PHY e ranging sono censiti ma non operativi nel bridge.
 
 ## CLI, test e sviluppo
 
