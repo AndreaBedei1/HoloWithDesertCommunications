@@ -1,117 +1,105 @@
-# HoloOcean-DESERT
+# HoloOcean DESERT
 
-Laboratorio di co-simulazione per flotte subacquee, senza ROS.
-**HoloOcean 2.3.0** gestisce veicoli, fisica e sensori; **DESERT Underwater 4.0.0**
-gestisce propagazione, interferenza, MAC e routing dei pacchetti acustici.
-La dashboard locale mostra flotta, ricezioni, pacchetti e metriche osservate.
+Simula e analizza le comunicazioni tra droni subacquei.
+HoloOcean gestisce movimento, fisica e sensori; DESERT gestisce il canale
+acustico e la rete. La dashboard permette di scegliere un esempio, creare
+un proprio scenario e osservare messaggi e risultati.
 
-Il motore DESERT gira in Docker. HoloOcean resta sull'host con accesso alla GPU.
-Su Windows non è richiesta una distribuzione Ubuntu personale: si usa Docker
-Desktop con il suo normale backend per container Linux.
+## Apri il laboratorio
 
-Sei demo, due MAC e routing statico. Prove e limiti:
-[validazione originale](docs/validation.md), [consolidamento](docs/consolidation-validation.md).
+Con il progetto già installato, da questa directory:
 
-## Avvio Windows
+```powershell
+.venv\Scripts\holo-desert.exe dashboard
+```
 
-Da questa directory, con Python 3.10 e Docker Desktop Linux containers:
+Apri **http://127.0.0.1:8000**. Su Linux il comando è
+`.venv/bin/holo-desert dashboard`.
+
+1. **Scegli uno scenario.** La scheda spiega cosa succede e cosa osservare.
+2. **Avvia simulazione.** HoloOcean e DESERT si inizializzano automaticamente.
+3. **Esplora la mappa.** Seleziona un drone; usa rotella e trascinamento per
+   cambiare inquadratura. Le posizioni sono quelle misurate da HoloOcean.
+4. **Segui i messaggi.** Seleziona una comunicazione per vedere il percorso e
+   la timeline. Una trasmissione osservata non è ancora una consegna.
+5. **Approfondisci in Analisi.** Le icone informative spiegano le metriche.
+6. **Apri Impostazioni** per regolare MAC, bitrate, potenza e parametri avanzati
+   prima della prossima corsa.
+7. **Esporta risultati** per scaricare configurazione, eventi e pacchetti in ZIP.
+
+I risultati delle corse ordinarie sono temporanei: esportali prima del reset
+o della chiusura. Gli scenari personali, invece, vengono conservati.
+
+## Crea il tuo scenario
+
+In **I miei scenari**, premi **Nuovo scenario**, oppure **Duplica** su un esempio.
+L'editor guida attraverso cinque passaggi: generale, droni e movimento,
+comunicazioni, rete acustica, riepilogo e avvio.
+
+Puoi aggiungere droni, trascinare le posizioni iniziali nella mappa, impostare
+waypoint, flussi di messaggi e route statiche con relay. Dopo **Salva scenario**
+lo ritrovi nella libreria e puoi avviarlo subito. Importazione ed esportazione
+YAML restano disponibili. I sei esempi sono protetti da modifica e cancellazione.
+
+Gli scenari vengono salvati nella directory dati dell'utente, separata dal
+pacchetto. `HOLO_DESERT_SCENARIOS_DIR` permette di scegliere una directory
+portabile. [Dettagli di utilizzo e salvataggio](docs/dashboard.md).
+
+## Installazione
+
+Servono Python 3.10–3.12, HoloOcean/Ocean **2.3.0**, GPU adatta al rendering e
+Docker con container Linux. HoloOcean rimane sull'host, DESERT gira in Docker;
+non serve gestire una distribuzione WSL personale.
+
+Su Windows, con il client HoloOcean già scaricato:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup.ps1 -HoloOceanClient "<HoloOcean-2.3.0>\client"
 .venv\Scripts\holo-desert.exe doctor
-.venv\Scripts\holo-desert.exe dashboard
 ```
 
-Ocean 2.3.0 deve essere già installato nel percorso ufficiale HoloOcean.
-Aprire **http://127.0.0.1:8000**, scegliere scenario e MAC, eventualmente
-**Configura rete**, poi **Avvia**. Il primo avvio scarica l'immagine DESERT e
-compila l'estensione; non servono terminali separati per motore e dashboard.
+Installazione Ubuntu 24.04, Ocean e prerequisiti: [guida installazione](docs/installation.md).
+Il primo avvio può scaricare l'immagine DESERT e compilare l'estensione.
 
-## Avvio Ubuntu 24.04
+## Gli esempi
 
-Con Docker Engine/Compose, Python 3.12, Git e rendering GPU configurati:
+| ID | Scenario | Cosa osservare |
+|---|---|---|
+| E01 | Scambio di messaggi | Richiesta e risposta tra due droni |
+| E02 | Comunicazione tra più droni | Quattro droni sullo stesso canale |
+| E03 | Droni in movimento | Allontanamento, ritorno, distanza e consegna |
+| E04 | Congestione della rete | Code, interferenza e confronto MAC |
+| E05 | Comunicazione tramite relay | Due tratte osservate A → B → C |
+| E06 | Coordinamento tra droni | Heartbeat, attesa e ripresa del follower |
 
-```bash
-bash scripts/setup.sh
-.venv/bin/python scripts/install_holoocean.py
-.venv/bin/python -c 'import holoocean; holoocean.install("Ocean")'
-.venv/bin/holo-desert doctor
-.venv/bin/holo-desert dashboard
+In **Analisi → Confronto MAC**, conserva due riepiloghi E04 cambiando soltanto
+il protocollo tra ALOHA e CSMA-ALOHA. Il controllo segnala configurazioni non
+equivalenti e mantiene anche i risultati negativi.
+
+## CLI, test e sviluppo
+
+La CLI continua ad accettare `holo-desert run e03_mobility` e file YAML
+personali: `holo-desert run percorso/scenario.yaml`. `--no-dashboard` esegue
+senza interfaccia; `--persist directory` salva esplicitamente i risultati.
+
+```powershell
+.venv\Scripts\holo-desert.exe test
+.venv\Scripts\holo-desert.exe test --integration
+.venv\Scripts\holo-desert.exe test --end-to-end
+npm.cmd --prefix tests/frontend ci
+npm.cmd --prefix tests/frontend test -- --config playwright.config.cjs
 ```
 
-Dettagli, client locale alternativo e troubleshooting: [installazione](docs/installation.md).
-La matrice delle prove realmente eseguite è in [validazione](docs/validation.md).
+I test browser richiedono Node e usano Edge installato su Windows. Su Linux:
+`cd tests/frontend && npx playwright install --with-deps chromium && npm test`.
+I test di presentazione utilizzano fixture dichiarate, separate dai simulatori.
 
-## Uso
+- [Dashboard, metriche e scenari personali](docs/dashboard.md)
+- [Guida sviluppatori e applicazioni](docs/developer-guide.md)
+- [Architettura](docs/architecture.md) · [API comunicazione](docs/communication-api.md)
+- [Protocolli](docs/protocols.md) · [Installazione](docs/installation.md)
+- [Revisione visiva e verifiche UI](docs/ui-review.md)
+- [Validazione originale](docs/validation.md) · [Consolidamento](docs/consolidation-validation.md)
 
-| Scenario | Cosa osservare |
-|---|---|
-| E01 Chat | Request/reply tra due droni |
-| E02 Multi-node | Quattro nodi sullo stesso canale |
-| E03 Mobility | Allontanamento/ritorno, distanza e PDR |
-| E04 Congestion | Code, interferenza e confronto dei MAC |
-| E05 Multi-hop | Tratte A→B→C reali, route e consegna distinte |
-| E06 Coordination | Heartbeat, HOLD/PROCEED e blackout acustico |
-
-La dashboard offre zoom/pan, dettagli per nodo, topologia per messaggio,
-timeline filtrabile, metriche per gruppi e configurazione di MAC, acustica,
-ACK, route e flussi. Per E04 completare una corsa, conservarne il riepilogo,
-cambiare **solo MAC** e ripetere: la scheda confronto verifica l'equivalenza.
-[Guida alla dashboard e alle metriche](docs/dashboard.md).
-
-```text
-holo-desert examples
-holo-desert run e01_chat
-holo-desert run e02_multi_node
-holo-desert run e03_mobility
-holo-desert run e04_congestion --mac aloha
-holo-desert run e05_multihop
-holo-desert run e06_coordination
-holo-desert dashboard
-holo-desert run e01_chat --standalone
-holo-desert official-sample
-holo-desert test
-holo-desert test --integration
-holo-desert test --end-to-end
-```
-
-Senza ambiente attivato, anteporre `.venv/bin/` su Linux o `.venv\Scripts\`
-su Windows. `--no-dashboard` esegue un esperimento e restituisce conteggi ed
-esito; `--fast` rimuove il pacing reale mantenendo gli orologi sincronizzati.
-
-I risultati ordinari sono temporanei. Il pulsante **Export** scarica ZIP con
-JSONL, CSV e configurazione; `--persist results/nome-esperimento` abilita il
-salvataggio esplicito. I messaggi in volo restano pending fino al proprio TTL.
-I timeout non vengono automaticamente attribuiti a collisioni o rumore.
-PDR: ricevuti / (ricevuti + scaduti), pending esclusi. Goodput: payload
-consegnato; throughput envelope: include JSON/base64, esclude header e retry
-PHY/MAC. I valori non osservabili sono indicati N/D.
-
-## Esperimenti e sviluppo
-
-Gli scenari sono YAML sotto `src/holo_desert/resources/examples/`, i profili
-MAC sotto `resources/profiles/`, Tcl e C++ sotto `resources/desert/`.
-Per un proprio esperimento copiare uno YAML fuori dagli esempi originali e
-avviarlo con `holo-desert run percorso/scenario.yaml`.
-Gli studenti lavorano tramite `CommunicationManager`, senza accedere a Tcl:
-
-```python
-drone_a.send(destination="auv_02", payload={"message": "hello"})
-messages = drone_b.receive()
-```
-
-Ogni applicazione vede solo il proprio stato e messaggi consegnati. I waypoint
-sono target del controller HoloOcean; le posizioni del canale provengono sempre
-dai sensori, mai dai target desiderati.
-
-- [Architettura e sincronizzazione](docs/architecture.md)
-- [Interfacce DESERT e estensione](docs/desert-integration.md)
-- [API comunicazione](docs/communication-api.md)
-- [Protocolli e parametri](docs/protocols.md)
-- [Sei dimostrazioni](docs/scenarios.md)
-- [Guida sviluppatori](docs/developer-guide.md)
-- [Limitazioni](docs/limitations.md)
-- [Dipendenze esterne](dependencies.lock.json)
-
-HoloOcean e DESERT sono distribuzioni esterne con le rispettive licenze.
-Questo repository non include binary Ocean, copie DESERT, immagini Docker o venv.
+HoloOcean e DESERT mantengono le rispettive licenze. Binary Ocean, immagini,
+venv e risultati delle simulazioni non sono inclusi nel repository.

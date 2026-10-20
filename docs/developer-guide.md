@@ -106,3 +106,27 @@ varianti MAC di E04, E05 ed E06, in sequenza. Controlla pausa, reset, identità
 dei next hop, eventi/ZIP e confronto; non è una prova del rendering browser.
 `--output file.json` è l'unico salvataggio esplicito. Non eseguirlo mentre altre
 simulazioni usano il servizio DESERT.
+
+## Libreria personale e test del browser
+
+`ScenarioManager` mantiene `list()` limitato ai sei esempi; `list_user()`,
+`get_user()`, `save_user()` e `delete_user()` delegano a `ScenarioLibrary`.
+La directory si configura con `HOLO_DESERT_SCENARIOS_DIR` oppure `user_root`
+nel gestore. Non salvare configurazioni nel package. `load()` continua ad
+accettare percorsi YAML della CLI e accetta gli ID personali `user_…`.
+
+Gli endpoint `/api/user-scenarios` gestiscono la libreria; PUT e DELETE
+richiedono la revisione corrente. Una revisione obsoleta o un nome duplicato
+produce 409. `/api/user-scenarios/import` valida una bozza senza salvarla;
+`/api/scenarios/{id}/yaml` esporta lo schema esistente. Le modifiche sono
+bloccate durante starting/running/paused/stopping sotto lo stesso lock dei
+controlli della simulazione. L'API HTTP non accetta percorsi arbitrari.
+La CLI conserva invece il suo accesso esplicito ai file YAML locali.
+
+I test browser sono in `tests/frontend`: `npm ci`, quindi `npm test`.
+Richiedono Edge su Windows o `npx playwright install --with-deps chromium`
+su Linux. Il server di test usa porta 8011 e libreria `.local/ui-test-library`:
+non puntarlo alla libreria personale reale. Le fixture di presentazione
+intercettano le richieste solo nel browser e mostrano una fascia esplicita;
+non provano fisica o rete. La prova reale e gli screenshot ispezionati sono
+descritti in [ui-review.md](ui-review.md).
