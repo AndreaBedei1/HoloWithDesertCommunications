@@ -13,3 +13,22 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: python -m pip install -e '.[test]'
       - run: python -m pytest -q -m 'not desert and not holoocean'
+  frontend:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: tests/frontend/package-lock.json
+      - run: python -m pip install -e '.[test]'
+      - run: npm ci
+        working-directory: tests/frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: tests/frontend
+      - run: npm test -- --config playwright.config.cjs
+        working-directory: tests/frontend

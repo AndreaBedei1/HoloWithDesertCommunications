@@ -8,10 +8,11 @@ export function chart(selector, series, lines, {window=0, max=null, dual=false, 
   const values=data.flatMap(p=>lines.filter(l=>!l.right).map(l=>l.value(p))).filter(Number.isFinite);
   let lo=Math.min(0,...values), hi=max??Math.max(0.01,...values); if(hi===lo)hi=lo+1;
   const y=(v,rightAxis=false)=>h-bottom-(rightAxis?v:(v-lo)/(hi-lo))*(h-top-bottom);
-  ctx.font='10px ui-monospace,monospace';ctx.fillStyle='#9fb0bf';
-  for(let i=0;i<5;i++){
-    const f=i/4,py=y(lo+f*(hi-lo));ctx.strokeStyle='#263746';ctx.beginPath();ctx.moveTo(left,py);ctx.lineTo(w-right,py);ctx.stroke();
-    ctx.fillStyle='#9fb0bf';ctx.fillText((lo+f*(hi-lo)).toLocaleString(undefined,{maximumFractionDigits:2}),2,py+3);
+  ctx.font='11px "Segoe UI",sans-serif';ctx.fillStyle='#748096';
+  const divisions=Math.max(1,Math.min(4,Math.floor((h-top-bottom)/26)));
+  for(let i=0;i<=divisions;i++){
+    const f=i/divisions,py=y(lo+f*(hi-lo));ctx.strokeStyle='#edf0f5';ctx.beginPath();ctx.moveTo(left,py);ctx.lineTo(w-right,py);ctx.stroke();
+    ctx.fillStyle='#748096';ctx.fillText((lo+f*(hi-lo)).toLocaleString('it-IT',{maximumFractionDigits:2}),2,py+3);
     if(dual)ctx.fillText(f.toFixed(2),w-right+7,py+3);
   }
   for(let i=0;i<5;i++){const t=start+i/4*(end-start);ctx.fillText(t.toFixed(1),x(t)-12,h-14)}

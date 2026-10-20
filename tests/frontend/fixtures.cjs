@@ -1,0 +1,16 @@
+// Deliberately synthetic presentation fixtures. Never used by the application
+// or by real simulator tests; every browser using them displays a test ribbon.
+function observedState(config){
+  const message=(id,status,destination='auv_03',type='data')=>({id,source:'auv_01',destination,type,size:16,wire_size:197,creation_time:1,deadline:9,status,delay:status==='received'?2:null,protocol:'csma_aloha',receive_time:status==='received'?3:undefined,physical_tx_time:1.2,events:[{event:'app_tx',time:1,node_id:'auv_01'},{event:'forward',time:1,node_id:'auv_01',next_hop_id:'auv_02'},{event:'phy_tx_start',time:1.2,node_id:'auv_01',next_hop_id:'auv_02'},...(status==='received'?[{event:'phy_rx_end',time:2,node_id:'auv_02',transmitter_id:'auv_01',next_hop_id:'auv_02',outcome:'decoded'},{event:'forward',time:2,node_id:'auv_02',next_hop_id:'auv_03'},{event:'phy_tx_start',time:2.2,node_id:'auv_02',next_hop_id:'auv_03'},{event:'delivered',time:3,node_id:'auv_03'}]:[])]});
+  const packets=[message('received-001','received'),message('pending-002','phy_tx_observed','auv_02','heartbeat'),message('expired-003','timeout_unknown_cause')];
+  return {state:'paused',run_id:'synthetic-fixture',configuration:config,time:12,pause_supported:true,services:{holoocean:'running',desert:'running'},standalone:false,fleet:Object.fromEntries(config.nodes.map(n=>[n.id,{x:n.position[0],y:n.position[1],z:n.position[2],yaw:0}])),trails:{},packets,observations:packets.flatMap(p=>p.events),edges:[{source:'auv_01',destination:'auv_03',last_receive:3}],counts:{generated:3,received:1,timed_out:1,pending:1},configured_routes:[{source:'auv_01',destination:'auv_03',next_hop:'auv_02',explicit:true},{source:'auv_02',destination:'auv_03',next_hop:'auv_03',explicit:false}],stats:{auv_01:{mac_queue:4,app_sent:3,app_received:0}},node_phy:{},applications:{},transitions:[],distances_m:{'auv_01>auv_02':500,'auv_02>auv_03':500},series:[{time:1,pdr_resolved:null,mean_latency_s:null,goodput_bps:0,application_wire_throughput_bps:0,generated:3,received:0,timed_out:0,nodes:{auv_01:{mac_queue:2,phy:{}}},distances_m:{'auv_01>auv_02':500},wall_drift_s:-.2},{time:12,pdr_resolved:.5,mean_latency_s:2,goodput_bps:16,application_wire_throughput_bps:197,generated:3,received:1,timed_out:1,phy_interference_observations:0,nodes:{auv_01:{mac_queue:4,phy:{}}},distances_m:{'auv_01>auv_02':500},wall_drift_s:-.1}]};
+}
+async function fixturePage(page,request){
+  const config=await (await request.get('/api/scenarios/e05_multihop')).json();let state=observedState(config);
+  await page.route('**/api/state',route=>route.fulfill({json:state}));
+  for(const action of ['pause','resume','stop'])await page.route('**/api/'+action,route=>{state={...state,state:{pause:'paused',resume:'running',stop:'stopped'}[action]};return route.fulfill({json:{ok:true}})});
+  await page.goto('/');await page.locator('#simulation').waitFor({state:'visible'});await page.locator('#fleet-canvas').waitFor({state:'visible'});await page.locator('#map-empty').waitFor({state:'hidden'});
+  await page.evaluate(()=>{const banner=document.querySelector('#snapshot-banner');banner.textContent='Fixture di test · dati sintetici, nessuna simulazione DESERT';banner.hidden=false});
+  return {setState:value=>state=value,state:()=>state};
+}
+module.exports={observedState,fixturePage};
