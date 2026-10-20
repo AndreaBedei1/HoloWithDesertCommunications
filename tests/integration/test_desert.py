@@ -118,7 +118,10 @@ def test_engine_death_is_reported_and_new_session_recovers(engine):
     backend = DESERTAdapter(manage_docker=False)
     try:
         backend.start(scenario)
-        docker_command(*COMPOSE, "exec", "-T", "desert", "pkill", "-9", "-x", "ns", timeout=10)
+        import os
+        target=os.environ.get('DESERT_TEST_CONTAINER')
+        command=["exec",target] if target else [*COMPOSE,"exec","-T","desert"]
+        docker_command(*command, "pkill", "-9", "-x", "ns", timeout=10)
         with pytest.raises(BackendError):
             backend.advance(1)
     finally:

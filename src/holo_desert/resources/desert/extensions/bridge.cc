@@ -13,6 +13,9 @@
 #include <cmath>
 #include <underwater-bpsk.h>
 #include <mac.h>
+#include <rng.h>
+#include <uw-mac-DACAP-alter.h>
+#include "corrected-bpsk.h"
 
 static std::string hexify(const char* p, unsigned n) {
     std::ostringstream s;
@@ -115,57 +118,99 @@ public:
     TclObject* create(int, const char*const*) override { return new HoloProbe; }
 } class_holo_probe;
 
-// Observe the official underwater PHY without replacing any of its decisions.
+// Upstream decisions stay delegated; the corrected variant replaces only endRx.
 class HoloPhy : public UnderwaterMPhyBpsk {
     int node_id_ = 0;
-    void report(const char* event, const std::string& wire, double timestamp,
-                double duration, const char* outcome, double snr, int next_hop, int transmitter) {
-        std::cout << std::setprecision(15) << "{\"event\":\"" << event << "\",\"time\":"
-            << timestamp << ",\"node\":" << node_id_ << ",\"duration_s\":" << duration
-            << ",\"outcome\":\"" << outcome << "\",\"snr_db\":";
-        if (std::isfinite(snr)) std::cout << snr; else std::cout << "null";
-        std::cout << ",\"transmitter_mac\":" << transmitter << ",\"next_hop_mac\":" << next_hop
-                  << ",\"wire_hex\":\"" << wire << "\"}" << std::endl;
+    struct Observation {
+        std::string wire;
+        bool application, receiving;
+        int uid, bits, packet_type, hop, transmitter;
+        double pt, pr, pn, pi, duration, txtime, rxtime;
+        Observation(Packet* p, bool is_receiving = true) {
+            receiving = is_receiving;
+            auto* ch = HDR_CMN(p);
+            auto* ph = HDR_MPHY(p);
+            application = ch->ptype() == PT_DATA_APPLICATION;
+            if (!application && ch->ptype() == PT_DACAP) {
+                const auto* dacap = HDR_DACAP(p);
+                // DATA_PKT is private to pinned uw-mac-DACAP-alter.cpp's enum.
+                application = dacap->dacap_type == 6 && dacap->orig_type == PT_DATA_APPLICATION;
+            }
+            if (application) {
+                auto* ah = HDR_DATA_APPLICATION(p);
+                if (ah->payload_size() <= MAX_LENGTH_PAYLOAD)
+                    wire = hexify(ah->payload_msg, ah->payload_size());
+            }
+            uid = ch->uid(); bits = ch->size()*8; packet_type = ch->ptype();
+            hop = HDR_MAC(p)->macDA(); transmitter = HDR_MAC(p)->macSA();
+            pt = ph->Pt;
+            pr = receiving ? ph->Pr : 0;
+            pn = receiving ? ph->Pn : 0;
+            pi = receiving ? ph->Pi : 0;
+            duration = ph->duration; txtime = ph->txtime;
+            rxtime = receiving ? ph->rxtime : 0;
+        }
+    };
+    static void number(double value) {
+        if (std::isfinite(value)) std::cout << value; else std::cout << "null";
     }
-    std::string wire(Packet* p) {
-        if (HDR_CMN(p)->ptype() != PT_DATA_APPLICATION) return "";
-        auto* ah = HDR_DATA_APPLICATION(p);
-        return hexify(ah->payload_msg, ah->payload_size());
+    void report(const char* event, const Observation& o, const char* outcome) {
+        std::cout << std::setprecision(15) << "{\"event\":\"phy_"
+            << (o.application ? "" : "control_") << event << "\",\"time\":"
+            << Scheduler::instance().clock() << ",\"node\":" << node_id_
+            << ",\"duration_s\":" << o.duration << ",\"outcome\":\"" << outcome
+            << "\",\"snr_db\":";
+        if (o.receiving && o.pn > 0 && o.pr > 0) number(10*std::log10(o.pr/o.pn));
+        else std::cout << "null";
+        std::cout << ",\"pt\":"; number(o.pt);
+        std::cout << ",\"pr\":"; if (o.receiving) number(o.pr); else std::cout << "null";
+        std::cout << ",\"pn\":"; if (o.receiving) number(o.pn); else std::cout << "null";
+        std::cout << ",\"pi\":"; if (o.receiving) number(o.pi); else std::cout << "null";
+        std::cout << ",\"phy_bits\":" << o.bits << ",\"packet_type\":" << o.packet_type
+            << ",\"ns_uid\":" << o.uid << ",\"phy_tx_time\":"; number(o.txtime);
+        std::cout << ",\"phy_rx_time\":"; if (o.receiving) number(o.rxtime); else std::cout << "null";
+        std::cout << ",\"rx_snr_penalty_db\":" << RxSnrPenalty_dB_
+            << ",\"phy_patch_id\":\"" << patchId() << "\""
+            << ",\"transmitter_mac\":" << o.transmitter << ",\"next_hop_mac\":" << o.hop;
+        if (o.application) std::cout << ",\"wire_hex\":\"" << o.wire << "\"";
+        if (std::strcmp(event, "rx_end") == 0) {
+            std::cout << ",\"positive_interference\":" << (o.pi > 0 ? "true" : "false");
+            if (conditional_probability_ >= 0)
+                std::cout << ",\"conditional_interference_per\":" << conditional_probability_;
+        }
+        std::cout << "}" << std::endl;
     }
 protected:
+    double conditional_probability_ = -1;
+    virtual const char* patchId() const { return "upstream"; }
+    virtual void receiveDecision(Packet* p) { UnderwaterMPhyBpsk::endRx(p); }
     void startTx(Packet* p) override {
-        auto h = wire(p);
-        if (!h.empty()) report("phy_tx_start", h, Scheduler::instance().clock(), HDR_MPHY(p)->duration,
-                               "transmitting", 0, HDR_MAC(p)->macDA(), HDR_MAC(p)->macSA());
+        report("tx_start", Observation(p, false), "transmitting");
         UnderwaterMPhyBpsk::startTx(p);
     }
+    void endTx(Packet* p) override {
+        report("tx_end", Observation(p, false), "transmitted");
+        UnderwaterMPhyBpsk::endTx(p);
+    }
     void startRx(Packet* p) override {
-        auto h = wire(p);
-        bool busy_tx = txPending;
-        bool busy_rx = PktRx != nullptr;
-        auto* ph = HDR_MPHY(p);
-        double snr = 10 * std::log10(ph->Pr / ph->Pn);
+        Observation o(p);
+        bool busy_tx = txPending, busy_rx = PktRx != nullptr;
+        bool wrong_modulation = HDR_MPHY(p)->modulationType != modid;
         UnderwaterMPhyBpsk::startRx(p);
-        if (!h.empty()) {
-            const char* outcome = PktRx == p ? "synchronized" :
-                busy_tx ? "transmitter_busy" : busy_rx ? "receiver_busy_overlap" :
-                ph->modulationType != modid ? "wrong_modulation" : "below_acquisition_threshold";
-            report("phy_rx_start", h, Scheduler::instance().clock(), ph->duration,
-                   outcome, snr, HDR_MAC(p)->macDA(), HDR_MAC(p)->macSA());
-        }
+        const char* outcome = PktRx == p ? "synchronized" :
+            busy_tx ? "transmitter_busy" : busy_rx ? "receiver_busy_overlap" :
+            wrong_modulation ? "wrong_modulation" : "below_acquisition_threshold";
+        report("rx_start", o, outcome);
     }
     void endRx(Packet* p) override {
-        auto h = wire(p);
+        Observation o(p);
         bool synchronized = PktRx == p;
-        auto* ph = HDR_MPHY(p);
-        double duration = ph->duration;
-        double snr = 10 * std::log10(ph->Pr / ph->Pn);
-        int hop = HDR_MAC(p)->macDA(), transmitter = HDR_MAC(p)->macSA();
         int noise = getErrorPktsNoise(), interference = getErrorPktsInterf();
-        UnderwaterMPhyBpsk::endRx(p); // may free p; use only saved values afterwards
-        if (!h.empty()) report("phy_rx_end", h, Scheduler::instance().clock(), duration,
-            !synchronized ? "not_synchronized" : getErrorPktsNoise() > noise ? "noise_error" :
-            getErrorPktsInterf() > interference ? "interference_error" : "decoded", snr, hop, transmitter);
+        conditional_probability_ = -1;
+        receiveDecision(p); // may free p; report only saved values
+        report("rx_end", o, !synchronized ? "not_synchronized" :
+            getErrorPktsNoise() > noise ? "noise_error" :
+            getErrorPktsInterf() > interference ? "interference_error" : "decoded");
     }
 public:
     HoloPhy() { bind("node_id_", &node_id_); }
@@ -175,5 +220,52 @@ public:
     HoloPhyClass() : TclClass("Module/MPhy/BPSK/Underwater/HOLO") {}
     TclObject* create(int, const char*const*) override { return new HoloPhy; }
 } class_holo_phy;
+
+class HoloCorrectedPhy : public HoloPhy {
+protected:
+    const char* patchId() const override { return "conditional-bpsk-v1"; }
+    void receiveDecision(Packet* p) override {
+        if (PktRx != p) { dropPacket(p); return; }
+        auto* ch = HDR_CMN(p);
+        auto* ph = HDR_MPHY(p);
+        const int bits = ch->size()*8;
+        const double noise_per = getPER(ph->Pr/ph->Pn, bits);
+        const double noise_ber = getPER(ph->Pr/ph->Pn, 1);
+        double log_ratio = 0;
+        bool positive_interference = false;
+        if (interference_) {
+            const PowerChunkList& chunks = interference_->getInterferencePowerChunkList(p);
+            double remaining = ph->duration;
+            for (const auto& chunk : chunks) {
+                const double duration = std::min(remaining, std::max(0.0, chunk.second));
+                remaining -= duration;
+                if (chunk.first > 0 && duration > 0) {
+                    positive_interference = true;
+                    log_ratio += holo_bpsk::log_success_ratio(noise_ber,
+                        getPER(ph->Pr/(ph->Pn+chunk.first), 1), bits*duration/ph->duration);
+                }
+            }
+        } else if (ph->Pi > 0) {
+            positive_interference = true;
+            log_ratio = holo_bpsk::log_success_ratio(noise_ber,
+                getPER(ph->Pr/(ph->Pn+ph->Pi), 1), bits);
+        }
+        conditional_probability_ = holo_bpsk::conditional_error(log_ratio);
+        const bool noise_error = RNG::defaultrng()->uniform_double() < noise_per;
+        const bool interference_error = !noise_error && positive_interference
+            && conditional_probability_ > 0
+            && RNG::defaultrng()->uniform_double() < conditional_probability_;
+        ch->error() = noise_error || interference_error;
+        if (noise_error) incrErrorPktsNoise();
+        else if (interference_error) incrErrorPktsInterf();
+        sendUp(p);
+        PktRx = nullptr;
+    }
+};
+static class HoloCorrectedPhyClass : public TclClass {
+public:
+    HoloCorrectedPhyClass() : TclClass("Module/MPhy/BPSK/Underwater/HOLO/Corrected") {}
+    TclObject* create(int, const char*const*) override { return new HoloCorrectedPhy; }
+} class_holo_corrected_phy;
 
 extern "C" int Holobridge_Init(Tcl_Interp*) { return TCL_OK; }

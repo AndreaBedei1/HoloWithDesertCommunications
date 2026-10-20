@@ -11,6 +11,7 @@ from .dashboard.server import DashboardServer
 from .desert_adapter.backend import docker_command, COMPOSE, BASE_IMAGE, BackendError
 from .doctor import doctor
 from .scenarios.config import ScenarioManager, RESOURCE_ROOT, Network
+from .resources.docker.stack_builder import MACS
 
 
 def serve_dashboard(application, port, before_start=None):
@@ -38,7 +39,7 @@ def parser():
     run.add_argument("--duration", type=float)
     run.add_argument("--fast", action="store_true", help="Skip wall-clock pacing; logical clocks remain synchronized")
     run.add_argument("--profile", choices=["acoustic_default", "acoustic_aloha"])
-    run.add_argument("--mac", choices=["csma_aloha", "aloha"], help="Change only MAC protocol, preserving other scenario parameters")
+    run.add_argument("--mac", choices=list(MACS), help="Change only MAC protocol, preserving other scenario parameters")
     run.add_argument("--persist", type=Path)
     run.add_argument("--port", type=int, default=8000)
     run.add_argument("--headless", action="store_true")

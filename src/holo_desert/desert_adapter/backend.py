@@ -102,6 +102,9 @@ class DESERTAdapter(CommunicationBackend):
             initial = self._until_barrier()
             self.initial_events = initial
             self.versions = next((e for e in initial if e["event"] == "engine_info"), {})
+            from ..resources.docker.stack_builder import CATALOG_VERSION
+            if self.versions.get('stack_builder') != CATALOG_VERSION:
+                raise BackendError('DESERT engine image is outdated: rebuild with holo-desert engine up before using this laboratory version')
             if self.time != 0 or any(e["event"] == "rx" for e in initial):
                 raise BackendError("DESERT did not initialize at time zero")
         except Exception:

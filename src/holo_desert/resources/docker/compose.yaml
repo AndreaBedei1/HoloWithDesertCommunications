@@ -1,6 +1,6 @@
 services:
   desert:
-    image: holo-desert-engine:4.0.0-v1
+    image: holo-desert-engine:4.0.0-v2
     build:
       context: ..
       dockerfile: docker/Dockerfile

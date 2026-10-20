@@ -1,0 +1,1600 @@
+{
+  "version": "desert-lab-v2",
+  "modules": [
+    {
+      "id": "aloha",
+      "name": "ALOHA",
+      "layer": "mac",
+      "tcl_class": "Module/UW/ALOHA",
+      "libraries": [
+        "libuwaloha.so"
+      ],
+      "parameters": [
+        {
+          "path": "network.mac.ack",
+          "label": "ACK",
+          "default": false,
+          "help": "Conferma MAC quando supportata. No-ACK rimuove il frame alla prima trasmissione; non attende il TTL.",
+          "type": "checkbox",
+          "unit": "",
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.mac.max_tx_tries",
+          "label": "Massimo tentativi",
+          "default": 3,
+          "help": "Limite dei tentativi con ACK. Non implica ritrasmissioni nella modalita no-ACK.",
+          "type": "integer",
+          "unit": "",
+          "min": 1,
+          "max": 20,
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.mac.buffer_packets",
+          "label": "Buffer MAC",
+          "default": 100,
+          "help": "Numero di pacchetti. Nei MAC ALOHA storici la modalita coda deriva dal default del costruttore; il limite impostato successivamente non e attivo.",
+          "type": "integer",
+          "unit": "",
+          "min": 1,
+          "max": 10000,
+          "default_origin": "bridge historical profile"
+        }
+      ],
+      "description": "Accesso casuale senza ascolto preventivo.",
+      "operational": true,
+      "validation": "verified_end_to_end",
+      "reason": "",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "official_example": "library_load_sequence_verified; full official scenario not executed",
+      "bridge_compatible": true,
+      "compatibility": {
+        "interfaces": [
+          "acoustic"
+        ],
+        "phy": [
+          "bpsk_upstream",
+          "bpsk_corrected"
+        ],
+        "routing": [
+          "static",
+          "flooding"
+        ],
+        "transport": "UDP/application envelope"
+      },
+      "node_roles": [
+        "peer"
+      ],
+      "topology_requirements": "2..32 auv_NN; positions updated from HoloOcean at synchronized barriers",
+      "telemetry": [
+        "phy_data_and_control_frames",
+        "PHY bits and airtime",
+        "Pr/Pn/Pi/SNR",
+        "application deliveries and TTL",
+        "MAC counters when exposed; otherwise null"
+      ],
+      "initialization": "See dedicated trusted Tcl adapter and bridge.tcl"
+    },
+    {
+      "id": "csma_aloha",
+      "name": "CSMA-ALOHA",
+      "layer": "mac",
+      "tcl_class": "Module/UW/CSMA_ALOHA",
+      "libraries": [
+        "libuwcsmaaloha.so"
+      ],
+      "parameters": [
+        {
+          "path": "network.mac.ack",
+          "label": "ACK",
+          "default": false,
+          "help": "Conferma MAC quando supportata. No-ACK rimuove il frame alla prima trasmissione; non attende il TTL.",
+          "type": "checkbox",
+          "unit": "",
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.mac.max_tx_tries",
+          "label": "Massimo tentativi",
+          "default": 3,
+          "help": "Limite dei tentativi con ACK. Non implica ritrasmissioni nella modalita no-ACK.",
+          "type": "integer",
+          "unit": "",
+          "min": 1,
+          "max": 20,
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.mac.buffer_packets",
+          "label": "Buffer MAC",
+          "default": 100,
+          "help": "Numero di pacchetti. Nei MAC ALOHA storici la modalita coda deriva dal default del costruttore; il limite impostato successivamente non e attivo.",
+          "type": "integer",
+          "unit": "",
+          "min": 1,
+          "max": 10000,
+          "default_origin": "bridge historical profile"
+        }
+      ],
+      "description": "Ascolto del canale e attesa casuale prima dei dati.",
+      "operational": true,
+      "validation": "verified_end_to_end",
+      "reason": "",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "official_example": "library_load_sequence_verified; full official scenario not executed",
+      "bridge_compatible": true,
+      "compatibility": {
+        "interfaces": [
+          "acoustic"
+        ],
+        "phy": [
+          "bpsk_upstream",
+          "bpsk_corrected"
+        ],
+        "routing": [
+          "static",
+          "flooding"
+        ],
+        "transport": "UDP/application envelope"
+      },
+      "node_roles": [
+        "peer"
+      ],
+      "topology_requirements": "2..32 auv_NN; positions updated from HoloOcean at synchronized barriers",
+      "telemetry": [
+        "phy_data_and_control_frames",
+        "PHY bits and airtime",
+        "Pr/Pn/Pi/SNR",
+        "application deliveries and TTL",
+        "MAC counters when exposed; otherwise null"
+      ],
+      "initialization": "See dedicated trusted Tcl adapter and bridge.tcl"
+    },
+    {
+      "id": "tdma",
+      "name": "TDMA",
+      "layer": "mac",
+      "tcl_class": "Module/UW/TDMA",
+      "libraries": [
+        "libuwtdma.so"
+      ],
+      "parameters": [
+        {
+          "path": "network.mac.tdma.frame_duration_s",
+          "label": "Durata frame TDMA",
+          "default": 3,
+          "help": "Durata di un ciclo condiviso. Profilo iniziale tratto dal campione ufficiale TDMA; gli slot sono frame / numero nodi.",
+          "type": "number",
+          "unit": "s",
+          "min": 0.001,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.mac.tdma.guard_time_s",
+          "label": "Guard time",
+          "default": 0.1,
+          "help": "Margine sottratto alla durata dello slot. Deve consentire propagazione e incertezze; la validazione verifica che il frame dati entri nello slot.",
+          "type": "number",
+          "unit": "s",
+          "min": 0,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.mac.tdma.max_packets_per_slot",
+          "label": "Pacchetti per slot",
+          "default": 1,
+          "help": "Numero massimo nativo trasmesso nel proprio slot. Nessun ACK ALOHA nel TDMA.",
+          "type": "integer",
+          "unit": "",
+          "min": 1,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.mac.buffer_packets",
+          "label": "Buffer MAC",
+          "default": 100,
+          "help": "Numero di pacchetti. Nei MAC ALOHA storici la modalita coda deriva dal default del costruttore; il limite impostato successivamente non e attivo.",
+          "type": "integer",
+          "unit": "",
+          "min": 1,
+          "max": 10000,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        }
+      ],
+      "description": "Slot assegnati: ogni drone trasmette nel proprio intervallo.",
+      "operational": true,
+      "validation": "verified_end_to_end",
+      "reason": "",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "official_example": "library_load_sequence_verified; full official scenario not executed",
+      "bridge_compatible": true,
+      "compatibility": {
+        "interfaces": [
+          "acoustic"
+        ],
+        "phy": [
+          "bpsk_upstream",
+          "bpsk_corrected"
+        ],
+        "routing": [
+          "static",
+          "flooding"
+        ],
+        "transport": "UDP/application envelope"
+      },
+      "node_roles": [
+        "peer"
+      ],
+      "topology_requirements": "2..32 auv_NN; positions updated from HoloOcean at synchronized barriers",
+      "telemetry": [
+        "phy_data_and_control_frames",
+        "PHY bits and airtime",
+        "Pr/Pn/Pi/SNR",
+        "application deliveries and TTL",
+        "MAC counters when exposed; otherwise null",
+        "Native get_buffer_size, get_upper_data_pkts_rx, get_sent_pkts, get_recv_pkts"
+      ],
+      "initialization": "Set class defaults before constructor; fair mode, N slots, per-node zero-based slot; schedule start at t=0"
+    },
+    {
+      "id": "tdma_frame",
+      "name": "TDMA Frame",
+      "layer": "mac",
+      "tcl_class": "Module/UW/TDMA_FRAME",
+      "libraries": [
+        "libuwtdma.so",
+        "libuwtdma_frame.so"
+      ],
+      "parameters": [
+        {
+          "path": "network.mac.tdma.frame_duration_s",
+          "label": "Durata frame TDMA",
+          "default": 3,
+          "help": "Durata di un ciclo condiviso. Profilo iniziale tratto dal campione ufficiale TDMA; gli slot sono frame / numero nodi.",
+          "type": "number",
+          "unit": "s",
+          "min": 0.001,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.mac.tdma.guard_time_s",
+          "label": "Guard time",
+          "default": 0.1,
+          "help": "Margine sottratto alla durata dello slot. Deve consentire propagazione e incertezze; la validazione verifica che il frame dati entri nello slot.",
+          "type": "number",
+          "unit": "s",
+          "min": 0,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.mac.tdma.max_packets_per_slot",
+          "label": "Pacchetti per slot",
+          "default": 1,
+          "help": "Numero massimo nativo trasmesso nel proprio slot. Nessun ACK ALOHA nel TDMA.",
+          "type": "integer",
+          "unit": "",
+          "min": 1,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.mac.buffer_packets",
+          "label": "Buffer MAC",
+          "default": 100,
+          "help": "Numero di pacchetti. Nei MAC ALOHA storici la modalita coda deriva dal default del costruttore; il limite impostato successivamente non e attivo.",
+          "type": "integer",
+          "unit": "",
+          "min": 1,
+          "max": 10000,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        }
+      ],
+      "description": "Slot definiti da matrice nativa, generata da assegnazioni esplicite.",
+      "operational": true,
+      "validation": "verified_end_to_end",
+      "reason": "",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "official_example": "library_load_sequence_verified; full official scenario not executed",
+      "bridge_compatible": true,
+      "compatibility": {
+        "interfaces": [
+          "acoustic"
+        ],
+        "phy": [
+          "bpsk_upstream",
+          "bpsk_corrected"
+        ],
+        "routing": [
+          "static",
+          "flooding"
+        ],
+        "transport": "UDP/application envelope"
+      },
+      "node_roles": [
+        "peer"
+      ],
+      "topology_requirements": "2..32 auv_NN; positions updated from HoloOcean at synchronized barriers",
+      "telemetry": [
+        "phy_data_and_control_frames",
+        "PHY bits and airtime",
+        "Pr/Pn/Pi/SNR",
+        "application deliveries and TTL",
+        "MAC counters when exposed; otherwise null",
+        "Native get_buffer_size, get_upper_data_pkts_rx, get_sent_pkts, get_recv_pkts"
+      ],
+      "initialization": "Set inherited defaults; explicit space separator, one-hot owned matrix, 1-based topology index; schedule start at t=0"
+    },
+    {
+      "id": "csma_ca",
+      "name": "CSMA/CA",
+      "layer": "mac",
+      "tcl_class": "Module/UW/CSMA_CA",
+      "libraries": [
+        "libuwcsmaca.so"
+      ],
+      "parameters": [
+        {
+          "path": "network.mac.csma_ca.queue_size",
+          "label": "Coda CSMA/CA",
+          "default": 10,
+          "help": "Capacita nativa queue_size_, impostata prima della creazione.",
+          "type": "integer",
+          "unit": "pacchetti",
+          "min": 1,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.mac.csma_ca.backoff_delta_s",
+          "label": "Passo backoff",
+          "default": 1,
+          "help": "Passo intero del backoff casuale nativo.",
+          "type": "integer",
+          "unit": "s",
+          "min": 1,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.mac.csma_ca.backoff_max",
+          "label": "Backoff massimo",
+          "default": 20,
+          "help": "Limite nativo della finestra di backoff.",
+          "type": "integer",
+          "unit": "",
+          "min": 1,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.mac.csma_ca.cts_wait_s",
+          "label": "Attesa CTS",
+          "default": 10,
+          "help": "Timer dopo RTS per ricevere CTS.",
+          "type": "integer",
+          "unit": "s",
+          "min": 1,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.mac.csma_ca.data_wait_s",
+          "label": "Attesa dati",
+          "default": 10,
+          "help": "Timer dopo CTS per ricevere il frame dati.",
+          "type": "integer",
+          "unit": "s",
+          "min": 1,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.mac.csma_ca.ack_wait_s",
+          "label": "Attesa ACK",
+          "default": 10,
+          "help": "Timer di conferma dati se ACK abilitato.",
+          "type": "integer",
+          "unit": "s",
+          "min": 1,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.mac.ack",
+          "label": "ACK",
+          "default": false,
+          "help": "Conferma MAC quando supportata. No-ACK rimuove il frame alla prima trasmissione; non attende il TTL.",
+          "type": "checkbox",
+          "unit": "",
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        }
+      ],
+      "description": "Handshake RTS/CTS nel protocollo DESERT originale.",
+      "operational": true,
+      "validation": "verified_end_to_end",
+      "reason": "",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "official_example": "library_load_sequence_verified; full official scenario not executed",
+      "bridge_compatible": true,
+      "compatibility": {
+        "interfaces": [
+          "acoustic"
+        ],
+        "phy": [
+          "bpsk_upstream",
+          "bpsk_corrected"
+        ],
+        "routing": [
+          "static"
+        ],
+        "transport": "UDP/application envelope"
+      },
+      "node_roles": [
+        "peer"
+      ],
+      "topology_requirements": "2..32 auv_NN; positions updated from HoloOcean at synchronized barriers",
+      "telemetry": [
+        "phy_data_and_control_frames",
+        "PHY bits and airtime",
+        "Pr/Pn/Pi/SNR",
+        "application deliveries and TTL",
+        "MAC counters when exposed; otherwise null"
+      ],
+      "initialization": "Set native integer bindings before construction; per-node integer bitrate; ACK/noACK then initialize",
+      "compatibility_reason": "Questo MAC richiede routing statico nello stack verificato: il broadcast Flooding non completa il suo handshake. La combinazione viene bloccata prima della simulazione."
+    },
+    {
+      "id": "dacap",
+      "name": "DACAP",
+      "layer": "mac",
+      "tcl_class": "Module/UW/DACAP",
+      "libraries": [
+        "libuwdacap.so"
+      ],
+      "parameters": [
+        {
+          "path": "network.mac.dacap.wait_costant_s",
+          "label": "Attesa costante",
+          "default": 0.2,
+          "help": "Margine nativo DACAP wait_costant.",
+          "type": "number",
+          "unit": "s",
+          "min": 0.001,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.mac.dacap.max_prop_delay_s",
+          "label": "Massima propagazione prevista",
+          "default": 2,
+          "help": "Parametro nativo max_prop_delay che determina i tempi di handshake, non una portata fisica imposta.",
+          "type": "number",
+          "unit": "s",
+          "min": 0.001,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.mac.dacap.delta_d",
+          "label": "Delta distanza",
+          "default": 1500,
+          "help": "delta_D nativo del protocollo DACAP; non e una misura di ranging HoloOcean.",
+          "type": "number",
+          "unit": "m",
+          "min": 0,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.mac.dacap.t_min",
+          "label": "Tempo minimo",
+          "default": 2,
+          "help": "t_min nativo della procedura di accesso DACAP.",
+          "type": "number",
+          "unit": "s",
+          "min": 0,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.mac.dacap.tw_min",
+          "label": "Attesa minima",
+          "default": 0,
+          "help": "T_W_min nativo, distinto dal TTL applicativo.",
+          "type": "number",
+          "unit": "s",
+          "min": 0,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.mac.ack",
+          "label": "ACK",
+          "default": false,
+          "help": "Conferma MAC quando supportata. No-ACK rimuove il frame alla prima trasmissione; non attende il TTL.",
+          "type": "checkbox",
+          "unit": "",
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.mac.max_tx_tries",
+          "label": "Massimo tentativi",
+          "default": 3,
+          "help": "Limite dei tentativi con ACK. Non implica ritrasmissioni nella modalita no-ACK.",
+          "type": "integer",
+          "unit": "",
+          "min": 1,
+          "max": 20,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.mac.buffer_packets",
+          "label": "Buffer MAC",
+          "default": 100,
+          "help": "Numero di pacchetti. Nei MAC ALOHA storici la modalita coda deriva dal default del costruttore; il limite impostato successivamente non e attivo.",
+          "type": "integer",
+          "unit": "",
+          "min": 1,
+          "max": 10000,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        }
+      ],
+      "description": "Accesso con handshake e temporizzazioni per il canale acustico.",
+      "operational": true,
+      "validation": "verified_end_to_end",
+      "reason": "",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "official_example": "library_load_sequence_verified; full official scenario not executed",
+      "bridge_compatible": true,
+      "compatibility": {
+        "interfaces": [
+          "acoustic"
+        ],
+        "phy": [
+          "bpsk_upstream",
+          "bpsk_corrected"
+        ],
+        "routing": [
+          "static"
+        ],
+        "transport": "UDP/application envelope"
+      },
+      "node_roles": [
+        "peer"
+      ],
+      "topology_requirements": "2..32 auv_NN; positions updated from HoloOcean at synchronized barriers",
+      "telemetry": [
+        "phy_data_and_control_frames",
+        "PHY bits and airtime",
+        "Pr/Pn/Pi/SNR",
+        "application deliveries and TTL",
+        "MAC counters when exposed; otherwise null"
+      ],
+      "initialization": "Native bindings without underscores; per-node MAC address, ACK/noACK; no ALOHA initialize",
+      "compatibility_reason": "Questo MAC richiede routing statico nello stack verificato: il broadcast Flooding non completa il suo handshake. La combinazione viene bloccata prima della simulazione."
+    },
+    {
+      "id": "static",
+      "name": "Routing statico",
+      "layer": "routing",
+      "tcl_class": "Module/UW/StaticRouting",
+      "libraries": [
+        "libuwstaticrouting.so"
+      ],
+      "parameters": [],
+      "description": "Destinazioni e next hop espliciti, diretto o multi-hop.",
+      "operational": true,
+      "validation": "verified_end_to_end",
+      "reason": "",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "official_example": "library_load_sequence_verified; full official scenario not executed",
+      "bridge_compatible": true,
+      "compatibility": {
+        "interfaces": [
+          "acoustic"
+        ],
+        "phy": [
+          "bpsk_upstream",
+          "bpsk_corrected"
+        ],
+        "routing": [
+          "static",
+          "flooding"
+        ],
+        "transport": "UDP/application envelope"
+      },
+      "node_roles": [
+        "peer"
+      ],
+      "topology_requirements": "2..32 auv_NN; positions updated from HoloOcean at synchronized barriers",
+      "telemetry": [
+        "phy_data_and_control_frames",
+        "PHY bits and airtime",
+        "Pr/Pn/Pi/SNR",
+        "application deliveries and TTL",
+        "MAC counters when exposed; otherwise null"
+      ],
+      "initialization": "See dedicated trusted Tcl adapter and bridge.tcl"
+    },
+    {
+      "id": "flooding",
+      "name": "Flooding",
+      "layer": "routing",
+      "tcl_class": "Module/UW/FLOODING",
+      "libraries": [
+        "libuwflooding.so"
+      ],
+      "parameters": [
+        {
+          "path": "network.flooding.ttl",
+          "label": "TTL di rete",
+          "default": 10,
+          "help": "Numero di inoltri previsto da Flooding; distinto dalla validita temporale del messaggio applicativo.",
+          "type": "integer",
+          "unit": "",
+          "min": 1,
+          "max": 255,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.flooding.maximum_cache_time_s",
+          "label": "Cache duplicati",
+          "default": 60,
+          "help": "Tempo nativo di conservazione degli identificativi per sopprimere duplicati.",
+          "type": "number",
+          "unit": "s",
+          "min": 0.001,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        },
+        {
+          "path": "network.flooding.optimize",
+          "label": "Soppressione duplicati",
+          "default": true,
+          "help": "Ottimizzazione nativa di Flooding: evita gli inoltri ripetuti secondo la cache DESERT.",
+          "type": "checkbox",
+          "unit": "",
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        }
+      ],
+      "description": "Inoltro broadcast reale DESERT per una destinazione applicativa unicast; TTL di rete e cache nativi.",
+      "operational": true,
+      "validation": "verified_end_to_end",
+      "reason": "",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "official_example": "library_load_sequence_verified; full official scenario not executed",
+      "bridge_compatible": true,
+      "compatibility": {
+        "interfaces": [
+          "acoustic"
+        ],
+        "phy": [
+          "bpsk_upstream",
+          "bpsk_corrected"
+        ],
+        "routing": [
+          "static",
+          "flooding"
+        ],
+        "transport": "UDP/application envelope",
+        "mac": [
+          "aloha",
+          "csma_aloha",
+          "tdma",
+          "tdma_frame"
+        ]
+      },
+      "node_roles": [
+        "peer"
+      ],
+      "topology_requirements": "2..32 auv_NN; positions updated from HoloOcean at synchronized barriers",
+      "telemetry": [
+        "phy_data_and_control_frames",
+        "PHY bits and airtime",
+        "Pr/Pn/Pi/SNR",
+        "application deliveries and TTL",
+        "MAC counters when exposed; otherwise null"
+      ],
+      "initialization": "Native addr/TTL/cache/optimize; no static addRoute"
+    },
+    {
+      "id": "bpsk_upstream",
+      "name": "BPSK upstream originale",
+      "layer": "phy",
+      "tcl_class": "Module/MPhy/BPSK/Underwater/HOLO",
+      "libraries": [
+        "libUwmStd.so",
+        "libmphy.so"
+      ],
+      "parameters": [
+        {
+          "path": "network.acoustic.bitrate_bps",
+          "label": "Bitrate",
+          "default": 4800,
+          "help": "Bit al secondo usati dal PHY per la durata del frame. La BER BPSK usa SNR e penalita senza una conversione Eb/N0 aggiuntiva.",
+          "type": "number",
+          "unit": "bit/s",
+          "min": 0.001,
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.acoustic.tx_power_db",
+          "label": "Potenza acustica",
+          "default": 135,
+          "help": "Livello SPL riferito a 1 microPa. Non e potenza elettrica, dBm o dBW. Il PHY usa 10^(SPL/10).",
+          "type": "number",
+          "unit": "dB SPL",
+          "min": 0,
+          "max": 200,
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.acoustic.frequency_hz",
+          "label": "Frequenza centrale",
+          "default": 25000,
+          "help": "Centro della maschera rettangolare. Influenza Thorp e rumore ambientale.",
+          "type": "number",
+          "unit": "Hz",
+          "min": 0.001,
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.acoustic.bandwidth_hz",
+          "label": "Larghezza di banda",
+          "default": 5000,
+          "help": "Banda della maschera. Il modello moltiplica per la densita di rumore al centro, assunta piatta.",
+          "type": "number",
+          "unit": "Hz",
+          "min": 0.001,
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.acoustic.spreading",
+          "label": "Spreading geometrico",
+          "default": 1.75,
+          "help": "Esponente k nel termine 10 k log10(distanza in metri). Default nativo 1.75.",
+          "type": "number",
+          "unit": "",
+          "min": 0.001,
+          "max": 3,
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.acoustic.shipping",
+          "label": "Traffico navale",
+          "default": 0.5,
+          "help": "Fattore shipping del rumore DESERT tra 0 e 1; non genera altri pacchetti in rete.",
+          "type": "number",
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.acoustic.wind_speed_mps",
+          "label": "Velocita del vento",
+          "default": 0,
+          "help": "Parametro del rumore ambientale. Non modifica il movimento dei droni HoloOcean.",
+          "type": "number",
+          "unit": "m/s",
+          "min": 0,
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.acoustic.sound_speed_mps",
+          "label": "Velocita del suono",
+          "default": 1500,
+          "help": "Valore positivo di propSpeed_ del canale: ritardo = distanza / velocita. Unico valore per il canale condiviso.",
+          "type": "number",
+          "unit": "m/s",
+          "min": 0.001,
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.acoustic.rx_snr_penalty_db",
+          "label": "Penalita SNR ricevitore",
+          "default": -10,
+          "help": "Somma in dB prima della BER. Il valore nativo -10 riduce gamma di dieci volte. Lo SNR osservato rimane grezzo.",
+          "type": "number",
+          "unit": "dB",
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.acoustic.acquisition_threshold_db",
+          "label": "Soglia di acquisizione",
+          "default": 0,
+          "help": "La ricezione deve superare strettamente questa soglia SNR grezza per sincronizzarsi.",
+          "type": "number",
+          "unit": "dB",
+          "default_origin": "bridge historical profile"
+        }
+      ],
+      "description": "Modello storico invariato. Il ramo interferenza puo ritestare il rumore con interferenza zero.",
+      "operational": true,
+      "validation": "verified_end_to_end",
+      "reason": "",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "official_example": "library_load_sequence_verified; full official scenario not executed",
+      "bridge_compatible": true,
+      "compatibility": {
+        "interfaces": [
+          "acoustic"
+        ],
+        "phy": [
+          "bpsk_upstream",
+          "bpsk_corrected"
+        ],
+        "routing": [
+          "static",
+          "flooding"
+        ],
+        "transport": "UDP/application envelope"
+      },
+      "node_roles": [
+        "peer"
+      ],
+      "topology_requirements": "2..32 auv_NN; positions updated from HoloOcean at synchronized barriers",
+      "telemetry": [
+        "phy_data_and_control_frames",
+        "PHY bits and airtime",
+        "Pr/Pn/Pi/SNR",
+        "application deliveries and TTL",
+        "MAC counters when exposed; otherwise null"
+      ],
+      "initialization": "See dedicated trusted Tcl adapter and bridge.tcl"
+    },
+    {
+      "id": "bpsk_corrected",
+      "name": "BPSK corretto",
+      "layer": "phy",
+      "tcl_class": "Module/MPhy/BPSK/Underwater/HOLO/Corrected",
+      "libraries": [
+        "libUwmStd.so",
+        "libmphy.so"
+      ],
+      "parameters": [
+        {
+          "path": "network.acoustic.bitrate_bps",
+          "label": "Bitrate",
+          "default": 4800,
+          "help": "Bit al secondo usati dal PHY per la durata del frame. La BER BPSK usa SNR e penalita senza una conversione Eb/N0 aggiuntiva.",
+          "type": "number",
+          "unit": "bit/s",
+          "min": 0.001,
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.acoustic.tx_power_db",
+          "label": "Potenza acustica",
+          "default": 135,
+          "help": "Livello SPL riferito a 1 microPa. Non e potenza elettrica, dBm o dBW. Il PHY usa 10^(SPL/10).",
+          "type": "number",
+          "unit": "dB SPL",
+          "min": 0,
+          "max": 200,
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.acoustic.frequency_hz",
+          "label": "Frequenza centrale",
+          "default": 25000,
+          "help": "Centro della maschera rettangolare. Influenza Thorp e rumore ambientale.",
+          "type": "number",
+          "unit": "Hz",
+          "min": 0.001,
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.acoustic.bandwidth_hz",
+          "label": "Larghezza di banda",
+          "default": 5000,
+          "help": "Banda della maschera. Il modello moltiplica per la densita di rumore al centro, assunta piatta.",
+          "type": "number",
+          "unit": "Hz",
+          "min": 0.001,
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.acoustic.spreading",
+          "label": "Spreading geometrico",
+          "default": 1.75,
+          "help": "Esponente k nel termine 10 k log10(distanza in metri). Default nativo 1.75.",
+          "type": "number",
+          "unit": "",
+          "min": 0.001,
+          "max": 3,
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.acoustic.shipping",
+          "label": "Traffico navale",
+          "default": 0.5,
+          "help": "Fattore shipping del rumore DESERT tra 0 e 1; non genera altri pacchetti in rete.",
+          "type": "number",
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.acoustic.wind_speed_mps",
+          "label": "Velocita del vento",
+          "default": 0,
+          "help": "Parametro del rumore ambientale. Non modifica il movimento dei droni HoloOcean.",
+          "type": "number",
+          "unit": "m/s",
+          "min": 0,
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.acoustic.sound_speed_mps",
+          "label": "Velocita del suono",
+          "default": 1500,
+          "help": "Valore positivo di propSpeed_ del canale: ritardo = distanza / velocita. Unico valore per il canale condiviso.",
+          "type": "number",
+          "unit": "m/s",
+          "min": 0.001,
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.acoustic.rx_snr_penalty_db",
+          "label": "Penalita SNR ricevitore",
+          "default": -10,
+          "help": "Somma in dB prima della BER. Il valore nativo -10 riduce gamma di dieci volte. Lo SNR osservato rimane grezzo.",
+          "type": "number",
+          "unit": "dB",
+          "default_origin": "bridge historical profile"
+        },
+        {
+          "path": "network.acoustic.acquisition_threshold_db",
+          "label": "Soglia di acquisizione",
+          "default": 0,
+          "help": "La ricezione deve superare strettamente questa soglia SNR grezza per sincronizzarsi.",
+          "type": "number",
+          "unit": "dB",
+          "default_origin": "bridge historical profile"
+        }
+      ],
+      "description": "Patch separata conditional-bpsk-v1: rumore una volta, rischio condizionato per interferenza reale.",
+      "operational": true,
+      "validation": "verified_end_to_end",
+      "reason": "",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "official_example": "project extension; analytical and native tests plus real HoloOcean verified",
+      "bridge_compatible": true,
+      "compatibility": {
+        "interfaces": [
+          "acoustic"
+        ],
+        "phy": [
+          "bpsk_upstream",
+          "bpsk_corrected"
+        ],
+        "routing": [
+          "static",
+          "flooding"
+        ],
+        "transport": "UDP/application envelope"
+      },
+      "node_roles": [
+        "peer"
+      ],
+      "topology_requirements": "2..32 auv_NN; positions updated from HoloOcean at synchronized barriers",
+      "telemetry": [
+        "phy_data_and_control_frames",
+        "PHY bits and airtime",
+        "Pr/Pn/Pi/SNR",
+        "application deliveries and TTL",
+        "MAC counters when exposed; otherwise null"
+      ],
+      "initialization": "See dedicated trusted Tcl adapter and bridge.tcl",
+      "experimental": true
+    },
+    {
+      "id": "polling",
+      "name": "Polling",
+      "layer": "mac",
+      "description": "Richiede ruoli coordinatore/nodi, formati e procedure specifici; non integrato nel bridge.",
+      "reason": "Richiede ruoli coordinatore/nodi, formati e procedure specifici; non integrato nel bridge.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "bridge_compatible": false,
+      "parameters": [],
+      "libraries": [
+        "libuwpolling.so"
+      ],
+      "tcl_classes": [
+        "Module/UW/POLLING/SINK",
+        "Module/UW/POLLING/AUV",
+        "Module/UW/POLLING/NODE"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/data_link/uwpolling",
+      "official_examples": [
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_polling_backoff.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwpolling.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/EvoLogics/S2C_uwpolling_sample.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/polling_ahoi/uw_node.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/polling_ahoi/auv.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/polling_ahoi/sink.tcl"
+      ],
+      "official_example": "load sequence only; scheduler run not verified"
+    },
+    {
+      "id": "t_lohi",
+      "name": "T-LOHI",
+      "layer": "mac",
+      "description": "Richiede gestione toni e controllo di accesso dedicato; non verificato con il PHY del bridge.",
+      "reason": "Richiede gestione toni e controllo di accesso dedicato; non verificato con il PHY del bridge.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": false,
+      "bridge_compatible": false,
+      "parameters": [],
+      "libraries": [
+        "libuwtlohi.so",
+        "libuwtlohiTracer.so"
+      ],
+      "tcl_classes": [
+        "Module/UW/TLOHI",
+        "MInterference/MIV/WKUP",
+        "Module/MPhy/Underwater/WKUP"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/data_link/uw-t-lohi",
+      "official_examples": [
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwtlohi.tcl"
+      ],
+      "official_example": "load sequence only; scheduler run not verified"
+    },
+    {
+      "id": "tokenbus",
+      "name": "TokenBus",
+      "layer": "mac",
+      "description": "Richiede topologia e gestione token dedicate; non integrato.",
+      "reason": "Richiede topologia e gestione token dedicate; non integrato.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "bridge_compatible": false,
+      "parameters": [],
+      "libraries": [
+        "libuwtokenbus.so"
+      ],
+      "tcl_classes": [
+        "Module/UW/TOKENBUS"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/data_link/uwtokenbus",
+      "official_examples": [
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ranging/ranging_tdoa.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ranging/ranging_tokenbus.tcl"
+      ],
+      "official_example": "load sequence only; scheduler run not verified"
+    },
+    {
+      "id": "cs_burst",
+      "name": "CS-Burst",
+      "layer": "mac",
+      "description": "Richiede inizializzazioni e telemetria di burst specifiche; non integrato.",
+      "reason": "Richiede inizializzazioni e telemetria di burst specifiche; non integrato.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "bridge_compatible": false,
+      "parameters": [],
+      "libraries": [
+        "libuwcsburst.so"
+      ],
+      "tcl_classes": [
+        "Module/UW/CSBURST"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/data_link/uw-cs-burst",
+      "official_examples": [
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_csburst.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/EvoLogics/S2C_uwcsburst.tcl"
+      ],
+      "official_example": "load sequence only; scheduler run not verified"
+    },
+    {
+      "id": "aloha_q",
+      "name": "ALOHA-Q",
+      "layer": "mac",
+      "description": "Stato e aggiornamenti apprendimento non integrati nel bridge.",
+      "reason": "Stato e aggiornamenti apprendimento non integrati nel bridge.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "bridge_compatible": false,
+      "parameters": [],
+      "libraries": [
+        "libuwalohaq.so"
+      ],
+      "tcl_classes": [
+        "Module/UW/ALOHAQ_NODE",
+        "Module/UW/ALOHAQ_SINK"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/data_link/uw-aloha-q",
+      "official_examples": [
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwalohaq.tcl"
+      ],
+      "official_example": "load sequence only; scheduler run not verified"
+    },
+    {
+      "id": "aloha_q_sync",
+      "name": "ALOHA-Q Sync",
+      "layer": "mac",
+      "description": "Sincronizzazione e apprendimento non integrati.",
+      "reason": "Sincronizzazione e apprendimento non integrati.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "bridge_compatible": false,
+      "parameters": [],
+      "libraries": [
+        "libuwalohaqsync.so"
+      ],
+      "tcl_classes": [
+        "Module/UW/ALOHAQ_SYNC_NODE",
+        "Module/UW/ALOHAQ_SYNC_SINK"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/data_link/uw-aloha-q-sync",
+      "official_examples": [
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwalohaq_sync.tcl"
+      ],
+      "official_example": "load sequence only; scheduler run not verified"
+    },
+    {
+      "id": "ufetch",
+      "name": "UFetch",
+      "layer": "mac",
+      "description": "Caricamento/ruoli e dipendenze richiedono adapter specifico; audit documenta i vincoli del linker.",
+      "reason": "Caricamento/ruoli e dipendenze richiedono adapter specifico; audit documenta i vincoli del linker.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": false,
+      "bridge_compatible": false,
+      "parameters": [],
+      "libraries": [
+        "libuwufetch.so"
+      ],
+      "tcl_classes": [
+        "Module/UW/UFETCH/AUV",
+        "Module/UW/UFETCH/NODE",
+        "Module/UW/UFETCH/AUV"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/data_link/uwUFetch",
+      "official_examples": [],
+      "official_example": "load sequence only; scheduler run not verified"
+    },
+    {
+      "id": "sun",
+      "name": "SUN",
+      "layer": "routing",
+      "description": "Ruoli sink/nodo e discovery richiedono inizializzazione specifica; costruttore nodo non configurato va in SIGSEGV.",
+      "reason": "Ruoli sink/nodo e discovery richiedono inizializzazione specifica; costruttore nodo non configurato va in SIGSEGV.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "bridge_compatible": false,
+      "parameters": [],
+      "libraries": [
+        "libsun.so"
+      ],
+      "tcl_classes": [
+        "Module/UW/SUNSink",
+        "Module/UW/SUNNode"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/network/uwsun",
+      "official_examples": [
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/Network/test_uwsun.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/mobility/test_uwgmposition.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/mobility/test_uwdriftposition.tcl"
+      ],
+      "official_example": "load sequence only; scheduler run not verified"
+    },
+    {
+      "id": "icrp",
+      "name": "ICRP",
+      "layer": "routing",
+      "description": "Il caricamento testato fallisce per UWIP_CLMSG_SEND_ADDR: simbolo presente ma non esportato dal caricamento RTLD_LOCAL.",
+      "reason": "Il caricamento testato fallisce per UWIP_CLMSG_SEND_ADDR: simbolo presente ma non esportato dal caricamento RTLD_LOCAL.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": false,
+      "bridge_compatible": false,
+      "parameters": [],
+      "libraries": [
+        "libuwicrp.so"
+      ],
+      "tcl_classes": [
+        "Module/UW/ICRPSink",
+        "Module/UW/ICRPNode"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/network/uwicrp",
+      "official_examples": [],
+      "official_example": "load sequence only; scheduler run not verified"
+    },
+    {
+      "id": "position_based",
+      "name": "Position-Based Routing",
+      "layer": "routing",
+      "description": "Classe Module/UW/PosBasedRt caricabile, ma nessuna distribuzione di posizione ammessa dal protocollo ancora integrata; non fornire ground truth globale.",
+      "reason": "Classe Module/UW/PosBasedRt caricabile, ma nessuna distribuzione di posizione ammessa dal protocollo ancora integrata; non fornire ground truth globale.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "bridge_compatible": false,
+      "parameters": [],
+      "libraries": [
+        "libuwposbasedrt.so"
+      ],
+      "tcl_classes": [
+        "Module/UW/PosBasedRt/ROV",
+        "Module/UW/PosBasedRt"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/network/uwPositionBasedRouting",
+      "official_examples": [
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/test_uwmulti_traffic/test_uwmulti_traffic.tcl"
+      ],
+      "official_example": "library load only; full scheduler example not executed"
+    },
+    {
+      "id": "woss",
+      "name": "WOSS / Bellhop",
+      "layer": "channel",
+      "description": "Librerie e Bellhop installati. SSP campione disponibile; manager, batimetria/sedimenti e transduttori devono essere configurati esplicitamente. Dataset globali esterni assenti; nessun adapter ambientale del bridge ancora verificato.",
+      "reason": "Librerie e Bellhop installati. SSP campione disponibile; manager, batimetria/sedimenti e transduttori devono essere configurati esplicitamente. Dataset globali esterni assenti; nessun adapter ambientale del bridge ancora verificato.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "bridge_compatible": false,
+      "parameters": [],
+      "libraries": [
+        "libWOSS.so",
+        "libWOSSPhy.so"
+      ],
+      "official_example": "official library sequence load verified; Bellhop environmental run not integrated"
+    },
+    {
+      "id": "optical",
+      "name": "Ottico",
+      "layer": "phy",
+      "description": "Modelli e dati campione installati. Orientamento, fascio e trasformazione pose del PHY ottico richiedono adapter e prove geometriche dedicati.",
+      "reason": "Modelli e dati campione installati. Orientamento, fascio e trasformazione pose del PHY ottico richiedono adapter e prove geometriche dedicati.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "bridge_compatible": false,
+      "parameters": [],
+      "libraries": [
+        "libuwoptical_phy.so"
+      ],
+      "tcl_classes": [
+        "Module/UW/OPTICAL/PHY"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/physical/uwoptical_phy",
+      "official_examples": [
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/Channel/Optical/test_uwoptical_prop.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/Channel/Optical/test_uwopticalbeampattern.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/test_uwmultiphy/test_uwmultiphy_ctr_rov.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/test_uwmultiphy/test_uwmultiphycontrol.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/test_uwmulti_traffic/test_uwmulti_traffic.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_with_woss_samples/test_uwmulti_stack_controller_wp.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_with_woss_samples/test_uwmulti_traffic_mobile_tot.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_with_woss_samples/uw_multi_traffic_waypoints/test_uwmulti_traffic_mobile_tot.tcl"
+      ],
+      "official_example": "load sequence only; scheduler run not verified"
+    },
+    {
+      "id": "em",
+      "name": "Elettromagnetico",
+      "layer": "phy",
+      "description": "Librerie installate; serve stack EM con antenna/mezzo e unita diverse da SPL, non intercambiabile con BPSK acustico.",
+      "reason": "Librerie installate; serve stack EM con antenna/mezzo e unita diverse da SPL, non intercambiabile con BPSK acustico.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "bridge_compatible": false,
+      "parameters": [],
+      "libraries": [
+        "libuwem_phy.so"
+      ],
+      "tcl_classes": [
+        "Module/UW/ElectroMagnetic/PHY"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/physical/uwem_phy",
+      "official_examples": [
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/EM/test_uwem_prop_multihop.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/EM/test_uwem_prop.tcl"
+      ],
+      "official_example": "load sequence only; scheduler run not verified"
+    },
+    {
+      "id": "ofdm",
+      "name": "OFDM",
+      "layer": "phy",
+      "description": "Libreria presente; moduli di accesso e framing dedicati non verificati con envelope del bridge.",
+      "reason": "Libreria presente; moduli di accesso e framing dedicati non verificati con envelope del bridge.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "bridge_compatible": false,
+      "parameters": [],
+      "libraries": [
+        "libuwofdmphy.so"
+      ],
+      "tcl_classes": [
+        "Module/UW/OFDM/PHY"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/physical/uwofdmphy",
+      "official_examples": [
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwcbr_smartofdm.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/OFDM/test_ofdmaloha_desert_integration.tcl"
+      ],
+      "official_example": "load sequence only; scheduler run not verified"
+    },
+    {
+      "id": "hmm",
+      "name": "PHY HMM",
+      "layer": "phy",
+      "description": "Modelli richiedono stati/tabelle e PHY specifici, non testati con questo bridge.",
+      "reason": "Modelli richiedono stati/tabelle e PHY specifici, non testati con questo bridge.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "bridge_compatible": false,
+      "parameters": [],
+      "libraries": [
+        "libuwhmmphysical.so"
+      ],
+      "tcl_classes": [
+        "Module/UW/HMMPHYSICAL/MCLINK/EXTENDED",
+        "Module/UW/HMMPHYSICAL/MCLINK",
+        "Module/UW/HMMPHYSICAL"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/physical/uwhmmphysical",
+      "official_examples": [
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwalohaq.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwalohaq_sync.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ranging/ranging_tdma.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ranging/ranging_tokenbus.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/test_uwhmmphy.tcl"
+      ],
+      "official_example": "load sequence only; scheduler run not verified"
+    },
+    {
+      "id": "multi_phy",
+      "name": "Multi-PHY",
+      "layer": "interface",
+      "description": "Moduli di switching upstream presenti; mapping flussi/interfacce e canali separati non ancora implementati. Nessuno switching automatico implicito.",
+      "reason": "Moduli di switching upstream presenti; mapping flussi/interfacce e canali separati non ancora implementati. Nessuno switching automatico implicito.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "bridge_compatible": false,
+      "parameters": [],
+      "libraries": [
+        "libuwmulti_traffic_control.so"
+      ],
+      "tcl_classes": [
+        "Module/UW/MULTI_TRAFFIC_RANGE_CTR",
+        "Module/UW/MULTI_TRAFFIC_CONTROL",
+        "Module/UW/MULTIPHY_CONTROLLER"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Addons/uwmulti_traffic_control",
+      "official_examples": [
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwalohaq.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/test_uwmultiphy/test_uwmultiphycontrol.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/test_uwmulti_traffic/test_uwmulti_traffic.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_with_woss_samples/test_uwmulti_traffic_mobile_tot.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_with_woss_samples/uw_multi_traffic_waypoints/test_uwmulti_traffic_mobile_tot.tcl"
+      ],
+      "official_example": "library load only; full scheduler example not executed"
+    },
+    {
+      "id": "ranging",
+      "name": "Ranging / TDOA",
+      "layer": "application",
+      "description": "Librerie presenti, ma richiedono messaggi, clock e inizializzazioni dedicate. Distanza geometrica non e una misura acustica.",
+      "reason": "Librerie presenti, ma richiedono messaggi, clock e inizializzazioni dedicate. Distanza geometrica non e una misura acustica.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": null,
+      "bridge_compatible": false,
+      "parameters": []
+    },
+    {
+      "id": "hardware",
+      "name": "Modem fisici",
+      "layer": "hardware",
+      "description": "Driver upstream installati, nessun modem rilevato o configurazione hardware verificata; non selezionabile per simulazione.",
+      "reason": "Driver upstream installati, nessun modem rilevato o configurazione hardware verificata; non selezionabile per simulazione.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": null,
+      "bridge_compatible": false,
+      "parameters": [],
+      "driver_installed": true,
+      "hardware_detected": false,
+      "configuration_verified": false
+    },
+    {
+      "id": "native_cbr",
+      "name": "UW/CBR nativo",
+      "layer": "application",
+      "description": "Generatore DESERT installato; non collegato al formato messaggi del bridge. Il generatore applicativo Python rimane distinto.",
+      "reason": "Richiede adapter degli header nativi, identita dei messaggi e metriche di consegna prima dell uso nel bridge.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "bridge_compatible": false,
+      "tcl_classes": [
+        "Module/UW/CBR"
+      ],
+      "libraries": [
+        "libuwcbr.so",
+        "libuwcbrtracer.so"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/application/uwcbr",
+      "official_examples": [
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/Channel/Optical/test_uwoptical_prop.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/Channel/Optical/test_uwopticalbeampattern.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_csburst.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwcbr_smartofdm.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwalohaq.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwalohaq_sync.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwtdma_frame.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_polling_backoff.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwtdma.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwcsmaaloha.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwpolling.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwtlohi.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwdacap.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwjammer.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/logger/test_logger.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ROV/test_uwrov_multi_destination_simple.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ROV/test_uwrov_tdma.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ROV/test_uwrov_tdma_frame_multihop.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ROV/test_uwrov.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/Network/test_uwflooding.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/Network/test_uwsun.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/test_uwmultiphy/test_uwmultiphy_ctr_rov.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/test_uwmultiphy/test_uwmultiphycontrol.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/test_uwmultiphy/test_uwmultiphy_ctr.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/mobility/test_uwgmposition.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/mobility/test_uwdriftposition.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/datamuling_test/multimodal_uwnode.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/datamuling_test/multimodal_onshore.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/datamuling_test/multimodal_sink.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ranging/ranging_tdoa.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ranging/test_uwevologics_uwmoda_tdoa.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ranging/ranging_tdma.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ranging/ranging_tokenbus.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/test_uwmulti_traffic/test_uwmulti_traffic.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/test_uwmodamodem_multihop.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/test_uwphysicalnoise.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/test_uwhermesphy_simple.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/test_uwmodamodem.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/test_uwhmmphy.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/test_uwmodamodemJANUS.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/OFDM/test_ofdmaloha_desert_integration.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/Ahoi/test_uwahoi_phy_simple.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/EvoLogics/S2C_uwcsburst.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/EvoLogics/S2C_uwpolling_sample.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/EvoLogics/test_uwevologics_application_multihop.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/EvoLogics/S2C_uwtdma.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/EM/test_uwem_prop_multihop.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/EM/test_uwem_prop.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/test_uwswarm_control/test_uwswarm.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/Application/test_uwcbr.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/yaml_input_interface/test_uwtdma.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/polling_ahoi/uw_node.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/polling_ahoi/auv.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/polling_ahoi/sink.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_with_woss_samples/test_desert_woss_dbs.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_with_woss_samples/test_uwmulti_stack_controller_wp.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_with_woss_samples/test_csma_aloha_hamburg_port_bathy.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_with_woss_samples/test_desert_woss_no_dbs.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_with_woss_samples/test_woss_waypoints_time_evo.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_with_woss_samples/test_uwmulti_traffic_mobile_tot.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_with_woss_samples/uw_multi_traffic_waypoints/test_uwmulti_traffic_mobile_tot.tcl"
+      ],
+      "official_example": "library load verified; scheduler scenario not executed",
+      "parameters": []
+    },
+    {
+      "id": "native_vbr",
+      "name": "UW/VBR nativo",
+      "layer": "application",
+      "description": "Generatore DESERT installato; non collegato al formato messaggi del bridge. Il generatore applicativo Python rimane distinto.",
+      "reason": "Richiede adapter degli header nativi, identita dei messaggi e metriche di consegna prima dell uso nel bridge.",
+      "operational": false,
+      "validation": "not_integrated",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "bridge_compatible": false,
+      "tcl_classes": [
+        "Module/UW/VBR"
+      ],
+      "libraries": [
+        "libuwvbr.so"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/application/uwvbr",
+      "official_examples": [
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/EvoLogics/S2C_uwcsburst.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/EvoLogics/S2C_uwpolling_sample.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/EvoLogics/S2C_uwtdma.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/Application/test_uwvbr.tcl"
+      ],
+      "official_example": "library load verified; scheduler scenario not executed",
+      "parameters": []
+    }
+  ],
+  "inventory": {
+    "libraries": 116,
+    "classes": 181,
+    "source_modules": 102,
+    "official_examples": 85,
+    "source_commit": "12203f3cdba7d85bac78074d1f2ccfddbfb08021"
+  },
+  "interfaces": [
+    "acoustic"
+  ],
+  "fixed_stack": {
+    "application": "Module/UW/APPLICATION/HOLO",
+    "transport": "Module/UW/UDP",
+    "ip": "Module/UW/IP",
+    "mll": "Module/UW/MLL",
+    "interference": "MInterference/MIV",
+    "channel": "Module/UnderwaterChannel",
+    "propagation": "MPropagation/Underwater",
+    "traffic_source": "Python application injector; network entirely native DESERT",
+    "addressing": "unicast application destinations; native Flooding uses broadcast forwarding, no group multicast API"
+  }
+}

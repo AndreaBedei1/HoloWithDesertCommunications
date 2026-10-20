@@ -3,18 +3,22 @@
 foreach lib {libMiracle.so libMiracleBasicMovement.so libmphy.so libmmac.so libUwmStd.so libuwcsmaaloha.so libuwaloha.so libuwip.so libuwstaticrouting.so libuwmll.so libuwudp.so libuwapplication.so} {
     load $lib
 }
-load /opt/holo/libholobridge.so
 source [lindex $argv 0]
+foreach lib $extra_libraries { load $lib }
+load /opt/holo/libholobridge.so
+source /opt/holo/desert/tcl/modules/mac_${mac_adapter}.tcl
+source /opt/holo/desert/tcl/modules/routing_${routing_adapter}.tcl
+set mac_queue_command getQueueSize
+set mac_stat_commands {}
+prepare_mac
+prepare_routing
 set ns [new Simulator]
 $ns use-Miracle
 global defaultRNG
 for {set i 0} {$i < $seed} {incr i} { $defaultRNG next-substream }
 set trace [open /dev/null w]
 set channel [new Module/UnderwaterChannel]
-set propagation [new MPropagation/Underwater]
-set mask [new MSpectralMask/Rect]
-$mask setFreq $frequency
-$mask setBandwidth $bandwidth
+$channel set propSpeed_ $sound_speed
 Module/MPhy/BPSK set BitRate_ $bitrate
 Module/MPhy/BPSK/Underwater set MaxTxSPL_dB_ $power
 Module/MPhy/BPSK/Underwater set MinTxSPL_dB_ $power
@@ -30,12 +34,23 @@ for {set i 1} {$i <= $count} {incr i} {
     set node($i) [$ns create-M_Node $trace $trace]
     set app($i) [new Module/UW/APPLICATION/HOLO]
     set udp($i) [new Module/UW/UDP]
-    set routing($i) [new Module/UW/StaticRouting]
+    set routing($i) [new $routing_class]
     set ip($i) [new Module/UW/IP]
     set probe($i) [new Module/HoloProbe]
     set mll($i) [new Module/UW/MLL]
-    set mac($i) [new $mac_class]
-    set phy($i) [new Module/MPhy/BPSK/Underwater/HOLO]
+    set mac($i) [create_mac $i]
+    set phy($i) [new $phy_class($i)]
+    set settings $acoustic($i)
+    set propagation($i) [new MPropagation/Underwater]
+    foreach {key binding} {spreading practicalSpreading_ shipping shipping_ wind_speed_mps windspeed_} {
+        $propagation($i) set $binding [dict get $settings $key]
+    }
+    set mask($i) [new MSpectralMask/Rect]
+    $mask($i) setFreq [dict get $settings frequency_hz]
+    $mask($i) setBandwidth [dict get $settings bandwidth_hz]
+    foreach {key binding} {tx_power_db MaxTxSPL_dB_ tx_power_db MinTxSPL_dB_ bitrate_bps BitRate_ rx_snr_penalty_db RxSnrPenalty_dB_ acquisition_threshold_db AcquisitionThreshold_dB_} {
+        $phy($i) set $binding [dict get $settings $key]
+    }
     $phy($i) set node_id_ $i
     set modules [list $app($i) $udp($i) $routing($i) $ip($i) $probe($i) $mll($i) $mac($i) $phy($i)]
     set layer 8
@@ -50,6 +65,7 @@ for {set i 1} {$i <= $count} {incr i} {
     set port [$udp($i) assignPort $app($i)]
     if {$port != 1} { error "Unexpected UDP application port $port" }
     $ip($i) addr $i
+    initialize_routing $i
     $app($i) set node_ID_ $i
     $probe($i) set node_id_ $i
     set position($i) [new Position/BM]
@@ -59,20 +75,13 @@ for {set i 1} {$i <= $count} {incr i} {
     $posdb($i) addpos $i $position($i)
     set interf($i) [new MInterference/MIV]
     $interf($i) set maxinterval_ 1000
-    $phy($i) setPropagation $propagation
-    $phy($i) setSpectralMask $mask
+    $phy($i) setPropagation $propagation($i)
+    $phy($i) setSpectralMask $mask($i)
     $phy($i) setInterference $interf($i)
-    $mac($i) set max_tx_tries_ $max_tries
-    $mac($i) set buffer_pkts_ $buffer_packets
-    $mac($i) set max_payload_ 4096
-    if {$ack} { $mac($i) setAckMode } else { $mac($i) setNoAckMode }
-    $mac($i) initialize
     puts "{\"event\":\"node_info\",\"time\":0,\"node\":$i,\"mac_address\":[$mac($i) addr]}"
 }
-foreach entry $routes {
-    lassign $entry src dst hop
-    $routing($src) addRoute $dst $hop
-}
+configure_routes
+start_macs
 for {set i 1} {$i <= $count} {incr i} {
     for {set j 1} {$j <= $count} {incr j} {
         $mll($i) addentry $j [$mac($j) addr]
@@ -90,11 +99,11 @@ proc nodeid {s} {
 }
 proc observed_counter {module command} {
     if {[catch {$module $command} value]} { return null }
-    if {![string is double -strict $value]} { return null }
+    if {![string is double -strict $value] || [string match -nocase *nan* $value] || [string match -nocase *inf* $value]} { return null }
     return $value
 }
 proc barrier {} {
-    global ns position app phy mac count
+    global ns position app phy mac count mac_queue_command mac_stat_commands
     set now [$ns now]
     puts "{\"event\":\"barrier\",\"time\":$now}"
     flush stdout
@@ -130,8 +139,12 @@ proc barrier {} {
                 }
                 STATS {
                     for {set id 1} {$id <= $count} {incr id} {
-                        set q null
-                        if {![catch {$mac($id) getQueueSize} v]} { set q $v }
+                        set q [observed_counter $mac($id) $mac_queue_command]
+                        set specific {}
+                        foreach {key command} $mac_stat_commands {
+                            lappend specific "\"$key\":[observed_counter $mac($id) $command]"
+                        }
+                        puts "{\"event\":\"mac_specific_stats\",\"time\":$now,\"node\":$id,\"values\":{[join $specific ,]}}"
                         puts "{\"event\":\"stats\",\"time\":$now,\"node\":$id,\"app_sent\":[$app($id) getsentpkts],\"app_received\":[$app($id) getrecvpkts],\"mac_queue\":$q,\"mac_data_tx\":[observed_counter $mac($id) getDataPktsTx],\"mac_data_rx\":[observed_counter $mac($id) getDataPktsRx],\"mac_error_rx\":[observed_counter $mac($id) getErrorPktsRx],\"mac_discarded_tx\":[observed_counter $mac($id) getDiscardedPktsTx],\"phy_noise_errors\":[observed_counter $phy($id) getErrorPktsNoise],\"phy_interference_errors\":[observed_counter $phy($id) getErrorPktsInterf]}"
                     }
                 }

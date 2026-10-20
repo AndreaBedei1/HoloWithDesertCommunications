@@ -21,29 +21,11 @@ def finite(value):
     return format(result, ".15g")
 
 
-def render(config):
-    net = config["network"]
-    acoustic = net["acoustic"]
-    mac = net["mac"]
-    protocols = {"csma_aloha": "Module/UW/CSMA_ALOHA", "aloha": "Module/UW/ALOHA"}
-    ids = {node["id"]: i + 1 for i, node in enumerate(config["nodes"])}
-    if len(ids) < 2 or len(ids) > 32:
-        raise ValueError("2..32 distinct nodes required")
-    values = {"count": len(ids), "seed": int(net["seed"]),
-              "frequency": finite(acoustic["frequency_hz"]),
-              "bandwidth": finite(acoustic["bandwidth_hz"]),
-              "bitrate": finite(acoustic["bitrate_bps"]), "power": finite(acoustic["tx_power_db"]),
-              "mac_class": protocols[mac["protocol"]], "ack": int(bool(mac["ack"])),
-              "max_tries": int(mac["max_tx_tries"]), "buffer_packets": int(mac["buffer_packets"])}
-    lines = ["set %s %s" % (key, value) for key, value in values.items()]
-    routes = []
-    for src, src_id in ids.items():
-        for dst, dst_id in ids.items():
-            if src != dst:
-                hop = net["routes"].get(src, {}).get(dst, dst)
-                routes.append("{%d %d %d}" % (src_id, dst_id, ids[hop]))
-    lines.append("set routes {%s}" % " ".join(routes))
-    return "\n".join(lines) + "\n"
+# The builder is pure stdlib, shared with host-side schema validation.
+try:
+    from holo_desert.resources.docker.stack_builder import render, validate, CATALOG_VERSION, effective_nodes
+except ImportError:
+    from stack_builder import render, validate, CATALOG_VERSION, effective_nodes
 
 
 class Handler(socketserver.StreamRequestHandler):
@@ -59,10 +41,12 @@ class Handler(socketserver.StreamRequestHandler):
             return
         process = None
         try:
-            config = json.loads(first)
+            config = validate(json.loads(first))
             commit = subprocess.check_output(["git", "-C", "/home/DESERT_Underwater", "rev-parse", "HEAD"], text=True).strip()
             self.wfile.write((json.dumps({"event": "engine_info", "time": 0,
-                "desert_release": "4.0.0", "desert_source_commit": commit}) + "\n").encode())
+                "desert_release": "4.0.0", "desert_source_commit": commit,
+                "stack_builder": CATALOG_VERSION, "phy_patch": "conditional-bpsk-v1" if any(n["acoustic"].get("phy")=="bpsk_corrected" for n in effective_nodes(config)) else "upstream-original",
+                "effective_network": config["network"], "effective_nodes": effective_nodes(config)}) + "\n").encode())
             self.wfile.flush()
             with tempfile.TemporaryDirectory(prefix="holo-desert-") as temp:
                 path = os.path.join(temp, "config.tcl")

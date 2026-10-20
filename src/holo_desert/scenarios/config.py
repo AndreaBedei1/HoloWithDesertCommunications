@@ -4,6 +4,7 @@ import math
 from pathlib import Path
 from typing import Literal
 import yaml
+from .network import Acoustic, Mac, Network, NodeCommunication
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 RESOURCE_ROOT = Path(__file__).resolve().parents[1] / "resources"
@@ -13,41 +14,10 @@ class Strict(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
 
-class Acoustic(Strict):
-    bitrate_bps: float = Field(default=4800, gt=0)
-    tx_power_db: float = Field(default=135, ge=0, le=200)
-    frequency_hz: float = Field(default=25000, gt=0)
-    bandwidth_hz: float = Field(default=5000, gt=0)
-    propagation: Literal["underwater"] = "underwater"
-    interference: Literal["miv"] = "miv"
-
-    @model_validator(mode="after")
-    def check_band(self):
-        if self.bandwidth_hz >= 2 * self.frequency_hz:
-            raise ValueError("Acoustic band must stay above zero Hz")
-        return self
-
-
-class Mac(Strict):
-    protocol: Literal["csma_aloha", "aloha"] = "csma_aloha"
-    ack: bool = False
-    max_tx_tries: int = Field(default=3, ge=1, le=20)
-    buffer_packets: int = Field(default=100, ge=1, le=10000)
-
-
-class Network(Strict):
-    backend: Literal["desert"] = "desert"
-    acoustic: Acoustic = Field(default_factory=Acoustic)
-    mac: Mac = Field(default_factory=Mac)
-    routing: Literal["static"] = "static"
-    max_wire_bytes: int = Field(default=4096, ge=256, le=4096)
-    seed: int = Field(default=1, ge=1, le=100000)
-    routes: dict[str, dict[str, str]] = Field(default_factory=dict)
-
-
 class Node(Strict):
     id: str = Field(pattern=r"^auv_[0-9]{2}$")
     position: tuple[float, float, float]
+    communication: NodeCommunication | None = None
     yaw: float = 0
     vehicle: Literal["HoveringAUV"] = "HoveringAUV"
     # Waypoints are commands to HoloOcean's built-in pose controller, not a physics model.
@@ -66,12 +36,24 @@ class Flow(Strict):
     destination: str
     start: float = Field(default=1, ge=0)
     stop: float | None = Field(default=None, gt=0)
+    pattern: Literal['periodic','poisson','burst','events'] = 'periodic'
+    interface: Literal['acoustic'] = 'acoustic'
+    burst_count: int = Field(default=3,ge=1,le=100)
+    burst_interval_s: float = Field(default=.25,gt=0)
+    burst_period_s: float = Field(default=5,gt=0)
+    events: list[float] = Field(default_factory=list)
     interval: float = Field(default=3, gt=0)
     final_interval: float | None = Field(default=None, gt=0)
     payload_bytes: int = Field(default=32, ge=1, le=2048)
     ttl: float = Field(default=20, gt=0)
     reply: bool = False
     message_type: str = "data"
+
+    @model_validator(mode='after')
+    def variable_interval_window(self):
+        if self.final_interval is not None and self.stop is None:
+            raise ValueError('Variable interval requires flow stop')
+        return self
 
 
 class PowerEvent(Strict):
@@ -108,6 +90,8 @@ class Scenario(Strict):
                 raise ValueError("Unknown node in static route")
             if src in routes or src in routes.values():
                 raise ValueError("Static routes cannot route to or through their own source")
+        if self.network.routing != 'static' and self.network.routes:
+            raise ValueError('Static routes cannot be used with Flooding')
         # Unspecified entries are direct routes, exactly as rendered by the backend.
         for src in ids:
             for dst in ids - {src}:
@@ -123,6 +107,8 @@ class Scenario(Strict):
             raise ValueError("Coordination demo requires two nodes")
         if self.coordination and self.flows:
             raise ValueError("Coordination uses heartbeat traffic; additional flows are unsupported")
+        from ..resources.docker.stack_builder import validate
+        validate(self.model_dump())
         return self
 
     @property

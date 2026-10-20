@@ -12,5 +12,5 @@ flags=("-I/opt/holo/desert/extensions" "-I$unpacked/ns-2.34" "-I$unpacked/tcl-8.
   "-I$unpacked/tcl-8.5.19/unix" "-I$unpacked/tclcl-1.20" "-I$unpacked/otcl-1.14")
 for dir in "${dirs[@]}"; do flags+=("-I$dir"); done
 g++ -std=c++11 -shared -fPIC -O2 -Wno-write-strings "${flags[@]}" /opt/holo/desert/extensions/bridge.cc \
-  -L"$build/lib" -Wl,-rpath,"$build/lib" -luwapplication -lUwmStd -lmphy -lMiracle -luwip -luwudp \
+  -L"$build/lib" -Wl,-rpath,"$build/lib" -luwapplication -lUwmStd -lmphy -lMiracle -luwip -luwudp -luwdacap \
   -o /opt/holo/libholobridge.so
