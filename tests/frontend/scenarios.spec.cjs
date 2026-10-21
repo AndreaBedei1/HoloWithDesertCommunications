@@ -17,10 +17,11 @@ test('create three drones, edit positions and waypoints, configure relay, save, 
   const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');await page.locator('#new-scenario').click();
   await page.locator('[data-general="name"]').fill('Rete personale con relay');await page.locator('[data-general="description"]').fill('Tre droni, due tratte e un messaggio da seguire.');await page.locator('[data-general="duration"]').fill('8');
   await page.locator('#editor-next').click();await page.locator('[data-add-node]').click();await expect(page.locator('[data-select-node]')).toHaveCount(3);
-  await page.locator('[data-node="x"]').fill('60');
-  const map=await page.locator('#editor-canvas').boundingBox();const scale=Math.min((map.width-100)/60,(map.height-90)/60),x=map.x+map.width/2+30*scale,y=map.y+map.height/2;
-  await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+18,y-10,{steps:4});await page.mouse.up();
-  await expect(page.locator('[data-node="x"]')).not.toHaveValue('60');await page.locator('[data-add-waypoint]').click();await expect(page.locator('[data-waypoint]')).toHaveCount(1);
+  // The third drone sits midway between the two original drones, at the preview centre.
+  await page.locator('[data-node="x"]').fill('15');
+  const canvas=page.locator('#editor-canvas');await canvas.scrollIntoViewIfNeeded();const map=await canvas.boundingBox();
+  await canvas.hover();await page.mouse.down();await page.mouse.move(map.x+map.width/2+18,map.y+map.height/2-10,{steps:4});await page.mouse.up();
+  await expect(page.locator('[data-node="x"]')).not.toHaveValue('15');await page.locator('[data-add-waypoint]').click();await expect(page.locator('[data-waypoint]')).toHaveCount(1);
   await page.locator('#editor-next').click();await page.locator('.flow-card [data-field="destination"]').selectOption('auv_03');await page.locator('#editor-next').click();
   await page.locator('[data-network-root] summary').filter({hasText:'Impostazioni avanzate'}).click();await page.locator('[data-add-route]').click();
   await page.locator('[data-routes] [data-field="destination"]').selectOption('auv_03');await page.locator('[data-routes] [data-field="hop"]').selectOption('auv_02');await page.locator('#editor-next').click();await page.locator('#editor-save').click();await expect(page.locator('#editor')).toBeHidden();
@@ -40,4 +41,14 @@ test('duplicate E03 preserves original motion, import YAML and remove a node wit
   const yaml=await (await request.get('/api/scenarios/'+copy.id+'/yaml')).text();await page.locator('#import-file').setInputFiles({name:'scenario.yaml',mimeType:'application/yaml',buffer:Buffer.from(yaml)});await page.locator('[data-general="name"]').fill('Scenario importato');await page.locator('[data-step="4"]').click();await page.locator('#editor-save').click();await expect(page.locator('#editor')).toBeHidden();await expect(page.locator('#scenario-title')).toHaveText('Scenario importato');
   await page.locator('#edit-scenario').click();await page.locator('[data-step="1"]').click();await page.locator('[data-remove-node]').click();await page.locator('#confirm-accept').click();await page.locator('[data-add-node]').click();await page.locator('[data-step="2"]').click();await expect(page.locator('.flow-card')).toHaveCount(0);await page.locator('[data-step="4"]').click();await page.locator('#editor-save').click();await expect(page.locator('#editor')).toBeHidden();await expect(page.locator('#scenario-title')).toHaveText('Scenario importato');
   expect((await (await request.get('/api/scenarios/e03_mobility')).json()).nodes).toEqual(original.nodes);
+});
+
+test('startup keeps editor actions unavailable until the initial state is loaded',async({page})=>{
+  let release,stateRequested;const pending=new Promise(resolve=>release=resolve),requested=new Promise(resolve=>stateRequested=resolve);let first=true;
+  await page.route('**/api/state',async route=>{if(!first)return route.continue();first=false;const response=await route.fetch();stateRequested();await pending;await route.fulfill({response})});
+  try{
+    await page.goto('/');await requested;
+    const create=page.locator('#new-scenario');await create.focus();await expect(create).not.toBeFocused();
+    release();await create.click();await page.locator('[data-general="name"]').fill('Bozza dopo il caricamento');await expect(page.locator('#editor')).toBeVisible();
+  }finally{release()}
 });
