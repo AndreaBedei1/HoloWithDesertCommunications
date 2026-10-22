@@ -204,8 +204,11 @@ start: its content fingerprint must match the installed package
 * `receive() -> list[Delivery]`; `on_receive(callback)` (usable as decorator)
   and `remove_callback(callback)`. A node with callbacks does not fill its inbox.
 * `update_pose(pose)`, `pose` (own pose only).
-* `set_tx_power(value)`: sent immediately and applied by DESERT at the current
-  barrier time, before the next step.
+* `set_tx_power(value, interface=None)`: sent immediately and applied by
+  DESERT at the current barrier time, before the next step, in the medium's
+  unit (dB re 1 µPa, W optical, dBm EM). With multi-PHY, `interface` names the
+  interface to change (default: the node's first) and the unit is its medium's;
+  power events take the same `interface` field.
 * `select_interface(name)`: multi-PHY with `policy: manual` only.
 
 `Delivery` has `message` (`source`, `destination`, `payload`, `message_type`,

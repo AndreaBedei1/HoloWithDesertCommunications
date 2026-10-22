@@ -74,7 +74,7 @@ def test_orchestrator_applies_power_events_in_the_medium_unit():
         time=0.0;versions={};pause_supported=True;initial_events=[]
         def start(self,scenario):pass
         def update_node_position(self,*args):pass
-        def set_power(self,node,value):applied.append((node,value))
+        def set_power(self,node,value,interface=None):applied.append((node,value))
         def request_stats(self):pass
         def advance(self,target):
             self.time=target

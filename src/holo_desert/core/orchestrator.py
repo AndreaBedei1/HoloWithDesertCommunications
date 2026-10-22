@@ -112,7 +112,7 @@ class SimulationOrchestrator:
                     self.backend.update_node_position(node, self.converter.to_network(pose), now)
                 while power_events and power_events[0].time <= now + 1e-9:
                     event = power_events.pop(0)
-                    self.backend.set_power(event.node, event.value)
+                    self.backend.set_power(event.node, event.value, event.interface)
                 for node in self.scenario.nodes:
                     application = self.applications[node.id]
                     previous = getattr(application, "state", None)

@@ -53,10 +53,11 @@ summary of verified capabilities is in [capabilities.md](capabilities.md).
 ## Protocol stack
 
 - Only one network interface per node, except the experimental multi-PHY
-  stack (2–3 acoustic BPSK interfaces, CSMA-ALOHA without ACK, static routing).
-  Flows cannot choose an interface; `POWER` changes only the first interface.
-  Mixed acoustic/optical stacks are supported by DESERT but not by this bridge
-  (blockers in [capabilities.md](capabilities.md#mixed-acousticoptical-stacks)).
+  stack (2–3 acoustic BPSK or optical interfaces, CSMA-ALOHA without ACK,
+  static routing). Flows cannot choose an interface. Optical interfaces need
+  nodes within 0–20 m depth, automatic switching needs the acoustic interfaces
+  before the optical ones, and `STATS` PHY counters cover each node's first
+  interface only ([capabilities.md](capabilities.md#mixed-acousticoptical-stacks)).
 - No per-node MAC or routing selection, no MAC priority (application priority
   is metadata), no application multicast or group API. Applications send
   unicast; Flooding uses broadcast forwarding internally.

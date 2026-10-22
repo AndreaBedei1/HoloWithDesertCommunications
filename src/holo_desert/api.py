@@ -150,9 +150,13 @@ class NetworkNode:
         """This node's own pose as last supplied to the network."""
         return self._session._poses[self.id]
 
-    def set_tx_power(self, value: float) -> None:
-        """Transmit power in the medium's native unit (dB re uPa SPL, W optical, dBm EM)."""
-        self._session._command(lambda backend: backend.set_power(self.id, value))
+    def set_tx_power(self, value: float, interface: str | None = None) -> None:
+        """Transmit power in the medium's native unit (dB re uPa SPL, W optical, dBm EM).
+
+        With multi-PHY, ``interface`` names the interface to change (default: the node's
+        first one) and the unit is that interface's medium.
+        """
+        self._session._command(lambda backend: backend.set_power(self.id, value, interface))
 
     def select_interface(self, interface: str) -> None:
         """Choose the active interface; requires a multi-PHY stack with ``policy: manual``."""

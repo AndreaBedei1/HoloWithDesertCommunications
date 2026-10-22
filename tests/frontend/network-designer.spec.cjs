@@ -142,6 +142,22 @@ test('real catalogue: the initial interface is kept on every drone and threshold
   await form.locator('[data-threshold][data-from="long"] input').fill('2e12');
   const saved=await applied(page);expect(saved.network.multiphy.initial_interface).toBe('short');
 });
+test('real catalogue: an optical interface has its own fields, shared optical parameters and thresholds in W',async({page})=>{
+  const form=await realDesigner(page);await form.locator('summary').filter({hasText:'Interfacce multiple'}).click();await form.locator('[data-multiphy]').check();
+  const medium=k=>form.locator('[data-mp-row]').nth(k).locator('[data-mp-medium]');
+  await medium(0).selectOption('optical');
+  await expect(form.locator('[data-path="network.multiphy.policy"] option[value="received_power"]')).toContainText('devono seguire quelle acustiche');
+  await medium(0).selectOption('acoustic');await medium(1).selectOption('optical');
+  const row=form.locator('[data-mp-row]').nth(1);
+  await expect(row.locator('[data-mp-field="tx_power_w"]')).toHaveCount(1);await expect(row.locator('[data-mp-field="tx_power_db"]')).toHaveCount(0);
+  await expect(form.locator('[data-path="network.optical.attenuation_per_m"]')).toHaveValue('0.043');
+  await row.locator('[data-mp-field="tx_power_w"]').fill('5');
+  await form.locator('[data-path="network.multiphy.policy"]').selectOption('received_power');
+  await expect(form.locator('[data-threshold][data-from="short"] td').last()).toHaveText('W');
+  const saved=await applied(page);
+  expect(saved.network.multiphy.interfaces[1]).toMatchObject({id:'short',medium:'optical',optical:{tx_power_w:5}});
+  expect(saved.network.multiphy.thresholds).toContainEqual({from_interface:'short',to_interface:'long',power_linear:3e-8});
+});
 test('real catalogue: native CBR/VBR generators expose native timers and disable Python-only options',async({page})=>{
   const form=await realDesigner(page);await form.locator('summary').filter({hasText:'Flussi applicativi'}).click();const flow=form.locator('.flow-card').first();
   await expect(flow.locator('[data-field="generator"] option',{hasText:'VBR'})).toContainText('non genera risposte');

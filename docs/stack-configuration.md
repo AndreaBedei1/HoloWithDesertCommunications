@@ -213,8 +213,9 @@ power_events:
   - {time: 16, node: auv_01, tx_power_dbm: 20}
 ```
 
-With multi-PHY the `POWER` command changes the first interface of the node
-only; per-interface power is set in the interface definition.
+With multi-PHY a power event may name an `interface`; without one, the node's
+first interface changes. The value uses that interface's unit: `tx_power_db`
+for an acoustic interface, `tx_power_w` for an optical one.
 
 `coordination: true` replaces flows with the built-in heartbeat demo (exactly
 two nodes, no other flows): the leader sends a 5-byte heartbeat every second
@@ -234,7 +235,7 @@ message freshness, not a safety system.
 | `routes` | `{}` | static routes `{source: {destination: next_hop}}` |
 | `flooding`, `sun` | defaults | routing parameters |
 | `woss`, `optical`, `em` | defaults | used only when selected |
-| `multiphy` | `null` | 2–3 acoustic interfaces per node |
+| `multiphy` | `null` | 2–3 interfaces per node, acoustic or optical |
 | `max_wire_bytes` | `4096` | 256–4096; limit on the serialised application envelope |
 | `seed` | `1` | 1–100000; NS-2 RNG substream index (the bridge advances `defaultRNG` by `seed` substreams, as `rngstream` in the official samples). Also seeds the Python Poisson generators and the WOSS random generator. Recorded as `rng_substream` |
 | `profile_id` | `null` | provenance of a communication profile; not used by the engine |
@@ -925,32 +926,54 @@ flows:
 
 Telemetry separates optical TX/RX power in W and noise in A² from EM TX power
 in dBm and RX power in mW (`power_unit`, `received_power_unit`, `noise_unit`
-fields). Optical/EM PHY events carry no per-packet `outcome`; application `rx`
-events establish delivery.
+fields). Optical PHY events carry the native reception outcome: `rx_start`
+`synchronized`, `transmitter_busy`, `receiver_busy_overlap`,
+`wrong_modulation` or `below_acquisition_threshold`, and `rx_end` `decoded`,
+`interference_error` (nonzero interference power) or `not_synchronized`; the
+optical PHY draws no bit errors. EM events carry the `rx_start` outcome only:
+the EM reception draws its packet error from the shared random generator,
+which an observer must not consume, so application `rx` events establish EM
+delivery. Both carry `interface_index` (0 outside multi-PHY).
 
 ## Multi-PHY and interface switching
 
 Status: experimental, verified natively, in HoloOcean end-to-end runs (manual
-and received-power controller) and in the Network Designer.
+and received-power controller) and in the Network Designer. Mixed
+acoustic/optical interfaces: see the status in
+[capabilities.md](capabilities.md#mixed-acousticoptical-stacks).
 
-`network.multiphy` gives every node 2–3 acoustic BPSK interfaces, each with its
-own PHY, propagation, spectral mask and MIV object on the shared channel, under
-DESERT's multi-stack controller (`libuwmulti_stack_controller.so`). One MAC
-(CSMA-ALOHA without ACK) and static routing are shared above the controller.
+`network.multiphy` gives every node 2–3 interfaces under DESERT's multi-stack
+controller (`libuwmulti_stack_controller.so`); one MAC (CSMA-ALOHA without
+ACK) and static routing are shared above the controller. Each interface has
+its own PHY, propagation, spectral mask and MIV object:
+
+- **acoustic** (default): analytic BPSK (`bpsk_upstream` or `bpsk_corrected`)
+  with `MPropagation/Underwater` on the shared `Module/UnderwaterChannel`;
+- **optical**: `Module/UW/OPTICAL/PHY/HOLO` with
+  `Module/UW/OPTICAL/Propagation/HOLO` and the pinned noise LUT, as for
+  `medium: optical`, on one `Module/UW/Optical/Channel` shared by all optical
+  interfaces and separate from the acoustic channel.
 
 | Field | Default | Meaning |
 |---|---|---|
-| `interfaces` | required | 2–3 items `{id, acoustic}`; `id` matches `[a-z][a-z0-9_]{0,15}`; `acoustic` overrides as in [Per-node overrides](#per-node-overrides) |
+| `interfaces` | required | 2–3 items `{id, medium, acoustic \| optical}`; `id` matches `[a-z][a-z0-9_]{0,15}`; `medium` is `acoustic` (default) or `optical`; `acoustic` overrides as in [Per-node overrides](#per-node-overrides); `optical` overrides `tx_power_w`, `bitrate_bps`, `frequency_hz`, `bandwidth_hz`, `attenuation_per_m`, `acquisition_threshold_db` on top of `network.optical` |
 | `initial_interface` | required | must exist and be available on every node |
 | `policy` | `manual` | `manual` (`Module/UW/MULTI_STACK_CONTROLLER_PHY`) or `received_power` (`…_MASTER` on the master node, `…_SLAVE` elsewhere) |
 | `master` | `auv_01` | master node for `received_power` |
 | `thresholds` | `[]` | `{from_interface, to_interface, power_linear}`; only for `received_power`, between adjacent interfaces in list order, both directions required; `power_linear > 0` |
 | `alpha` | `0.5` | 0..1, `setAlpha` on the master |
 
-Rules: interface bands must be disjoint
-(`|f1 − f2| > (b1 + b2)/2`); per node, `communication.interfaces` may list a
-subset (manual policy only; it must include the initial interface) and
-`communication.interface_overrides` may override settings per interface.
+Rules: the bands of the acoustic interfaces must be disjoint
+(`|f1 − f2| > (b1 + b2)/2`; optical interfaces use their own channel); per
+node, `communication.interfaces` may list a subset (manual policy only; it must
+include the initial interface) and `communication.interface_overrides` may
+override settings per acoustic interface. An interface takes only the settings
+of its own medium. Every node that has an optical interface must stay between
+0 and 20 m depth (positions, waypoints and every `POSITION`, the range of the
+noise LUT); its yaw, pitch and roll reach the optical propagation, which uses
+them when `network.optical.directional` is set. With `received_power` the
+acoustic interfaces come before the optical ones (range decreases along the
+list).
 Override order: global `acoustic` < node `communication.acoustic` < interface
 `acoustic` < node `interface_overrides`. Flows cannot select an interface
 (`flow.interface` must be `inherit`).
@@ -964,9 +987,11 @@ automatically according to the thresholds. Each `phy_*` event carries
 
 **Controller power units.** The master keeps an exponential average (weight
 `alpha` for the new sample) of `Pr`, the received power of unicast frames
-addressed to it on the active interface, in the acoustic PHY's linear unit:
-`Pr = 10^(received level / 10)` with the level in dB re 1 µPa, the same
-quantity shown as `pr` in the PHY events. Before each of its own
+addressed to it on the active interface, in that interface's PHY unit: for an
+acoustic interface the linear `Pr = 10^(received level / 10)` with the level in
+dB re 1 µPa, for an optical interface W; in both cases the quantity shown as
+`pr` in the PHY events. Each threshold is therefore in the unit of its
+`from_interface`. Before each of its own
 transmissions it moves to the next interface in list order (the shorter-range
 one) when the average exceeds the threshold `from → next`, and back to the
 previous one when it falls below the threshold `from → previous`; the
@@ -974,11 +999,20 @@ average is then reset, so a sample from the peer must arrive between two
 transmissions of the master. Slaves follow the interface on which they last
 received. At 150 dB re 1 µPa and the default channel, the average is about
 2.5·10^12 at 30 m on a 25 kHz interface and falls below 2·10^11 beyond about
-100 m on a 50 kHz one (values from the end-to-end test configuration).
+100 m on a 50 kHz one (values from the end-to-end test configuration). With an
+acoustic interface (150 dB, 25 kHz) and an optical one (default optical
+parameters, 1 Mbit/s) at 10 m depth, the native test sweep observed acoustic
+`Pr` 2.6·10^13 at 8 m and 2.5·10^12 at 30 m, and optical `Pr` 8.4·10^-7 W at
+8 m, 2.3·10^-8 W at 30 m (still decoded) and 8.5·10^-9 W at 40 m (below the
+acquisition threshold). Thresholds of 10^13 (acoustic → optical) and
+3·10^-8 W (optical → acoustic) move to optical within about 14 m and back to
+acoustic beyond about 28 m.
 
 **Transmit power.** The `POWER` command (power events,
-`NetworkNode.set_tx_power`) changes the source level of each node's first
-interface only; the other interfaces keep their configured `tx_power_db`.
+`NetworkNode.set_tx_power`) changes the interface it names, by default each
+node's first interface, in that interface's unit (bridge command
+`POWER node value [interface index]`); the event `power_applied` carries
+`interface_index`.
 
 ```yaml
 name: multiphy_received_power
@@ -1000,6 +1034,28 @@ network:
       - {from_interface: short, to_interface: long, power_linear: 2.0e11}
 flows:
   - {source: auv_01, destination: auv_02, interval: 5, payload_bytes: 16}
+```
+
+Mixed acoustic/optical interfaces (thresholds in linear acoustic power and in W):
+
+```yaml
+nodes:
+  - {id: auv_01, position: [0, 0, -10]}
+  - {id: auv_02, position: [8, 0, -10]}
+network:
+  optical: {attenuation_per_m: 0.043}
+  multiphy:
+    policy: received_power
+    initial_interface: acoustic
+    master: auv_01
+    interfaces:
+      - {id: acoustic, acoustic: {frequency_hz: 25000, bandwidth_hz: 5000, bitrate_bps: 4800, tx_power_db: 150}}
+      - {id: optical, medium: optical, optical: {bitrate_bps: 1000000}}
+    thresholds:
+      - {from_interface: acoustic, to_interface: optical, power_linear: 1.0e13}
+      - {from_interface: optical, to_interface: acoustic, power_linear: 3.0e-8}
+power_events:
+  - {time: 20, node: auv_01, interface: optical, tx_power_w: 0.5}
 ```
 
 ## Ranging (Ranging-TokenBus, Ranging-TDMA)

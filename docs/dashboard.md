@@ -183,13 +183,18 @@ available in the personal scenario editor.
      salinity, temperature, antenna gain).
    - *Canale acustico e accesso al mezzo*: PHY and MAC parameters, TDMA slots
      per vehicle (0..N−1; empty = node order).
-   - *Interfacce multiple (multi-PHY)*: 2–3 acoustic interfaces (name,
-     frequency, bandwidth, bitrate, source level, PHY; empty cells inherit the
-     global channel), the selection policy (manual through the Python API, or
+   - *Interfacce multiple (multi-PHY)*: 2–3 interfaces, each acoustic or
+     optical (name, medium, frequency, bandwidth, bitrate, transmit power in
+     dB re 1 µPa or W, PHY; empty cells inherit the global values of the
+     medium; with an optical interface the shared optical parameters appear
+     below the table), the selection policy (manual through the Python API, or
      the native received-power controller with master vehicle, alpha and
-     thresholds for both directions between adjacent interfaces, in the PHY's
-     linear received-power unit), the initial interface and, for manual
-     selection, the interfaces installed on each vehicle. Renaming an
+     thresholds for both directions between adjacent interfaces, each in the
+     received-power unit of the interface left: linear acoustic or W), the
+     initial interface and, for manual selection, the interfaces installed on
+     each vehicle. The optical medium is unavailable, with the reason, for
+     vehicles outside 0–20 m depth and, with the received-power policy, before
+     an acoustic interface. Renaming an
      interface updates the initial interface, thresholds and availability.
    - *Routing e relay*, *Override acustici per drone* (acoustic medium only),
      *Flussi applicativi* and the execution mode.

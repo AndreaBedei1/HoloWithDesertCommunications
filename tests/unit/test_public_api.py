@@ -52,7 +52,7 @@ class ScriptedBackend:
         self.log.append(("STEP", target))
         return events
 
-    def set_power(self, node, value):
+    def set_power(self, node, value, interface=None):
         self.log.append(("POWER", node, value))
 
     def stop(self):

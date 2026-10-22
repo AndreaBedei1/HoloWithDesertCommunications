@@ -20,12 +20,12 @@ from pathlib import Path
 import re
 
 try:
-    from .multiphy_config import effective_interfaces, render_multiphy
+    from .multiphy_config import OPTICAL_PHY, effective_interfaces, render_multiphy
 except ImportError:
     try:
-        from holo_desert.resources.docker.multiphy_config import effective_interfaces, render_multiphy
+        from holo_desert.resources.docker.multiphy_config import OPTICAL_PHY, effective_interfaces, render_multiphy
     except ImportError:
-        from multiphy_config import effective_interfaces, render_multiphy
+        from multiphy_config import OPTICAL_PHY, effective_interfaces, render_multiphy
 
 try:
     from .medium_config import validate_media_stack
@@ -319,7 +319,10 @@ def render(config):
     lines.append('set mac_parameters {'+' '.join(parts)+'}')
     for i,node in enumerate(effective_nodes(c),1):
         if environment=='woss':lines.append('set initial_position('+str(i)+') {'+' '.join(number(v) for v in c['nodes'][i-1]['position'])+'}')
-        ac=multi[i-1]['interfaces'][0]['acoustic'] if multi else node['acoustic'];lines.append('set phy_class('+str(i)+') '+({'woss':'WOSS/Module/MPhy/BPSK/HOLO','optical':'Module/UW/OPTICAL/PHY/HOLO','em':'Module/UW/ElectroMagnetic/PHY/HOLO'}.get(environment,PHYS[ac['phy']])))
+        # With multi-PHY the node PHY is its first interface, which may be optical.
+        first=multi[i-1]['interfaces'][0] if multi else None
+        ac=first['acoustic'] if first and first['medium']=='acoustic' else node['acoustic']
+        lines.append('set phy_class('+str(i)+') '+({'woss':'WOSS/Module/MPhy/BPSK/HOLO','optical':OPTICAL_PHY,'em':'Module/UW/ElectroMagnetic/PHY/HOLO'}.get(environment,OPTICAL_PHY if first and first['medium']=='optical' else PHYS[ac['phy']])))
         lines.append('set acoustic('+str(i)+') {'+' '.join(k+' '+number(ac[k]) for k in ('tx_power_db','bitrate_bps','frequency_hz','bandwidth_hz','spreading','shipping','wind_speed_mps','rx_snr_penalty_db','acquisition_threshold_db'))+'}')
     lines.append('set flooding_parameters {'+' '.join(k+' '+number(int(v) if isinstance(v,bool) else v) for k,v in net['flooding'].items())+'}')
     routes=[]

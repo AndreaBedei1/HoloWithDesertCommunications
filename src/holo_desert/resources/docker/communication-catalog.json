@@ -2042,8 +2042,8 @@
       "id": "multi_phy",
       "name": "Multi-PHY",
       "layer": "interface",
-      "description": "Controller nativo multi-stack DESERT: 2-3 interfacce acustiche BPSK sotto un solo MAC, con selezione manuale (API) o per potenza ricevuta (master/slave nativi). Le soglie sono nell’unità lineare della potenza ricevuta del PHY acustico.",
-      "reason": "Verificato con test nativi del bridge (selezione manuale, controller per potenza ricevuta, POWER sulla prima interfaccia), con HoloOcean end-to-end (cambio di interfaccia guidato dalla distanza reale e selezione manuale in un ambiente collegato) e nel Network Designer (2026-10-22). Solo interfacce acustiche, CSMA-ALOHA senza ACK e routing statico; reti miste acustico/ottiche non supportate dal bridge (blocchi documentati in capabilities.md).",
+      "description": "Controller nativo multi-stack DESERT: 2-3 interfacce sotto un solo MAC, acustiche BPSK sul canale acustico condiviso oppure ottiche (UW/OPTICAL) su un canale ottico separato, con selezione manuale (API) o per potenza ricevuta (master/slave nativi). Ogni soglia è nell’unità della potenza ricevuta del PHY dell’interfaccia di partenza.",
+      "reason": "Verificato con test nativi del bridge (selezione manuale, controller per potenza ricevuta, POWER per interfaccia), con HoloOcean end-to-end (cambio di interfaccia guidato dalla distanza reale e selezione manuale in un ambiente collegato) e nel Network Designer (2026-10-22). Interfacce ottiche verificate con test nativi (consegna per mezzo e portata, commutazione automatica acustico/ottico, potenza in W, oggetti nativi per interfaccia) e nel Network Designer. Solo CSMA-ALOHA senza ACK e routing statico; interfacce ottiche fra 0 e 20 m di profondità.",
       "operational": true,
       "validation": "verified_end_to_end",
       "source_present": true,
@@ -2662,19 +2662,19 @@
       ]
     },
     "multiphy": {
-      "label": "Interfacce acustiche multiple (multi-PHY)",
+      "label": "Interfacce multiple (multi-PHY)",
       "type": "checkbox",
       "default": false,
       "unit": "",
-      "help": "Ogni drone ha 2 o 3 interfacce acustiche sotto un solo MAC; il controller nativo DESERT sceglie l’interfaccia attiva.",
-      "constraint": "solo propagazione analitica, CSMA-ALOHA senza ACK e routing statico; bande delle interfacce disgiunte"
+      "help": "Ogni drone ha 2 o 3 interfacce, acustiche o ottiche, sotto un solo MAC; il controller nativo DESERT sceglie l’interfaccia attiva.",
+      "constraint": "solo propagazione analitica, CSMA-ALOHA senza ACK e routing statico; bande delle interfacce acustiche disgiunte"
     },
     "multiphy_interface": {
       "label": "Interfaccia",
       "type": "text",
       "unit": "",
-      "help": "Nome dell’interfaccia (minuscole, cifre, _). I campi vuoti ereditano il canale acustico globale.",
-      "constraint": "da 2 a 3 interfacce con nomi unici; le bande non devono sovrapporsi"
+      "help": "Nome dell’interfaccia (minuscole, cifre, _). I campi vuoti ereditano i parametri globali del suo mezzo (canale acustico o parametri ottici).",
+      "constraint": "da 2 a 3 interfacce con nomi unici; le bande delle interfacce acustiche non devono sovrapporsi"
     },
     "multiphy_policy": {
       "path": "network.multiphy.policy",
@@ -2725,8 +2725,8 @@
     "multiphy_threshold": {
       "label": "Soglia di potenza ricevuta",
       "type": "number",
-      "unit": "unità lineari del PHY acustico (µPa²)",
-      "help": "Il master confronta la media della potenza ricevuta Pr sull’interfaccia corrente: passa all’interfaccia successiva quando la supera, alla precedente quando scende sotto. Pr = 10^(livello ricevuto/10), la grandezza mostrata nei dettagli PHY dei messaggi.",
+      "unit": "unità lineari del PHY acustico (µPa²) o W",
+      "help": "Il master confronta la media della potenza ricevuta Pr sull’interfaccia corrente: passa all’interfaccia successiva quando la supera, alla precedente quando scende sotto. La soglia è nell’unità del PHY dell’interfaccia di partenza: Pr = 10^(livello ricevuto/10) per un’interfaccia acustica, W per un’interfaccia ottica.",
       "constraint": "valore positivo; servono entrambe le direzioni fra interfacce adiacenti"
     },
     "multiphy_available": {
@@ -2756,6 +2756,24 @@
         {
           "value": "desert_vbr",
           "label": "DESERT VBR nativo"
+        }
+      ]
+    },
+    "multiphy_medium": {
+      "label": "Mezzo",
+      "type": "select",
+      "default": "acoustic",
+      "unit": "",
+      "help": "Acustico: PHY BPSK sul canale acustico condiviso, potenza in dB re 1 µPa. Ottico: PHY ottico nativo DESERT (UW/OPTICAL) su un canale ottico separato, propagazione Lambert-Beer, potenza in W; portata di pochi metri o decine di metri.",
+      "constraint": "un’interfaccia ottica richiede droni fra 0 e 20 m di profondità (tabella del rumore ottico); con la selezione per potenza ricevuta le interfacce ottiche seguono quelle acustiche",
+      "choices": [
+        {
+          "value": "acoustic",
+          "label": "Acustico"
+        },
+        {
+          "value": "optical",
+          "label": "Ottico"
         }
       ]
     }

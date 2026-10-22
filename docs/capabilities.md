@@ -41,7 +41,7 @@ a short reason.
 | Applications | Python generators (periodic, Poisson, burst, events, request/reply, heartbeat) and API messages | `Module/UW/APPLICATION` bridge over UDP/IP/MLL | yes | yes | yes | unicast only; application TTL is a validity window, not a MAC deadline |
 | Propagation | `acoustic.propagation: woss` | `WOSS/Module/Channel`, `WOSS/MPropagation`, WOSS BPSK + Bellhop | yes | yes (`demos/e08_woss`) | yes | synthetic flat environment with configured SSP (editable table in the Designer) and one sediment; no bathymetry/geographic databases; vertical links rejected (Bellhop abort guard) |
 | Applications | flow `generator: desert_cbr` / `desert_vbr` | `Module/UW/CBR/HOLO`, `Module/UW/VBR/HOLO` (observer subclasses of the native CBR/VBR modules) | yes | yes | yes | native timers; Python TTL does not apply |
-| Interfaces | `network.multiphy` (`manual` or `received_power`) | `Module/UW/MULTI_STACK_CONTROLLER_PHY[_MASTER/_SLAVE]` | yes | yes | yes | **experimental**: 2–3 acoustic BPSK interfaces, CSMA-ALOHA without ACK, StaticRouting; thresholds in the master's linear received-power unit (Pr = 10^(received level/10)); `POWER` changes only each node's first interface; see [Mixed acoustic/optical stacks](#mixed-acousticoptical-stacks) |
+| Interfaces | `network.multiphy` (`manual` or `received_power`) | `Module/UW/MULTI_STACK_CONTROLLER_PHY[_MASTER/_SLAVE]` | yes | yes | yes | **experimental**: 2–3 acoustic BPSK or optical interfaces, CSMA-ALOHA without ACK, StaticRouting; thresholds in the received-power unit of the interface left (linear acoustic power, or W for optical); `POWER` changes the named interface, by default the first; see [Mixed acoustic/optical stacks](#mixed-acousticoptical-stacks) |
 
 ## Experimental, verified
 
@@ -59,30 +59,38 @@ switched interfaces manually through `select_interface`.
 
 ## Mixed acoustic/optical stacks
 
-Evaluated on 22 October 2026 against the pinned DESERT sources and in
-disposable containers; **not supported by this bridge**. DESERT itself supports
-them: the official sample `test_uwmultiphy/test_uwmultiphy_ctr_rov.tcl` (one
-MAC, `MULTI_STACK_CONTROLLER_PHY_MASTER/_SLAVE`, two acoustic PHYs on
-`Module/UnderwaterChannel` plus `Module/UW/OPTICAL/PHY` on
-`Module/UW/Optical/Channel`) exchanged packets on both media, and a prototype
-of this project's multi-PHY adapter with one acoustic and one optical
-interface delivered through the real bridge chain. The concrete blockers in
-this repository are:
+**Experimental, verified natively and in the Network Designer**
+(`tests/integration/test_hybrid_multiphy_stack.py`,
+`tests/frontend/network-designer.spec.cjs`); the HoloOcean end-to-end test is
+`tests/end_to_end/test_hybrid_holoocean.py`. A multi-PHY interface may be
+`medium: optical`. Each optical interface gets its own
+`Module/UW/OPTICAL/PHY/HOLO` observer, `Module/UW/OPTICAL/Propagation/HOLO`
+and noise LUT, as `medium: optical` does, and all optical interfaces share one
+`Module/UW/Optical/Channel`, separate from the acoustic channel. One MAC and the
+native multi-stack controller sit above both media, as in the official DESERT
+sample `test_uwmultiphy/test_uwmultiphy_ctr_rov.tcl`.
 
-1. `bridge.tcl` creates one channel object and `multiphy.tcl` attaches every
-   interface to it; optical interfaces need their own `Module/UW/Optical/Channel`.
-2. The interface factory always builds acoustic propagation, masks and SPL
-   bindings; optical interfaces need the optical propagation, noise LUT and
-   W-based bindings of `environment_optical.tcl`, per interface.
-3. The schema and `multiphy_config.py` accept only acoustic interfaces and a
-   unit-less threshold; the native master compares each threshold in the unit
-   of the interface it switches from (linear acoustic power or W).
-4. The optical observer (`optical-em.h`) has no `interface_index_` binding and
-   reports no reception outcome, so per-interface telemetry would be missing.
-5. `POWER`, the optical depth guard, `setHeading` and the `STATS` PHY counters
-   act on the first interface only.
-6. Without the master's signalling period, the native received-power statistic
-   is reset at every transmission, so automatic switching depends on traffic.
+Observed through the real bridge:
+
+- manual selection delivers on each medium within its own range: optical at
+  10 m (`rx_end` `decoded`), not at 100 m (`rx_start`
+  `below_acquisition_threshold`), acoustic at 100 m;
+- the received-power master moves to optical when the averaged acoustic power
+  exceeds 10^13 (about 14 m) and returns to acoustic when the optical power
+  falls below 3·10^-8 W (about 28 m); the slave follows the last interface it
+  heard, so its first packet beyond the optical range is lost;
+- an optical interface may be the node's first interface; `POWER` with an
+  interface index changes that interface in its own unit (W for optical);
+- `native_bindings` report every interface with its class, medium and values.
+
+Limits: the optical interfaces need nodes between 0 and 20 m depth (noise
+LUT); with `received_power` acoustic interfaces must precede optical ones; the
+`STATS` PHY counters still come from each node's first interface (per-interface
+outcomes are in the PHY events); CSMA-ALOHA timers are tuned for acoustic links
+and also apply to the optical interface; EM interfaces are not offered.
+Without the master's signalling period, the native received-power statistic is
+reset at every transmission of the master, so automatic switching depends on
+traffic from the peer.
 
 ## Not integrated
 

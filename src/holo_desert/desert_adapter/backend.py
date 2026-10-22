@@ -91,16 +91,23 @@ class DESERTAdapter(CommunicationBackend):
         self.initial_events = []
         self.woss_depth = None
         self.medium = 'acoustic'
+        self.multi_media = {}
+        self.optical_nodes = set()
 
     def start(self, scenario: Scenario):
         if self.socket:
             raise BackendError("Backend already started")
         self.nodes = scenario.node_map
         from ..resources.docker.multiphy_config import effective_interfaces
-        self.multi_interfaces = {n['id']:{p['id']:p['index'] for p in n['interfaces']} for n in effective_interfaces(scenario.model_dump())}
+        effective = effective_interfaces(scenario.model_dump())
+        self.multi_interfaces = {n['id']:{p['id']:p['index'] for p in n['interfaces']} for n in effective}
+        # Medium of each interface, in the node's interface order: power units and the optical depth guard.
+        self.multi_media = {n['id']:{p['id']:p['medium'] for p in n['interfaces']} for n in effective}
         self.multi_policy = scenario.network.multiphy.policy if scenario.network.multiphy else None
         self.limit = scenario.network.max_wire_bytes
         self.medium = scenario.network.medium
+        self.optical_nodes = ({n.id for n in scenario.nodes} if self.medium == 'optical' else
+                              {node for node, media in self.multi_media.items() if 'optical' in media.values()})
         self.woss_depth = scenario.network.woss.water_depth_m if self.medium=='acoustic' and scenario.network.acoustic.propagation=='woss' else None
         self.positions = {n.id:n.position for n in scenario.nodes}
         try:
@@ -190,11 +197,11 @@ class DESERTAdapter(CommunicationBackend):
 
     def validate_positions(self, poses: dict):
         """Raise ValueError for geometry the configured model rejects; sends nothing."""
-        for pose in poses.values():
+        for node, pose in poses.items():
             if self.woss_depth is not None:
                 from ..resources.docker.environment_config import validate_woss_position
                 validate_woss_position((pose.x, pose.y, pose.z), self.woss_depth)
-            if self.medium == 'optical' and not -20 <= pose.z < 0:
+            if node in self.optical_nodes and not -20 <= pose.z < 0:
                 raise ValueError('Optical noise LUT covers underwater depths through 20 m')
         if self.woss_depth is not None:
             from ..resources.docker.environment_config import validate_woss_separation
@@ -206,8 +213,9 @@ class DESERTAdapter(CommunicationBackend):
         if self.woss_depth is not None:
             from ..resources.docker.environment_config import validate_woss_position
             validate_woss_position((pose.x,pose.y,pose.z),self.woss_depth)
-        if self.medium=='optical' and not -20<=pose.z<0:raise ValueError('Optical noise LUT covers underwater depths through 20 m')
-        angles=(' '+' '.join(format(math.radians(v),'.12g') for v in (pose.yaw,pose.pitch,pose.roll))) if self.medium=='optical' else ''
+        optical=node in self.optical_nodes
+        if optical and not -20<=pose.z<0:raise ValueError('Optical noise LUT covers underwater depths through 20 m')
+        angles=(' '+' '.join(format(math.radians(v),'.12g') for v in (pose.yaw,pose.pitch,pose.roll))) if optical else ''
         self._command(f"POSITION {self.nodes[node]} {pose.x:.12g} {pose.y:.12g} {pose.z:.12g} {timestamp:.12g}{angles}")
         self.positions[node]=(pose.x,pose.y,pose.z)
 
@@ -216,11 +224,22 @@ class DESERTAdapter(CommunicationBackend):
             from ..resources.docker.environment_config import validate_woss_separation
             validate_woss_separation(self.positions.values())
 
-    def set_power(self, node: str, power_db: float):
-        low,high,unit={'acoustic':(0,200,'dB acoustic SPL'),'optical':(1e-15,10000,'W'),'em':(-100,100,'dBm')}[self.medium]
-        if not math.isfinite(power_db) or not low <= power_db <= high:
+    def set_power(self, node: str, value: float, interface: str | None = None):
+        """Transmit power in the native unit of the medium (of ``interface`` with multi-PHY)."""
+        media=self.multi_media.get(node)
+        if media:
+            # Without an interface the node's first interface changes, as in the bridge.
+            interface=interface or next(iter(media))
+            if interface not in media:raise ValueError(f"Unknown multi-PHY interface {interface!r} on {node}")
+            medium,suffix=media[interface],f" {self.multi_interfaces[node][interface]}"
+        elif interface is not None:
+            raise ValueError('A power interface requires a multi-PHY network')
+        else:
+            medium,suffix=self.medium,''
+        low,high,unit={'acoustic':(0,200,'dB acoustic SPL'),'optical':(1e-15,10000,'W'),'em':(-100,100,'dBm')}[medium]
+        if not math.isfinite(value) or not low <= value <= high:
             raise ValueError(f"Transmit power must be within {low}..{high} {unit}")
-        self._command(f"POWER {self.nodes[node]} {power_db:.12g}")
+        self._command(f"POWER {self.nodes[node]} {value:.12g}{suffix}")
 
     def set_interface(self, node: str, interface: str):
         if self.multi_policy!='manual' or interface not in self.multi_interfaces.get(node,{}):

@@ -56,7 +56,9 @@ for {set i 1} {$i <= $count} {incr i} {
     set phy($i) [new $phy_class($i)]
     set settings $acoustic($i)
     set mask($i) [new MSpectralMask/Rect]
-    if {$environment_adapter in {optical em}} {
+    if {$multiphy_enabled} {
+        # prepare_multi_phy configures every interface by its medium, the first one included.
+    } elseif {$environment_adapter in {optical em}} {
         configure_medium_phy $i
     } else {
     if {$environment_adapter eq "woss"} {
@@ -118,15 +120,11 @@ for {set i 1} {$i <= $count} {incr i} {
     }
     set interf($i) [new MInterference/MIV]
     $interf($i) set maxinterval_ 1000
-    $phy($i) setPropagation $propagation($i)
-    $phy($i) setSpectralMask $mask($i)
-    $phy($i) setInterference $interf($i)
-    if {$multiphy_enabled} {
-        # Keep each PHY's independently configured propagation/mask/interference.
-        set index [lindex $multi_indices($i) 0]
-        $phy($i) setPropagation $interface_prop($i,$index)
-        $phy($i) setSpectralMask $interface_mask($i,$index)
-        $phy($i) setInterference $interface_interf($i,$index)
+    # With multi-PHY each interface already holds its own propagation/mask/interference.
+    if {!$multiphy_enabled} {
+        $phy($i) setPropagation $propagation($i)
+        $phy($i) setSpectralMask $mask($i)
+        $phy($i) setInterference $interf($i)
     }
     puts "{\"event\":\"node_info\",\"time\":0,\"node\":$i,\"mac_address\":[$mac($i) addr]}"
 }
@@ -161,18 +159,22 @@ proc report_bindings {node module object bindings {getters {}} {extra {}}} {
 }
 proc report_native_bindings {} {
     global count phy propagation mask mac routing channel environment_adapter multiphy_enabled mac_bindings routing_bindings
-    global multi_indices interface_phy interface_prop interface_mask multi_controller native_flows native_app
+    global multi_indices multi_medium interface_phy interface_prop interface_mask multi_controller native_flows native_app
     set acoustic {MaxTxSPL_dB_ MinTxSPL_dB_ BitRate_ RxSnrPenalty_dB_ AcquisitionThreshold_dB_}
-    set phy_bindings [dict get [dict create optical {TxPower_ BitRate_ Ar_ T_ Id_ R_ S_ AcquisitionThreshold_dB_} em {TxPower_ BitRate_} woss $acoustic underwater $acoustic] $environment_adapter]
-    set propagation_bindings [dict get [dict create optical {Ar_ At_ c_ theta_} em {T_ S_} woss {shipping_ windspeed_} underwater {practicalSpreading_ shipping_ windspeed_}] $environment_adapter]
+    set phy_by_medium [dict create optical {TxPower_ BitRate_ Ar_ T_ Id_ R_ S_ AcquisitionThreshold_dB_} em {TxPower_ BitRate_} woss $acoustic underwater $acoustic]
+    set propagation_by_medium [dict create optical {Ar_ At_ c_ theta_} em {T_ S_} woss {shipping_ windspeed_} underwater {practicalSpreading_ shipping_ windspeed_}]
+    set phy_bindings [dict get $phy_by_medium $environment_adapter]
+    set propagation_bindings [dict get $propagation_by_medium $environment_adapter]
     set mask_getters {frequency_hz getFreq bandwidth_hz getBandwidth}
     report_bindings 0 channel $channel {propSpeed_}
     for {set i 1} {$i <= $count} {incr i} {
         if {$multiphy_enabled} {
             foreach index $multi_indices($i) {
-                report_bindings $i phy $interface_phy($i,$index) $acoustic {} ",\"interface_index\":$index"
-                report_bindings $i mask $interface_mask($i,$index) {} $mask_getters ",\"interface_index\":$index"
-                report_bindings $i propagation $interface_prop($i,$index) {practicalSpreading_ shipping_ windspeed_} {} ",\"interface_index\":$index"
+                set medium [expr {$multi_medium($i,$index) eq "optical" ? "optical" : "underwater"}]
+                set scope ",\"interface_index\":$index,\"medium\":\"$multi_medium($i,$index)\""
+                report_bindings $i phy $interface_phy($i,$index) [dict get $phy_by_medium $medium] {} $scope
+                report_bindings $i mask $interface_mask($i,$index) {} $mask_getters $scope
+                report_bindings $i propagation $interface_prop($i,$index) [dict get $propagation_by_medium $medium] {} $scope
             }
             report_bindings $i controller $multi_controller($i) {alpha_}
         } else {
@@ -206,6 +208,7 @@ proc observed_counter {module command} {
 }
 proc barrier {} {
     global ns position propagation app phy mac count mac_queue_command mac_stat_commands environment_adapter multiphy_enabled
+    global multi_indices multi_medium interface_phy interface_prop optical_interfaces
     set now [$ns now]
     puts "{\"event\":\"barrier\",\"time\":$now}"
     flush stdout
@@ -223,8 +226,10 @@ proc barrier {} {
                     nodeid $id
                     if {abs([number $state_time] - $now) > 0.000001} { error "Position timestamp differs from scheduler" }
                     number $x; number $y; number $z
-                    if {$environment_adapter eq "optical" && ($z >= 0 || $z < -20)} { error "Optical noise LUT covers underwater depths through 20 m" }
+                    set optical [expr {$environment_adapter eq "optical" || ($multiphy_enabled && [llength $optical_interfaces($id)])}]
+                    if {$optical && ($z >= 0 || $z < -20)} { error "Optical noise LUT covers underwater depths through 20 m" }
                     if {$environment_adapter eq "optical"} { $propagation($id) setHeading $position($id) $yaw $pitch $roll }
+                    if {$multiphy_enabled} { foreach index $optical_interfaces($id) { $interface_prop($id,$index) setHeading $position($id) $yaw $pitch $roll } }
                     set geographic {}
                     if {$environment_adapter eq "woss"} {
                         set geographic [update_woss_position $id $x $y $z]
@@ -244,22 +249,33 @@ proc barrier {} {
                     $app($src) sendhex $dst $hex
                 }
                 POWER {
-                    if {[llength $line] != 3} { error "POWER requires node dB" }
-                    lassign $line op id db
+                    if {[llength $line] ni {3 4}} { error "POWER requires node value and an optional multi-PHY interface" }
+                    lassign $line op id db index
                     nodeid $id
                     number $db
-                    if {$environment_adapter in {optical em}} {
-                        if {$environment_adapter eq "optical" && ($db < 1e-15 || $db > 10000)} { error "Optical power must be watts in supported range" }
-                        if {$environment_adapter eq "em" && ($db < -100 || $db > 100)} { error "EM power must be dBm in supported range" }
-                        $phy($id) set TxPower_ $db
-                        set unit [expr {$environment_adapter eq "optical" ? "tx_power_w" : "tx_power_dbm"}]
+                    set target $phy($id)
+                    set medium $environment_adapter
+                    set scope ""
+                    if {$multiphy_enabled} {
+                        # Without an index the first interface of the node changes.
+                        if {$index eq ""} { set index [lindex $multi_indices($id) 0] }
+                        if {![string is integer -strict $index] || $index ni $multi_indices($id)} { error "Unknown multi-PHY interface" }
+                        set target $interface_phy($id,$index)
+                        set medium $multi_medium($id,$index)
+                        set scope ",\"interface_index\":$index"
+                    } elseif {$index ne ""} { error "POWER interface requires multi-PHY" }
+                    if {$medium in {optical em}} {
+                        if {$medium eq "optical" && ($db < 1e-15 || $db > 10000)} { error "Optical power must be watts in supported range" }
+                        if {$medium eq "em" && ($db < -100 || $db > 100)} { error "EM power must be dBm in supported range" }
+                        $target set TxPower_ $db
+                        set unit [expr {$medium eq "optical" ? "tx_power_w" : "tx_power_dbm"}]
                     } else {
                         if {$db < 0 || $db > 200} { error "Acoustic source level outside supported range" }
-                        $phy($id) set MaxTxSPL_dB_ $db
-                        $phy($id) set MinTxSPL_dB_ $db
+                        $target set MaxTxSPL_dB_ $db
+                        $target set MinTxSPL_dB_ $db
                         set unit tx_power_db
                     }
-                    puts "{\"event\":\"power_applied\",\"time\":$now,\"node\":$id,\"$unit\":$db}"
+                    puts "{\"event\":\"power_applied\",\"time\":$now,\"node\":$id,\"$unit\":$db$scope}"
                 }
                 INTERFACE {
                     if {!$multiphy_enabled || [llength $line] != 3} { error "INTERFACE requires a multiPHY node and interface index" }

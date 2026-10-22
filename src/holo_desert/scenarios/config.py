@@ -74,6 +74,8 @@ class PowerEvent(Strict):
     tx_power_db: float | None = Field(default=None, ge=0, le=200)  # acoustic source level, dB re 1 uPa
     tx_power_w: float | None = Field(default=None, ge=1e-15, le=10000)  # optical, W
     tx_power_dbm: float | None = Field(default=None, ge=-100, le=100)  # EM, dBm; negative values are valid
+    # Multi-PHY only: the interface whose PHY changes (default: the node's first interface).
+    interface: str | None = Field(default=None, pattern=r'^[a-z][a-z0-9_]{0,15}$')
 
     @model_validator(mode="after")
     def one_value(self):
@@ -135,10 +137,21 @@ class Scenario(Strict):
                     current = self.network.routes.get(current, {}).get(dst, dst)
         if any(e.node not in ids for e in self.power_events):
             raise ValueError("Unknown node in power event")
-        unit = POWER_UNITS[self.network.medium]
+        from ..resources.docker.multiphy_config import effective_interfaces
+        interfaces = {n['id']: n['interfaces'] for n in effective_interfaces(self.model_dump())}
         for event in self.power_events:
+            medium = self.network.medium
+            if interfaces:
+                own = interfaces[event.node]
+                chosen = next((i for i in own if i['id'] == event.interface), None) if event.interface else own[0]
+                if chosen is None:
+                    raise ValueError(f"Power event interface {event.interface!r} is not available on {event.node}")
+                medium = chosen['medium']
+            elif event.interface is not None:
+                raise ValueError("Power event interface requires a multi-PHY network")
+            unit = POWER_UNITS[medium]
             if event.unit != unit:
-                raise ValueError(f"The {self.network.medium} medium expects power event values in {unit}, not {event.unit}")
+                raise ValueError(f"The {medium} medium expects power event values in {unit}, not {event.unit}")
         if self.coordination and len(self.nodes) != 2:
             raise ValueError("Coordination demo requires two nodes")
         if self.coordination and self.flows:

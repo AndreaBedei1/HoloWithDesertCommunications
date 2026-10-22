@@ -57,20 +57,21 @@ public:
 } class_holo_optical_propagation;
 
 template<class Base, bool Optical> class ObservedMediumPhy : public Base {
-    int node_id_=0;
+    int node_id_=0,interface_index_=0;
     static void number(double value) {if(std::isfinite(value))std::cout << value;else std::cout << "null";}
-    void report(const char* event, Packet* p, bool receiving) {
+    void report(const char* event, Packet* p, bool receiving, const char* outcome=nullptr) {
         auto* ch=HDR_CMN(p);auto* ph=HDR_MPHY(p);
         std::cout << std::setprecision(15) << "{\"event\":\"phy_";
         if(ch->ptype()!=PT_DATA_APPLICATION && !nativeApplicationType(ch->ptype()))std::cout << "control_";
         std::cout << event << "\",\"time\":" << Scheduler::instance().clock()
-            << ",\"node\":" << node_id_ << ",\"medium\":\"" << (Optical?"optical":"em")
+            << ",\"node\":" << node_id_ << ",\"interface_index\":" << interface_index_ << ",\"medium\":\"" << (Optical?"optical":"em")
             << "\",\"power_unit\":\"" << (Optical?"W":"dBm")
             << "\",\"received_power_unit\":\"" << (Optical?"W":"mW")
             << "\",\"phy_patch_id\":\"" << (Optical?"native-optical-lambert-beer-body-frame-v1":"em-power-lut-v1")
             << "\",\"ns_uid\":" << ch->uid() << ",\"phy_bits\":" << ch->size()*8
             << ",\"duration_s\":" << ph->duration << ",\"pt\":";number(Optical?ph->Pt:10*std::log10(ph->Pt));
         if(receiving){std::cout << ",\"pr\":";number(ph->Pr);if(Optical){std::cout << ",\"noise_unit\":\"A2\",\"pn\":";number(ph->Pn);}}
+        if(outcome)std::cout << ",\"outcome\":\"" << outcome << "\"";
         if(ch->ptype()==PT_DATA_APPLICATION) {
             auto* ah=HDR_DATA_APPLICATION(p);
             if(ah->payload_size()<=MAX_LENGTH_PAYLOAD)std::cout << ",\"wire_hex\":\"" << hexify(ah->payload_msg,ah->payload_size()) << "\"";
@@ -80,10 +81,26 @@ template<class Base, bool Optical> class ObservedMediumPhy : public Base {
 protected:
     void startTx(Packet* p) override { report("tx_start",p,false);Base::startTx(p); }
     void endTx(Packet* p) override { report("tx_end",p,false);Base::endTx(p); }
-    void startRx(Packet* p) override { report("rx_start",p,true);Base::startRx(p); }
-    void endRx(Packet* p) override { report("rx_end",p,true);Base::endRx(p); }
+    void startRx(Packet* p) override {
+        bool busy_tx=this->txPending,busy_rx=this->PktRx!=nullptr,wrong=HDR_MPHY(p)->modulationType!=Base::modid;
+        Base::startRx(p);
+        report("rx_start",p,true,this->PktRx==p?"synchronized":busy_tx?"transmitter_busy":busy_rx?"receiver_busy_overlap":
+               wrong?"wrong_modulation":"below_acquisition_threshold");
+    }
+    void endRx(Packet* p) override {
+        // Native optical decision: a synchronized packet fails only on nonzero interference power,
+        // read here without side effects. The EM decision draws from the shared RNG, so it stays unlabelled.
+        const char* outcome=nullptr;
+        if(Optical){
+            bool synchronized=this->PktRx==p;
+            double interference=synchronized && this->interference_?this->interference_->getInterferencePower(p):0;
+            outcome=!synchronized?"not_synchronized":interference!=0?"interference_error":"decoded";
+        }
+        report("rx_end",p,true,outcome);
+        Base::endRx(p);
+    }
 public:
-    ObservedMediumPhy(){this->bind("node_id_",&node_id_);}
+    ObservedMediumPhy(){this->bind("node_id_",&node_id_);this->bind("interface_index_",&interface_index_);}
 };
 static class HoloOpticalPhyClass : public TclClass {
 public:

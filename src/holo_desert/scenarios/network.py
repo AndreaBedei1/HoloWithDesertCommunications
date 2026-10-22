@@ -50,9 +50,30 @@ class NodeCommunication(Strict):
     interface_overrides: dict[str,AcousticOverride] = Field(default_factory=dict)
 
 
+class OpticalOverride(Strict):
+    """Per-interface values on top of ``network.optical``; empty fields inherit it."""
+    tx_power_w: float | None = None
+    bitrate_bps: float | None = None
+    frequency_hz: float | None = None
+    bandwidth_hz: float | None = None
+    attenuation_per_m: float | None = None
+    acquisition_threshold_db: float | None = None
+
+
 class PhyInterface(Strict):
     id: str = Field(pattern=r'^[a-z][a-z0-9_]{0,15}$')
+    # An optical interface has its own native optical PHY, propagation and channel.
+    medium: Literal['acoustic','optical'] = 'acoustic'
     acoustic: AcousticOverride = Field(default_factory=AcousticOverride)
+    optical: OpticalOverride = Field(default_factory=OpticalOverride)
+
+    @model_validator(mode='after')
+    def settings_of_its_medium(self):
+        if self.medium=='optical' and any(v is not None for v in self.acoustic.model_dump().values()):
+            raise ValueError('An optical interface takes optical settings, not acoustic ones')
+        if self.medium=='acoustic' and any(v is not None for v in self.optical.model_dump().values()):
+            raise ValueError('An acoustic interface takes acoustic settings, not optical ones')
+        return self
 
 
 class InterfaceThreshold(Strict):

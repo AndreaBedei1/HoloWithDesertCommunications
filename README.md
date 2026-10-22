@@ -41,7 +41,7 @@ Status from executed tests (details and blockers: [capability matrix](docs/capab
 | MAC | ALOHA, CSMA-ALOHA, TDMA, TDMA Frame, CSMA/CA, DACAP, TokenBus, CS-Burst, Ranging-TokenBus, Ranging-TDMA | — | Polling, T-LOHI, ALOHA-Q, UFetch |
 | Routing | Static (multi-hop), Flooding, SUN | — | ICRP, Position-Based |
 | PHY / channel | BPSK + analytic Underwater/Thorp + MIV; WOSS/Bellhop (synthetic SSP) | corrected BPSK, optical, electromagnetic | OFDM, HMM |
-| Interfaces | one interface per vehicle | multi-PHY: 2–3 acoustic interfaces, native manual or received-power switching | hybrid acoustic/optical (supported by DESERT, not by this bridge) |
+| Interfaces | one interface per vehicle | multi-PHY: 2–3 acoustic or optical interfaces, native manual or received-power switching | — |
 | Traffic & measurement | Python generators, JSON/binary messages, native UW/CBR and UW/VBR, native ranging (TokenBus, TDMA) | — | ranging TDOA |
 | Hardware modems | — | — | drivers present in DESERT, no hardware validation |
 
