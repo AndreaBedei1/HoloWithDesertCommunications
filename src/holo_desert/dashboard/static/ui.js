@@ -27,5 +27,5 @@ export function fields(data) {
 export const statusName = s => ({queued:'Generato',in_flight:'Nella rete',phy_tx_observed:'Trasmissione osservata',received:'Consegnato',timeout_unknown_cause:'Scaduto'}[s]||s);
 export function timeline(events) {
   return events.map(e=>'<li><time>'+number(e.time)+' s</time> <b>'+esc(e.event)+'</b> '+esc(e.node_id||e.node||'')+' '+esc(e.state||e.outcome||'')+
-    (e.next_hop_id?' → '+esc(e.next_hop_id):'')+(e.tx_power_db!=null?' · '+number(e.tx_power_db,1)+' dB SPL':'')+'</li>').join('');
+    (e.next_hop_id?' → '+esc(e.next_hop_id):'')+(e.tx_power_db!=null?' · '+number(e.tx_power_db,1)+' dB re 1 µPa':e.tx_power_dbm!=null?' · '+number(e.tx_power_dbm,1)+' dBm':e.tx_power_w!=null?' · '+Number(e.tx_power_w).toExponential(3)+' W':'')+'</li>').join('');
 }

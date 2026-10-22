@@ -1,5 +1,7 @@
 import io
 import zipfile
+
+import pytest
 from fastapi.testclient import TestClient
 from holo_desert.common.models import Message, Delivery
 from holo_desert.telemetry.collector import TelemetryCollector
@@ -51,5 +53,26 @@ def test_correlated_engine_event_retains_type_and_timestamp():
         packet = collector.snapshot()["packets"][0]
         assert packet["events"][0]["event"] == "rx"
         assert packet["events"][0]["time"] == 1
+    finally:
+        collector.close()
+
+
+def test_ranging_estimates_are_kept_beside_the_geometric_reference():
+    from holo_desert.common.models import Pose
+    collector = TelemetryCollector(ScenarioManager().load("e01_chat").model_dump())
+    inverse = {1: "auv_01", 2: "auv_02"}
+    try:
+        collector.positions({"auv_01": Pose(0, 0, -20), "auv_02": Pose(30, 40, -20)}, 1)
+        for observer, travel, distance in ((1, 0.0333, 49.95), (2, None, None)):
+            collector.engine_event({"event": "ranging_estimate", "time": 1, "node": observer, "peer_a": 1, "peer_b": 2,
+                                    "travel_time_s": travel, "distance_m": distance, "valid": travel is not None,
+                                    "measurement_time": None, "protocol": "ranging_tokenbus"}, inverse)
+        ranging = collector.snapshot()["ranging"]
+        point = ranging["series"]["auv_01>auv_02"][0]
+        assert point["time"] == 1 and point["geometric_distance_m"] == 50
+        assert point["estimates"] == {"auv_01": 49.95}
+        latest = {row["observer"]: row for row in ranging["latest"]}
+        assert latest["auv_01"]["error_m"] == pytest.approx(-0.05) and latest["auv_01"]["protocol"] == "ranging_tokenbus"
+        assert latest["auv_02"]["valid"] is False and latest["auv_02"]["error_m"] is None
     finally:
         collector.close()

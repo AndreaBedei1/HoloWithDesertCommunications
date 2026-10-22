@@ -1,4 +1,4 @@
-import {esc} from './ui.js';
+import {esc,number} from './ui.js';
 
 export const SCENARIOS = {
   e01_chat: {code:'E01', title:'Scambio di messaggi', description:'Due droni fermi si scambiano una richiesta e una risposta.', observe:'Segui il viaggio di un messaggio, dalla generazione alla consegna.', diagram:['A','→ ←','B']},
@@ -19,6 +19,7 @@ export const HELP = {
   Throughput:'Bit dell’envelope applicativo consegnato al secondo, inclusi JSON e base64. Esclude header PHY/MAC, ACK e ritrasmissioni.',
   PHY:'Livello fisico del canale acustico. Una ricezione PHY non conferma da sola la consegna all’applicazione.',
   TTL:'Tempo massimo di validità applicativa del messaggio. Non cancella un pacchetto già nella coda del MAC.',
+  Ranging:'Stima nativa DESERT: tempo di volo misurato dal MAC di ranging moltiplicato per la velocità del suono configurata. La distanza geometrica HoloOcean è un riferimento esterno che il protocollo non conosce; la differenza mostra l’errore della stima.',
 };
 export const help = term => '<button type="button" class="help" data-help="'+esc(term)+'" aria-label="Spiega '+esc(term)+'">?</button>';
 export const drone = id => id ? 'Drone '+id.replace(/^auv_/, '') : '—';
@@ -29,7 +30,13 @@ export function interferenceLabel(e){
   if(!zero&&positive&&/conditional|corrected/.test(patch))return 'Errore di interferenza';
   return 'Errore nel ramo PHY interferenza (causa non misurata)';
 }
-export const eventLabel = e => ({late_receive:'Ricevuto dopo il TTL (non consegnato)',duplicate:'Duplicato applicativo ignorato',generated:'Messaggio generato',app_tx:'Inserito nella rete',forward:'Inoltro di rete',phy_tx_start:'Trasmissione acustica iniziata',phy_tx_end:'Trasmissione acustica terminata',phy_rx_start:'Segnale acustico osservato',phy_rx_end:e.outcome==='decoded'?'Segnale acustico decodificato':e.outcome==='interference_error'?interferenceLabel(e):e.outcome==='noise_error'?'Errore dovuto al rumore':'Ricezione non sincronizzata',rx:'Ricezione nello stack applicativo',delivered:'Consegnato all’applicazione',ttl_expired:'Tempo di validità scaduto',application_state:'Stato del drone',power_applied:'Potenza applicata'}[e.event.replace('phy_control_','phy_')]||e.event)+(e.event.startsWith('phy_control_')?' (controllo MAC)':'');
+// Multi-PHY interface names of the configuration on screen (events carry 1-based indices).
+let interfaceNames=[];
+export function setInterfaceNames(configuration){interfaceNames=(configuration?.network?.multiphy?.interfaces||[]).map(i=>i.id)}
+export const interfaceLabel=index=>(interfaceNames[index-1]||'interfaccia')+' · '+index;
+export const powerLabel=e=>e.tx_power_db!=null?number(e.tx_power_db,1)+' dB re 1 µPa':e.tx_power_dbm!=null?number(e.tx_power_dbm,1)+' dBm':e.tx_power_w!=null?Number(e.tx_power_w).toExponential(3)+' W':null;
+const signal=e=>({optical:'ottico',em:'EM'}[e.medium]||'acustico'),transmission=e=>({optical:'ottica',em:'EM'}[e.medium]||'acustica');
+export const eventLabel = e => ({late_receive:'Ricevuto dopo il TTL (non consegnato)',duplicate:'Duplicato applicativo ignorato',generated:'Messaggio generato',app_tx:'Inserito nella rete',forward:'Inoltro di rete',phy_tx_start:'Trasmissione '+transmission(e)+' iniziata',phy_tx_end:'Trasmissione '+transmission(e)+' terminata',phy_rx_start:'Segnale '+signal(e)+' osservato',phy_rx_end:e.outcome==='decoded'?'Segnale '+signal(e)+' decodificato':e.outcome==='interference_error'?interferenceLabel(e):e.outcome==='noise_error'?'Errore dovuto al rumore':e.outcome==='not_synchronized'?'Ricezione non sincronizzata':'Fine ricezione (esito non esposto dal PHY)',rx:'Ricezione nello stack applicativo',delivered:'Consegnato all’applicazione',ttl_expired:'Tempo di validità scaduto',application_state:'Stato del drone',power_applied:'Potenza applicata'}[e.event.replace('phy_control_','phy_')]||e.event)+(e.event.startsWith('phy_control_')?' (controllo MAC)':'');
 export function eventTone(e) {
   if(e.event==='delivered')return 'success';
   if(e.event==='ttl_expired')return 'warning';

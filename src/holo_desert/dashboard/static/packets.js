@@ -1,10 +1,10 @@
 import {$,esc,number,fields,statusName} from './ui.js';
-import {drone,typeName,eventLabel,eventTone,help} from './presentation.js';
+import {drone,typeName,eventLabel,eventTone,help,interfaceLabel,powerLabel} from './presentation.js';
 
 export const packetTone=p=>p.status==='received'?'success':p.status==='timeout_unknown_cause'?'warning':p.status==='phy_tx_observed'?'info':'neutral';
 export const stateHTML=p=>'<span class="state-text '+packetTone(p)+'"><span aria-hidden="true">'+({success:'✓',warning:'◷',info:'↗',neutral:'·'}[packetTone(p)])+'</span>'+esc(statusName(p.status))+'</span>';
 export function eventTimeline(events){
-  return '<ol class="timeline">'+events.map(e=>{const level=e.event.startsWith('phy_')?'PHY':e.event==='forward'?'Rete':'Applicazione',node=e.node_id||(typeof e.node==='string'?e.node:null);return '<li class="'+eventTone(e)+'"><b>'+esc(eventLabel(e))+'</b><span class="event-level">'+level+'</span><time>'+number(e.time,3)+' s'+(node?' · '+esc(drone(node)):'')+'</time>'+(e.next_hop_id?'<small>Prossimo nodo: '+esc(drone(e.next_hop_id))+'</small>':'')+(e.state?'<small>Stato: '+esc(e.state)+'</small>':'')+(e.tx_power_db!=null?'<small>Potenza applicata: '+number(e.tx_power_db,0)+' dB SPL</small>':'')+'</li>'}).join('')+'</ol>';
+  return '<ol class="timeline">'+events.map(e=>{const level=e.event.startsWith('phy_')?'PHY':e.event==='forward'?'Rete':'Applicazione',node=e.node_id||(typeof e.node==='string'?e.node:null);return '<li class="'+eventTone(e)+'"><b>'+esc(eventLabel(e))+'</b><span class="event-level">'+level+'</span><time>'+number(e.time,3)+' s'+(node?' · '+esc(drone(node)):'')+'</time>'+(e.next_hop_id?'<small>Prossimo nodo: '+esc(drone(e.next_hop_id))+'</small>':'')+(e.state?'<small>Stato: '+esc(e.state)+'</small>':'')+(e.interface_index!=null?'<small>Interfaccia: '+esc(interfaceLabel(e.interface_index))+'</small>':'')+(powerLabel(e)?'<small>Potenza applicata: '+esc(powerLabel(e))+'</small>':'')+'</li>'}).join('')+'</ol>';
 }
 function phyDetails(event){
   const power=value=>value==null?'N/D':Number(value).toExponential(5);

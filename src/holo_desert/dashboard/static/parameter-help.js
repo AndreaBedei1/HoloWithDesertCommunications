@@ -18,7 +18,7 @@ destination:'Destinatario unicast. Flooding usa broadcast nativi sotto questo in
 hop:'Prossimo drone nella route statica; non garantisce che il segnale arrivi.',
 message_type:'Etichetta applicativa; request genera una risposta alla ricezione. Nessuna priorita MAC implicita.',
 reply:'Richiesta e risposta applicativa, distinte da ACK del MAC.',
-pattern:'Generatore Python; DESERT gestisce accesso, canale, routing e consegna.',
+pattern:'Andamento temporale dei messaggi: periodico, Poisson, burst o istanti espliciti. DESERT gestisce accesso, canale, routing e consegna.',
 interval:'Intervallo periodico o medio esponenziale Poisson, in secondi; default 3.',
 start:'Primo tempo assoluto di generazione, in secondi simulati; default 1.',
 stop:'Limite escluso di generazione in secondi. Vuoto: fino alla fine della corsa.',

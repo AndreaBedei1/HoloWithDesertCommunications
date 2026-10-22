@@ -46,3 +46,20 @@ def test_native_received_power_controller_switches_after_peer_packet(engine):
         assert tx['interface_index']==2
         assert any(e['event']=='rx' for e in events)
     finally:backend.stop()
+
+
+def test_native_power_command_changes_only_the_first_interface(engine):
+    backend=DESERTAdapter(manage_docker=False)
+    try:
+        backend.start(scenario())
+        for i,node in enumerate(('auv_01','auv_02')):backend.update_node_position(node,Pose(i*30,0,-20),0)
+        backend.set_power('auv_01',0)
+        delivered={}
+        for interface in ('short','long'):
+            backend.set_interface('auv_01',interface)
+            message=Message('auv_01','auv_02',interface.encode(),backend.time)
+            backend.send(message);events=backend.advance(backend.time+5)
+            delivered[interface]=any(e['event']=='rx' and Message.decode(bytes.fromhex(e['wire_hex'])).id==message.id for e in events)
+        # POWER sets the source level of the node's first interface ("long") only.
+        assert delivered=={'short':True,'long':False}
+    finally:backend.stop()

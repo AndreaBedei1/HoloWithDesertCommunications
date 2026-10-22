@@ -17,7 +17,8 @@
           "help": "Conferma MAC quando supportata. No-ACK rimuove il frame alla prima trasmissione; non attende il TTL.",
           "type": "checkbox",
           "unit": "",
-          "default_origin": "bridge historical profile"
+          "default_origin": "bridge historical profile",
+          "constraint": "non disponibile con TDMA, TokenBus, CS-Burst, SUN e multi-PHY"
         },
         {
           "path": "network.mac.max_tx_tries",
@@ -25,10 +26,11 @@
           "default": 3,
           "help": "Limite dei tentativi con ACK. Non implica ritrasmissioni nella modalita no-ACK.",
           "type": "integer",
-          "unit": "",
+          "unit": "tentativi",
           "min": 1,
           "max": 20,
-          "default_origin": "bridge historical profile"
+          "default_origin": "bridge historical profile",
+          "constraint": "conta solo con ACK MAC attivo"
         },
         {
           "path": "network.mac.buffer_packets",
@@ -36,7 +38,7 @@
           "default": 100,
           "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
           "type": "integer",
-          "unit": "",
+          "unit": "pacchetti",
           "min": 1,
           "max": 10000,
           "default_origin": "bridge historical profile"
@@ -97,7 +99,8 @@
           "help": "Conferma MAC quando supportata. No-ACK rimuove il frame alla prima trasmissione; non attende il TTL.",
           "type": "checkbox",
           "unit": "",
-          "default_origin": "bridge historical profile"
+          "default_origin": "bridge historical profile",
+          "constraint": "non disponibile con TDMA, TokenBus, CS-Burst, SUN e multi-PHY"
         },
         {
           "path": "network.mac.max_tx_tries",
@@ -105,10 +108,11 @@
           "default": 3,
           "help": "Limite dei tentativi con ACK. Non implica ritrasmissioni nella modalita no-ACK.",
           "type": "integer",
-          "unit": "",
+          "unit": "tentativi",
           "min": 1,
           "max": 20,
-          "default_origin": "bridge historical profile"
+          "default_origin": "bridge historical profile",
+          "constraint": "conta solo con ACK MAC attivo"
         },
         {
           "path": "network.mac.queue_mode",
@@ -134,7 +138,7 @@
           "default": 100,
           "help": "Limite della coda CSMA-ALOHA in modalita bounded. La modalita storica legacy mantiene la coda senza limite nativo.",
           "type": "integer",
-          "unit": "",
+          "unit": "pacchetti",
           "min": 1,
           "max": 10000,
           "default_origin": "bridge historical profile",
@@ -205,7 +209,8 @@
           "type": "number",
           "unit": "s",
           "min": 0.001,
-          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
+          "constraint": "divisa per il numero di droni deve contenere il frame più lungo più il tempo di guardia"
         },
         {
           "path": "network.mac.tdma.guard_time_s",
@@ -215,7 +220,8 @@
           "type": "number",
           "unit": "s",
           "min": 0,
-          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
+          "constraint": "minore della durata di uno slot (frame diviso per il numero di droni)"
         },
         {
           "path": "network.mac.tdma.max_packets_per_slot",
@@ -223,7 +229,7 @@
           "default": 1,
           "help": "Numero massimo nativo trasmesso nel proprio slot. Nessun ACK ALOHA nel TDMA.",
           "type": "integer",
-          "unit": "",
+          "unit": "pacchetti",
           "min": 1,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
         },
@@ -233,7 +239,7 @@
           "default": 100,
           "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
           "type": "integer",
-          "unit": "",
+          "unit": "pacchetti",
           "min": 1,
           "max": 10000,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
@@ -297,7 +303,8 @@
           "type": "number",
           "unit": "s",
           "min": 0.001,
-          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
+          "constraint": "divisa per il numero di droni deve contenere il frame più lungo più il tempo di guardia"
         },
         {
           "path": "network.mac.tdma.guard_time_s",
@@ -307,7 +314,8 @@
           "type": "number",
           "unit": "s",
           "min": 0,
-          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
+          "constraint": "minore della durata di uno slot (frame diviso per il numero di droni)"
         },
         {
           "path": "network.mac.tdma.max_packets_per_slot",
@@ -315,7 +323,7 @@
           "default": 1,
           "help": "Numero massimo nativo trasmesso nel proprio slot. Nessun ACK ALOHA nel TDMA.",
           "type": "integer",
-          "unit": "",
+          "unit": "pacchetti",
           "min": 1,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
         },
@@ -325,7 +333,7 @@
           "default": 100,
           "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
           "type": "integer",
-          "unit": "",
+          "unit": "pacchetti",
           "min": 1,
           "max": 10000,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
@@ -398,7 +406,8 @@
           "type": "integer",
           "unit": "s",
           "min": 1,
-          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
+          "constraint": "intero"
         },
         {
           "path": "network.mac.csma_ca.backoff_max",
@@ -406,7 +415,7 @@
           "default": 20,
           "help": "Limite nativo della finestra di backoff.",
           "type": "integer",
-          "unit": "",
+          "unit": "passi",
           "min": 1,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
         },
@@ -418,7 +427,8 @@
           "type": "integer",
           "unit": "s",
           "min": 1,
-          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
+          "constraint": "intero"
         },
         {
           "path": "network.mac.csma_ca.data_wait_s",
@@ -428,7 +438,8 @@
           "type": "integer",
           "unit": "s",
           "min": 1,
-          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
+          "constraint": "intero"
         },
         {
           "path": "network.mac.csma_ca.ack_wait_s",
@@ -438,7 +449,8 @@
           "type": "integer",
           "unit": "s",
           "min": 1,
-          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
+          "constraint": "intero"
         },
         {
           "path": "network.mac.ack",
@@ -447,7 +459,8 @@
           "help": "Conferma MAC quando supportata. No-ACK rimuove il frame alla prima trasmissione; non attende il TTL.",
           "type": "checkbox",
           "unit": "",
-          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
+          "constraint": "non disponibile con TDMA, TokenBus, CS-Burst, SUN e multi-PHY"
         }
       ],
       "description": "Handshake RTS/CTS nel protocollo DESERT originale.",
@@ -555,7 +568,8 @@
           "help": "Conferma MAC quando supportata. No-ACK rimuove il frame alla prima trasmissione; non attende il TTL.",
           "type": "checkbox",
           "unit": "",
-          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
+          "constraint": "non disponibile con TDMA, TokenBus, CS-Burst, SUN e multi-PHY"
         },
         {
           "path": "network.mac.max_tx_tries",
@@ -563,10 +577,11 @@
           "default": 3,
           "help": "Limite dei tentativi con ACK. Non implica ritrasmissioni nella modalita no-ACK.",
           "type": "integer",
-          "unit": "",
+          "unit": "tentativi",
           "min": 1,
           "max": 20,
-          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
+          "constraint": "conta solo con ACK MAC attivo"
         },
         {
           "path": "network.mac.buffer_packets",
@@ -574,7 +589,7 @@
           "default": 100,
           "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
           "type": "integer",
-          "unit": "",
+          "unit": "pacchetti",
           "min": 1,
           "max": 10000,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
@@ -679,7 +694,7 @@
           "default": 10,
           "help": "Numero di inoltri previsto da Flooding; distinto dalla validita temporale del messaggio applicativo.",
           "type": "integer",
-          "unit": "",
+          "unit": "inoltri",
           "min": 1,
           "max": 255,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
@@ -785,7 +800,8 @@
           "type": "number",
           "unit": "Hz",
           "min": 0.001,
-          "default_origin": "bridge historical profile"
+          "default_origin": "bridge historical profile",
+          "constraint": "la banda deve restare minore del doppio della frequenza centrale"
         },
         {
           "path": "network.acoustic.bandwidth_hz",
@@ -795,7 +811,8 @@
           "type": "number",
           "unit": "Hz",
           "min": 0.001,
-          "default_origin": "bridge historical profile"
+          "default_origin": "bridge historical profile",
+          "constraint": "la banda deve restare minore del doppio della frequenza centrale"
         },
         {
           "path": "network.acoustic.spreading",
@@ -803,7 +820,7 @@
           "default": 1.75,
           "help": "Esponente k nel termine 10 k log10(distanza in metri). Default nativo 1.75.",
           "type": "number",
-          "unit": "",
+          "unit": "adimensionale",
           "min": 0.001,
           "max": 3,
           "default_origin": "bridge historical profile",
@@ -820,7 +837,7 @@
           "default": 0.5,
           "help": "Fattore shipping del rumore DESERT tra 0 e 1; non genera altri pacchetti in rete.",
           "type": "number",
-          "unit": "",
+          "unit": "adimensionale",
           "min": 0,
           "max": 1,
           "default_origin": "bridge historical profile"
@@ -843,7 +860,8 @@
           "type": "number",
           "unit": "m/s",
           "min": 0.001,
-          "default_origin": "bridge historical profile"
+          "default_origin": "bridge historical profile",
+          "constraint": "unico valore per tutto il canale; con WOSS il profilo SSP governa Bellhop"
         },
         {
           "path": "network.acoustic.rx_snr_penalty_db",
@@ -852,7 +870,8 @@
           "help": "Somma in dB prima della BER. Il valore nativo -10 riduce gamma di dieci volte. Lo SNR osservato rimane grezzo.",
           "type": "number",
           "unit": "dB",
-          "default_origin": "bridge historical profile"
+          "default_origin": "bridge historical profile",
+          "constraint": "qualsiasi valore finito"
         },
         {
           "path": "network.acoustic.acquisition_threshold_db",
@@ -861,7 +880,8 @@
           "help": "La ricezione deve superare strettamente questa soglia SNR grezza per sincronizzarsi.",
           "type": "number",
           "unit": "dB",
-          "default_origin": "bridge historical profile"
+          "default_origin": "bridge historical profile",
+          "constraint": "qualsiasi valore finito"
         }
       ],
       "description": "Modello storico invariato. Il ramo interferenza puo ritestare il rumore con interferenza zero.",
@@ -939,7 +959,8 @@
           "type": "number",
           "unit": "Hz",
           "min": 0.001,
-          "default_origin": "bridge historical profile"
+          "default_origin": "bridge historical profile",
+          "constraint": "la banda deve restare minore del doppio della frequenza centrale"
         },
         {
           "path": "network.acoustic.bandwidth_hz",
@@ -949,7 +970,8 @@
           "type": "number",
           "unit": "Hz",
           "min": 0.001,
-          "default_origin": "bridge historical profile"
+          "default_origin": "bridge historical profile",
+          "constraint": "la banda deve restare minore del doppio della frequenza centrale"
         },
         {
           "path": "network.acoustic.spreading",
@@ -957,7 +979,7 @@
           "default": 1.75,
           "help": "Esponente k nel termine 10 k log10(distanza in metri). Default nativo 1.75.",
           "type": "number",
-          "unit": "",
+          "unit": "adimensionale",
           "min": 0.001,
           "max": 3,
           "default_origin": "bridge historical profile",
@@ -974,7 +996,7 @@
           "default": 0.5,
           "help": "Fattore shipping del rumore DESERT tra 0 e 1; non genera altri pacchetti in rete.",
           "type": "number",
-          "unit": "",
+          "unit": "adimensionale",
           "min": 0,
           "max": 1,
           "default_origin": "bridge historical profile"
@@ -997,7 +1019,8 @@
           "type": "number",
           "unit": "m/s",
           "min": 0.001,
-          "default_origin": "bridge historical profile"
+          "default_origin": "bridge historical profile",
+          "constraint": "unico valore per tutto il canale; con WOSS il profilo SSP governa Bellhop"
         },
         {
           "path": "network.acoustic.rx_snr_penalty_db",
@@ -1006,7 +1029,8 @@
           "help": "Somma in dB prima della BER. Il valore nativo -10 riduce gamma di dieci volte. Lo SNR osservato rimane grezzo.",
           "type": "number",
           "unit": "dB",
-          "default_origin": "bridge historical profile"
+          "default_origin": "bridge historical profile",
+          "constraint": "qualsiasi valore finito"
         },
         {
           "path": "network.acoustic.acquisition_threshold_db",
@@ -1015,7 +1039,8 @@
           "help": "La ricezione deve superare strettamente questa soglia SNR grezza per sincronizzarsi.",
           "type": "number",
           "unit": "dB",
-          "default_origin": "bridge historical profile"
+          "default_origin": "bridge historical profile",
+          "constraint": "qualsiasi valore finito"
         }
       ],
       "description": "Patch separata conditional-bpsk-v1: rumore una volta, rischio condizionato per interferenza reale.",
@@ -1090,19 +1115,20 @@
         "media": [
           "acoustic"
         ]
-      }
+      },
+      "unavailable": "richiede ruoli AUV, sink e nodo che il bridge non assegna"
     },
     {
       "id": "t_lohi",
       "name": "T-LOHI",
       "layer": "mac",
       "description": "Richiede gestione toni e controllo di accesso dedicato; non verificato con il PHY del bridge.",
-      "reason": "Richiede gestione toni e controllo di accesso dedicato; non verificato con il PHY del bridge.",
+      "reason": "Libreria libuwtlohi.so caricabile (fallisce solo il tracer libuwtlohiTracer.so: simbolo hdr_tlohi::offset_). Non integrato: il MAC cerca per nome di classe un PHY dei toni (Module/MPhy/Underwater/WKUP) e il PHY dati sotto di sé; con un solo PHY il PHY dei toni non viene impostato e la prenotazione non esiste.",
       "operational": false,
       "validation": "not_integrated",
       "source_present": true,
       "compiled": true,
-      "loadable": false,
+      "loadable": true,
       "bridge_compatible": false,
       "parameters": [],
       "libraries": [
@@ -1123,7 +1149,8 @@
         "media": [
           "acoustic"
         ]
-      }
+      },
+      "unavailable": "richiede un secondo PHY per i toni di prenotazione"
     },
     {
       "id": "tokenbus",
@@ -1163,7 +1190,8 @@
           "unit": "s",
           "help": "Il frame deve entrare in questo tempo; il builder rifiuta flussi che non entrano.",
           "type": "number",
-          "min": 1e-06
+          "min": 1e-06,
+          "constraint": "non inferiore al tempo minimo; deve contenere il frame più lungo"
         },
         {
           "path": "network.mac.buffer_packets",
@@ -1171,7 +1199,7 @@
           "default": 100,
           "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
           "type": "integer",
-          "unit": "",
+          "unit": "pacchetti",
           "min": 1,
           "max": 10000,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
@@ -1230,7 +1258,8 @@
         "media": [
           "acoustic"
         ]
-      }
+      },
+      "unavailable": "richiede ruoli nodo/sink e un PHY dedicato agli ACK"
     },
     {
       "id": "aloha_q_sync",
@@ -1261,7 +1290,8 @@
         "media": [
           "acoustic"
         ]
-      }
+      },
+      "unavailable": "richiede ruoli, sincronizzazione e un PHY per gli ACK"
     },
     {
       "id": "ufetch",
@@ -1291,7 +1321,8 @@
         "media": [
           "acoustic"
         ]
-      }
+      },
+      "unavailable": "richiede ruoli AUV/head-node e dipendenze native"
     },
     {
       "id": "sun",
@@ -1314,7 +1345,8 @@
           "help": "Destinazione convergecast: tutti i flussi devono terminare qui.",
           "type": "select",
           "choices": [],
-          "node_choices": true
+          "node_choices": true,
+          "constraint": "un drone configurato; ogni flusso deve terminare qui e non avere risposte"
         },
         {
           "path": "network.sun.probe_interval_s",
@@ -1388,7 +1420,8 @@
           "default": 0.0,
           "unit": "dB",
           "help": "Soglia nativa per accettare un probe; non modifica il PHY.",
-          "type": "number"
+          "type": "number",
+          "constraint": "qualsiasi valore finito"
         },
         {
           "path": "network.sun.poisson_timing",
@@ -1448,7 +1481,8 @@
       ],
       "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/network/uwicrp",
       "official_examples": [],
-      "official_example": "load sequence only; scheduler run not verified"
+      "official_example": "load sequence only; scheduler run not verified",
+      "unavailable": "richiede simboli di uwip non esportati e ruoli dedicati"
     },
     {
       "id": "position_based",
@@ -1474,15 +1508,16 @@
       "official_examples": [
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/test_uwmulti_traffic/test_uwmulti_traffic.tcl"
       ],
-      "official_example": "library load only; full scheduler example not executed"
+      "official_example": "library load only; full scheduler example not executed",
+      "unavailable": "richiede le posizioni degli altri nodi senza ground truth"
     },
     {
       "id": "woss",
       "name": "WOSS / Bellhop",
       "layer": "channel",
       "description": "Bellhop reale senza database globali: SSP esplicito, fondale e superficie piatti, sedimento sintetico. Cache locale alla sessione, posizioni aggiornate alle barriere. Separazione orizzontale ≥1 m; margine superficie/fondo >0,1 m.",
-      "reason": "Verificato con test nativi del bridge e con HoloOcean end-to-end (2026-10-22). Configurabile da YAML (Importa) e API Python; non ancora selezionabile nel Network Designer.",
-      "operational": false,
+      "reason": "Verificato con test nativi del bridge, con HoloOcean end-to-end e nel Network Designer (test Playwright, 2026-10-22). Configurabile anche da YAML e API Python.",
+      "operational": true,
       "validation": "verified_end_to_end",
       "source_present": true,
       "compiled": true,
@@ -1527,7 +1562,8 @@
           "help": "Fondale piatto sintetico; non viene letto dalla scena Unreal. Richiede adeguare SSP.",
           "type": "number",
           "min": 1,
-          "max": 11000
+          "max": 11000,
+          "constraint": "il profilo SSP deve terminare a questa profondità; ogni drone resta ad almeno 0,1 m da superficie e fondale"
         },
         {
           "path": "network.woss.sediment_speed_mps",
@@ -1573,8 +1609,8 @@
       "name": "Ottico DESERT",
       "layer": "phy",
       "description": "Catena nativa con unità proprie. Lambert-Beer e rumore solare, ricevitore omnidirezionale; adattatore orientamento sperimentale.",
-      "reason": "Verificato con test nativi del bridge e con HoloOcean end-to-end (2026-10-22). Configurabile da YAML (Importa) e API Python; non ancora selezionabile nel Network Designer.",
-      "operational": false,
+      "reason": "Verificato con test nativi del bridge, con HoloOcean end-to-end e nel Network Designer (test Playwright, 2026-10-22). Configurabile anche da YAML e API Python.",
+      "operational": true,
       "validation": "verified_end_to_end",
       "source_present": true,
       "compiled": true,
@@ -1586,111 +1622,139 @@
           "label": "Potenza ottica",
           "default": 50.0,
           "unit": "W",
-          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
-          "type": "number"
+          "help": "Potenza ottica emessa (TxPower_ del PHY ottico nativo): watt lineari, non un livello SPL.",
+          "type": "number",
+          "min": 1e-15,
+          "max": 10000
         },
         {
           "path": "network.optical.bitrate_bps",
           "label": "Bitrate",
           "default": 1000000.0,
           "unit": "bit/s",
-          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
-          "type": "number"
+          "help": "Bit al secondo del PHY ottico; determinano la durata del frame.",
+          "type": "number",
+          "min": 1,
+          "max": 1000000000.0
         },
         {
           "path": "network.optical.frequency_hz",
           "label": "Frequenza del modello",
           "default": 10000000.0,
           "unit": "Hz",
-          "help": "Parametro della maschera spettrale nativa. La lunghezza d’onda della LUT è 532 nm: questo valore non viene convertito automaticamente in una nuova calibrazione ottica.",
-          "type": "number"
+          "help": "Centro della maschera spettrale nativa. Le tabelle di rumore sono a 532 nm: il valore non ricalibra il modello ottico.",
+          "type": "number",
+          "constraint": "la banda deve restare minore del doppio della frequenza centrale",
+          "min": 1,
+          "max": 1000000000000000.0
         },
         {
           "path": "network.optical.bandwidth_hz",
           "label": "Banda",
           "default": 100000.0,
           "unit": "Hz",
-          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
-          "type": "number"
+          "help": "Larghezza della maschera spettrale usata per il rumore del ricevitore.",
+          "type": "number",
+          "constraint": "la banda deve restare minore del doppio della frequenza centrale",
+          "min": 1,
+          "max": 1000000000000.0
         },
         {
           "path": "network.optical.attenuation_per_m",
           "label": "Attenuazione ottica",
           "default": 0.043,
           "unit": "1/m",
-          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
-          "type": "number"
+          "help": "Coefficiente di attenuazione c dell’acqua nella legge di Lambert-Beer (setFixedC).",
+          "type": "number",
+          "min": 0,
+          "max": 100
         },
         {
           "path": "network.optical.temperature_k",
           "label": "Temperatura ricevitore",
           "default": 293.15,
           "unit": "K",
-          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
-          "type": "number"
+          "help": "Temperatura del ricevitore per il rumore termico (T_).",
+          "type": "number",
+          "min": 250,
+          "max": 350
         },
         {
           "path": "network.optical.receiver_area_m2",
           "label": "Area ricevitore",
           "default": 1.1e-06,
           "unit": "m²",
-          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
-          "type": "number"
+          "help": "Area del fotorivelatore (Ar_), usata sia dalla propagazione sia dal PHY.",
+          "type": "number",
+          "min": 1e-12,
+          "max": 10
         },
         {
           "path": "network.optical.transmitter_area_m2",
           "label": "Area trasmettitore",
           "default": 1e-05,
           "unit": "m²",
-          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
-          "type": "number"
+          "help": "Area di apertura del trasmettitore (At_).",
+          "type": "number",
+          "min": 1e-12,
+          "max": 10
         },
         {
           "path": "network.optical.beam_angle_rad",
           "label": "Angolo nativo del fascio",
           "default": 1.0,
           "unit": "rad",
-          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
-          "type": "number"
+          "help": "Semiangolo del fascio (theta_): il guadagno Lambert dipende dal coseno dell’angolo.",
+          "type": "number",
+          "min": 0,
+          "max": 1.56
         },
         {
           "path": "network.optical.dark_current_a",
           "label": "Corrente oscura",
           "default": 1e-09,
           "unit": "A",
-          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
-          "type": "number"
+          "help": "Corrente di buio del fotodiodo (Id_), contributo al rumore shot.",
+          "type": "number",
+          "min": 0,
+          "max": 1
         },
         {
           "path": "network.optical.shunt_resistance_ohm",
           "label": "Resistenza shunt",
           "default": 1490000000.0,
           "unit": "Ω",
-          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
-          "type": "number"
+          "help": "Resistenza di shunt del fotodiodo (R_), contributo al rumore termico.",
+          "type": "number",
+          "min": 1,
+          "max": 1000000000000000.0
         },
         {
           "path": "network.optical.responsivity_a_w",
           "label": "Responsività",
           "default": 0.26,
           "unit": "A/W",
-          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
-          "type": "number"
+          "help": "Responsività del fotodiodo (S_): corrente prodotta per watt ottico ricevuto.",
+          "type": "number",
+          "min": 1e-12,
+          "max": 100
         },
         {
           "path": "network.optical.acquisition_threshold_db",
           "label": "Soglia acquisizione",
           "default": 10.0,
           "unit": "dB",
-          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
-          "type": "number"
+          "help": "Soglia SNR che la ricezione deve superare per sincronizzarsi (AcquisitionThreshold_dB_).",
+          "type": "number",
+          "min": -100,
+          "max": 100
         },
         {
           "path": "network.optical.directional",
           "label": "Trasduttore direzionale",
           "default": false,
           "unit": "",
-          "help": "Adattatore geometrico sperimentale 3D: pose reali + montaggio del trasduttore; guadagno Lambert-Beer nativo. Ricevitore omnidirezionale. Gli offset modificano il guadagno; il ritardo usa il centro del veicolo.",
+          "help": "Adattatore sperimentale: orienta il trasmettitore con yaw/pitch/roll misurati da HoloOcean. Il ricevitore resta omnidirezionale.",
           "type": "checkbox"
         },
         {
@@ -1698,48 +1762,60 @@
           "label": "mount yaw deg",
           "default": 0.0,
           "unit": "°",
-          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
-          "type": "number"
+          "help": "Rotazione del trasmettitore attorno all’asse verticale del veicolo.",
+          "type": "number",
+          "min": -360,
+          "max": 360
         },
         {
           "path": "network.optical.mount_pitch_deg",
           "label": "mount pitch deg",
           "default": 0.0,
           "unit": "°",
-          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
-          "type": "number"
+          "help": "Inclinazione del trasmettitore rispetto al corpo del veicolo.",
+          "type": "number",
+          "min": -360,
+          "max": 360
         },
         {
           "path": "network.optical.mount_roll_deg",
           "label": "mount roll deg",
           "default": 0.0,
           "unit": "°",
-          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
-          "type": "number"
+          "help": "Rollio del trasmettitore rispetto al corpo del veicolo.",
+          "type": "number",
+          "min": -360,
+          "max": 360
         },
         {
           "path": "network.optical.offset_x_m",
           "label": "offset x m",
           "default": 0.0,
           "unit": "m",
-          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
-          "type": "number"
+          "help": "Spostamento del trasduttore lungo X del corpo (avanti), dal baricentro.",
+          "type": "number",
+          "min": -100,
+          "max": 100
         },
         {
           "path": "network.optical.offset_y_m",
           "label": "offset y m",
           "default": 0.0,
           "unit": "m",
-          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
-          "type": "number"
+          "help": "Spostamento del trasduttore lungo Y del corpo (sinistra), dal baricentro.",
+          "type": "number",
+          "min": -100,
+          "max": 100
         },
         {
           "path": "network.optical.offset_z_m",
           "label": "offset z m",
           "default": 0.0,
           "unit": "m",
-          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
-          "type": "number"
+          "help": "Spostamento del trasduttore lungo Z del corpo (alto), dal baricentro.",
+          "type": "number",
+          "min": -100,
+          "max": 100
         }
       ],
       "libraries": [
@@ -1775,8 +1851,8 @@
       "name": "EM DESERT (LUT sicura)",
       "layer": "phy",
       "description": "Catena nativa con unità proprie. LUT originale percentuale con correzione separata dei limiti/interpolazione; classe upstream conservata.",
-      "reason": "Verificato con test nativi del bridge e con HoloOcean end-to-end (2026-10-22). Configurabile da YAML (Importa) e API Python; non ancora selezionabile nel Network Designer.",
-      "operational": false,
+      "reason": "Verificato con test nativi del bridge, con HoloOcean end-to-end e nel Network Designer (test Playwright, 2026-10-22). Configurabile anche da YAML e API Python.",
+      "operational": true,
       "validation": "verified_end_to_end",
       "source_present": true,
       "compiled": true,
@@ -1788,56 +1864,72 @@
           "label": "Potenza EM",
           "default": 14.0,
           "unit": "dBm",
-          "help": "Parametro EM nativo. Potenza in dBm; LUT SF7 CR4/5 fissata, non una calibrazione universale.",
-          "type": "number"
+          "help": "Potenza trasmessa del PHY EM nativo (TxPower_), in dBm; i valori negativi sono validi.",
+          "type": "number",
+          "min": -100,
+          "max": 100
         },
         {
           "path": "network.em.bitrate_bps",
           "label": "Bitrate",
           "default": 27000.0,
           "unit": "bit/s",
-          "help": "Parametro EM nativo. Potenza in dBm; LUT SF7 CR4/5 fissata, non una calibrazione universale.",
-          "type": "number"
+          "help": "Bit al secondo del PHY EM; la tabella di errore resta quella SF7 CR4/5.",
+          "type": "number",
+          "min": 1,
+          "max": 1000000000.0
         },
         {
           "path": "network.em.frequency_hz",
           "label": "Frequenza del modello",
           "default": 868000000.0,
           "unit": "Hz",
-          "help": "Parametro EM nativo. Potenza in dBm; LUT SF7 CR4/5 fissata, non una calibrazione universale.",
-          "type": "number"
+          "help": "Portante: con temperatura e salinità determina l’attenuazione nativa in acqua.",
+          "type": "number",
+          "constraint": "la banda deve restare minore del doppio della frequenza centrale",
+          "min": 1,
+          "max": 1000000000000000.0
         },
         {
           "path": "network.em.bandwidth_hz",
           "label": "Banda",
           "default": 125000.0,
           "unit": "Hz",
-          "help": "Parametro EM nativo. Potenza in dBm; LUT SF7 CR4/5 fissata, non una calibrazione universale.",
-          "type": "number"
+          "help": "Larghezza della maschera spettrale.",
+          "type": "number",
+          "constraint": "la banda deve restare minore del doppio della frequenza centrale",
+          "min": 1,
+          "max": 1000000000000.0
         },
         {
           "path": "network.em.temperature_c",
           "label": "Temperatura acqua",
           "default": 20.0,
           "unit": "°C",
-          "help": "Parametro EM nativo. Potenza in dBm; LUT SF7 CR4/5 fissata, non una calibrazione universale.",
-          "type": "number"
+          "help": "Temperatura dell’acqua usata dalla propagazione EM nativa (T_).",
+          "type": "number",
+          "min": 0,
+          "max": 40
         },
         {
           "path": "network.em.salinity_ppt",
           "label": "Salinità",
           "default": 0.0,
           "unit": "ppt",
-          "help": "Parametro EM nativo. Potenza in dBm; LUT SF7 CR4/5 fissata, non una calibrazione universale.",
-          "type": "number"
+          "help": "Salinità dell’acqua (S_): l’acqua salata attenua molto più di quella dolce.",
+          "type": "number",
+          "min": 0,
+          "max": 40
         },
         {
           "path": "network.em.antenna_gain_db",
           "label": "Guadagno antenna",
           "default": 2.0,
           "unit": "dB",
-          "help": "Parametro EM nativo. Potenza in dBm; LUT SF7 CR4/5 fissata, non una calibrazione universale.",
-          "type": "number"
+          "help": "Guadagno costante delle antenne (setGain); non dipende dall’orientamento del veicolo.",
+          "type": "number",
+          "min": -100,
+          "max": 100
         }
       ],
       "libraries": [
@@ -1886,7 +1978,8 @@
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwcbr_smartofdm.tcl",
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/OFDM/test_ofdmaloha_desert_integration.tcl"
       ],
-      "official_example": "load sequence only; scheduler run not verified"
+      "official_example": "load sequence only; scheduler run not verified",
+      "unavailable": "framing OFDM dedicato non verificato con il bridge"
     },
     {
       "id": "hmm",
@@ -1917,16 +2010,17 @@
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ranging/ranging_tokenbus.tcl",
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/test_uwhmmphy.tcl"
       ],
-      "official_example": "load sequence only; scheduler run not verified"
+      "official_example": "load sequence only; scheduler run not verified",
+      "unavailable": "stati e tabelle HMM non verificati con il bridge"
     },
     {
       "id": "multi_phy",
       "name": "Multi-PHY",
       "layer": "interface",
-      "description": "Moduli di switching upstream presenti; mapping flussi/interfacce e canali separati non ancora implementati. Nessuno switching automatico implicito.",
-      "reason": "Test nativi del bridge: selezione manuale e controller nativo per potenza ricevuta, 2-3 interfacce acustiche, CSMA-ALOHA senza ACK e StaticRouting. Nessuna prova HoloOcean end-to-end e nessuna rete ibrida acustico/ottica. Configurabile da YAML e API Python.",
-      "operational": false,
-      "validation": "native_verified",
+      "description": "Controller nativo multi-stack DESERT: 2-3 interfacce acustiche BPSK sotto un solo MAC, con selezione manuale (API) o per potenza ricevuta (master/slave nativi). Le soglie sono nell’unità lineare della potenza ricevuta del PHY acustico.",
+      "reason": "Verificato con test nativi del bridge (selezione manuale, controller per potenza ricevuta, POWER sulla prima interfaccia), con HoloOcean end-to-end (cambio di interfaccia guidato dalla distanza reale e selezione manuale in un ambiente collegato) e nel Network Designer (2026-10-22). Solo interfacce acustiche, CSMA-ALOHA senza ACK e routing statico; reti miste acustico/ottiche non supportate dal bridge (blocchi documentati in capabilities.md).",
+      "operational": true,
+      "validation": "verified_end_to_end",
       "source_present": true,
       "compiled": true,
       "loadable": true,
@@ -1981,15 +2075,16 @@
       "parameters": [],
       "driver_installed": true,
       "hardware_detected": false,
-      "configuration_verified": false
+      "configuration_verified": false,
+      "unavailable": "nessun modem collegato o verificato"
     },
     {
       "id": "native_cbr",
       "name": "UW/CBR nativo",
       "layer": "application",
       "description": "Timer e pacchetti generati nel DESERT reale. Nessun envelope JSON o TTL Python; statistiche native distinte.",
-      "reason": "Verificato con test nativi del bridge e con HoloOcean end-to-end (2026-10-22). Configurabile da YAML (Importa) e API Python; non ancora selezionabile nel Network Designer.",
-      "operational": false,
+      "reason": "Verificato con test nativi del bridge, con HoloOcean end-to-end e nel Network Designer (test Playwright, 2026-10-22). Configurabile anche da YAML e API Python.",
+      "operational": true,
       "validation": "verified_end_to_end",
       "source_present": true,
       "compiled": true,
@@ -2088,8 +2183,8 @@
       "name": "UW/VBR nativo",
       "layer": "application",
       "description": "Timer e pacchetti generati nel DESERT reale. Nessun envelope JSON o TTL Python; statistiche native distinte.",
-      "reason": "Verificato con test nativi del bridge e con HoloOcean end-to-end (2026-10-22). Configurabile da YAML (Importa) e API Python; non ancora selezionabile nel Network Designer.",
-      "operational": false,
+      "reason": "Verificato con test nativi del bridge, con HoloOcean end-to-end e nel Network Designer (test Playwright, 2026-10-22). Configurabile anche da YAML e API Python.",
+      "operational": true,
       "validation": "verified_end_to_end",
       "source_present": true,
       "compiled": true,
@@ -2128,7 +2223,7 @@
           "label": "Secondo intervallo VBR",
           "default": 2.0,
           "unit": "s",
-          "help": "Parametro del timer UW/VBR originale, non interpolazione Python.",
+          "help": "Intervallo fra pacchetti nel secondo stato del timer UW/VBR nativo (il primo stato usa l’intervallo del flusso).",
           "type": "number",
           "min": 1e-06
         },
@@ -2137,7 +2232,7 @@
           "label": "Durata primo stato VBR",
           "default": 5.0,
           "unit": "s",
-          "help": "Parametro del timer UW/VBR originale, non interpolazione Python.",
+          "help": "Durata del primo stato del timer UW/VBR nativo prima di passare al secondo.",
           "type": "number",
           "min": 1e-06
         },
@@ -2146,7 +2241,7 @@
           "label": "Durata secondo stato VBR",
           "default": 5.0,
           "unit": "s",
-          "help": "Parametro del timer UW/VBR originale, non interpolazione Python.",
+          "help": "Durata del secondo stato del timer UW/VBR nativo prima di tornare al primo.",
           "type": "number",
           "min": 1e-06
         }
@@ -2199,7 +2294,7 @@
           "default": 100,
           "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
           "type": "integer",
-          "unit": "",
+          "unit": "pacchetti",
           "min": 1,
           "max": 10000,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
@@ -2266,7 +2361,8 @@
           "unit": "s",
           "help": "Il frame deve entrare in questo tempo; il builder rifiuta flussi che non entrano.",
           "type": "number",
-          "min": 1e-06
+          "min": 1e-06,
+          "constraint": "non inferiore al tempo minimo; deve contenere il frame più lungo"
         },
         {
           "path": "network.mac.buffer_packets",
@@ -2274,7 +2370,7 @@
           "default": 100,
           "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
           "type": "integer",
-          "unit": "",
+          "unit": "pacchetti",
           "min": 1,
           "max": 10000,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
@@ -2421,7 +2517,7 @@
       "label": "Tecnologia",
       "default": "acoustic",
       "unit": "",
-      "help": "Una catena PHY/propagazione/canale nativa. Le unità e i parametri cambiano con la tecnologia.",
+      "help": "Catena nativa PHY, propagazione e canale. Acustica: BPSK DESERT; ottica: Lambert-Beer con rumore tabulato; elettromagnetica: tabella di errore SF7. Unità e parametri cambiano con la tecnologia.",
       "type": "select",
       "choices": [
         {
@@ -2436,7 +2532,8 @@
           "value": "em",
           "label": "Elettromagnetica"
         }
-      ]
+      ],
+      "constraint": "ottica ed EM sono verificate con CSMA-ALOHA e routing statico, senza multi-PHY, WOSS o override acustici per drone; l’ottica solo fra 0 e 20 m di profondità"
     },
     "propagation": {
       "path": "network.acoustic.propagation",
@@ -2454,12 +2551,122 @@
           "value": "woss",
           "label": "WOSS / Bellhop"
         }
-      ]
+      ],
+      "constraint": "WOSS richiede il PHY BPSK originale su tutti i droni, nessun multi-PHY, almeno 1 m di separazione orizzontale e droni ad almeno 0,1 m da superficie e fondale"
     },
     "ssp": {
       "label": "Profilo velocità del suono",
       "unit": "m, m/s",
-      "help": "Campioni ordinati profondità/velocità, dalla superficie al fondale. Fra 1000 e 2000 m/s; 2–256 punti. Bellhop usa questo profilo reale."
+      "help": "Profilo della velocità del suono letto da Bellhop: coppie profondità/velocità in ordine di profondità crescente.",
+      "constraint": "da 2 a 256 punti; il primo a 0 m, l’ultimo alla profondità del fondale; velocità fra 1000 e 2000 m/s",
+      "default": [
+        {
+          "depth_m": 0,
+          "speed_mps": 1500
+        },
+        {
+          "depth_m": 100,
+          "speed_mps": 1500
+        }
+      ]
+    },
+    "multiphy": {
+      "label": "Interfacce acustiche multiple (multi-PHY)",
+      "type": "checkbox",
+      "default": false,
+      "unit": "",
+      "help": "Ogni drone ha 2 o 3 interfacce acustiche sotto un solo MAC; il controller nativo DESERT sceglie l’interfaccia attiva.",
+      "constraint": "solo propagazione analitica, CSMA-ALOHA senza ACK e routing statico; bande delle interfacce disgiunte"
+    },
+    "multiphy_interface": {
+      "label": "Interfaccia",
+      "type": "text",
+      "unit": "",
+      "help": "Nome dell’interfaccia (minuscole, cifre, _). I campi vuoti ereditano il canale acustico globale.",
+      "constraint": "da 2 a 3 interfacce con nomi unici; le bande non devono sovrapporsi"
+    },
+    "multiphy_policy": {
+      "path": "network.multiphy.policy",
+      "label": "Selezione dell’interfaccia",
+      "type": "select",
+      "default": "manual",
+      "unit": "",
+      "help": "Manuale: l’applicazione sceglie con select_interface (API Python). Potenza ricevuta: il controller master/slave nativo cambia interfaccia in base alla potenza misurata.",
+      "constraint": "la potenza ricevuta richiede tutte le interfacce su ogni drone e soglie fra interfacce adiacenti",
+      "choices": [
+        {
+          "value": "manual",
+          "label": "Manuale"
+        },
+        {
+          "value": "received_power",
+          "label": "Potenza ricevuta (controller nativo)"
+        }
+      ]
+    },
+    "multiphy_initial": {
+      "path": "network.multiphy.initial_interface",
+      "label": "Interfaccia iniziale",
+      "type": "select",
+      "unit": "",
+      "help": "Interfaccia attiva all’avvio su ogni drone.",
+      "constraint": "deve essere disponibile su ogni drone"
+    },
+    "multiphy_master": {
+      "path": "network.multiphy.master",
+      "label": "Drone master",
+      "type": "select",
+      "default": "auv_01",
+      "unit": "",
+      "help": "Drone che misura la potenza e decide il cambio; gli altri seguono come slave.",
+      "constraint": "usato solo con la selezione per potenza ricevuta"
+    },
+    "multiphy_alpha": {
+      "path": "network.multiphy.alpha",
+      "label": "Peso della media (alpha)",
+      "type": "number",
+      "default": 0.5,
+      "min": 0,
+      "max": 1,
+      "unit": "adimensionale",
+      "help": "Peso della nuova misura nella media esponenziale della potenza ricevuta dal master."
+    },
+    "multiphy_threshold": {
+      "label": "Soglia di potenza ricevuta",
+      "type": "number",
+      "unit": "unità lineari del PHY acustico (µPa²)",
+      "help": "Il master confronta la media della potenza ricevuta Pr sull’interfaccia corrente: passa all’interfaccia successiva quando la supera, alla precedente quando scende sotto. Pr = 10^(livello ricevuto/10), la grandezza mostrata nei dettagli PHY dei messaggi.",
+      "constraint": "valore positivo; servono entrambe le direzioni fra interfacce adiacenti"
+    },
+    "multiphy_available": {
+      "label": "Interfacce disponibili per drone",
+      "type": "checkbox",
+      "unit": "",
+      "help": "Interfacce installate su ciascun drone.",
+      "constraint": "l’interfaccia iniziale è obbligatoria; con la potenza ricevuta servono tutte"
+    },
+    "generator": {
+      "path": "generator",
+      "label": "Generatore",
+      "type": "select",
+      "default": "python",
+      "unit": "",
+      "help": "Python: messaggi applicativi con envelope e TTL. CBR/VBR: timer e pacchetti generati dai moduli nativi DESERT, senza envelope né TTL.",
+      "constraint": "i generatori nativi accettano solo dati, tempi periodici o Poisson, nessuna risposta e nessun intervallo finale",
+      "choices": [
+        {
+          "value": "python",
+          "label": "Python (applicazione)"
+        },
+        {
+          "value": "desert_cbr",
+          "label": "DESERT CBR nativo"
+        },
+        {
+          "value": "desert_vbr",
+          "label": "DESERT VBR nativo"
+        }
+      ]
     }
   }
 }

@@ -46,6 +46,9 @@ class TelemetryCollector:
         self.queue_peak = None
         self.node_phy = {}
         self.series = deque(maxlen=1000)
+        # Native ranging estimates per node pair, beside the HoloOcean geometric reference.
+        self.ranging_series = {}
+        self.ranging_latest = {}
         self.generated_count = self.received_count = self.expired_count = 0
         self.generated_bytes = self.received_bytes = self.wire_received_bytes = 0
         self.native_generated_count = self.native_received_count = self.native_received_bytes = 0
@@ -137,12 +140,35 @@ class TelemetryCollector:
                     counters[outcome] = counters.get(outcome, 0) + 1
             if event['event']=='mac_specific_stats':
                 self.mac_specific_stats[data['node_id']]=data['values']
+            if event['event']=='ranging_estimate':
+                self._ranging(data,inverse)
             if event["event"] == "stats":
                 self.stats[inverse[event["node"]]] = data
                 if data.get("mac_queue") is not None:
                     self.queue_peak = max(self.queue_peak or 0, data["mac_queue"])
             self.emit(data["event"], data["time"],
                       **{k: v for k, v in data.items() if k not in ("event", "time")}, origin="desert")
+
+    def _ranging(self, data, inverse):
+        a, b = inverse.get(data.get('peer_a')), inverse.get(data.get('peer_b'))
+        if a is None or b is None:
+            return
+        data['peer_a_id'], data['peer_b_id'] = a, b
+        pair = a + '>' + b
+        # Geometry of the latest fleet sample: the native module does not expose when it measured.
+        reference = (math.dist([self.fleet[a][k] for k in ('x', 'y', 'z')], [self.fleet[b][k] for k in ('x', 'y', 'z')])
+                     if a in self.fleet and b in self.fleet else None)
+        valid = bool(data.get('valid')) and data.get('distance_m') is not None
+        self.ranging_latest[(data['node_id'], pair)] = {
+            'time': data['time'], 'observer': data['node_id'], 'pair': pair, 'peer_a': a, 'peer_b': b,
+            'protocol': data.get('protocol'), 'valid': valid, 'travel_time_s': data.get('travel_time_s') if valid else None,
+            'distance_m': data['distance_m'] if valid else None, 'geometric_distance_m': reference,
+            'error_m': data['distance_m'] - reference if valid and reference is not None else None}
+        series = self.ranging_series.setdefault(pair, deque(maxlen=1000))
+        if not series or series[-1]['time'] != data['time']:
+            series.append({'time': data['time'], 'geometric_distance_m': reference, 'estimates': {}})
+        if valid:
+            series[-1]['estimates'][data['node_id']] = data['distance_m']
 
     def native_generated(self,event,inverse):
         packet_id=event['native_packet_id']
@@ -242,6 +268,8 @@ class TelemetryCollector:
                     "distances_m": self._distances(), "node_phy": self.node_phy, "network_metrics": self.network_metrics,
                     "packets": [dict(self.packets[k]) for k in list(self.packet_order)[-500:]],
                     "events": list(self.events)[-100:], "series": list(self.series),
+                    "ranging": {"series": {pair: list(points) for pair, points in self.ranging_series.items()},
+                                "latest": sorted(self.ranging_latest.values(), key=lambda r: (r['pair'], r['observer']))},
                     "counts": {"generated": self.generated_count, "received": self.received_count,
                                "timed_out": self.expired_count,
                                "pending": self.generated_count - self.received_count - self.expired_count}})

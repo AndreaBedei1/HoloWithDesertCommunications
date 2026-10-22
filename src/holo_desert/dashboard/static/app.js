@@ -3,7 +3,7 @@ import {chart} from './charts.js';
 import {drawMap,bindMap,resetMaps} from './maps.js';
 import {bindConfiguration,setNetworkCatalog,moduleName} from './configuration.js';
 import {renderPackets,packetDetails,packetTone,stateHTML,eventTimeline} from './packets.js';
-import {SCENARIOS,scenarioInfo,drone,typeName,help,bindHelp} from './presentation.js';
+import {SCENARIOS,scenarioInfo,drone,typeName,help,bindHelp,setInterfaceNames} from './presentation.js';
 import {bindScenarioEditor} from './scenario-editor.js';
 
 const activeStates=['starting','running','paused','stopping'];
@@ -109,7 +109,7 @@ function metrics(){
   const accounting=latest.network_metrics;preserve($('#network-accounting'),accounting?'<h3>Contabilità della rete osservata</h3>'+fields(Object.fromEntries([['data_tx_frames','Frame dati TX',0],['control_tx_frames','Frame controllo TX',0],['data_tx_bits','Bit dati TX',0],['control_tx_bits','Bit controllo TX',0],['data_airtime_s','Tempo dati sul mezzo [s]',6],['control_airtime_s','Tempo controllo sul mezzo [s]',6],['late_received','Ricevuti dopo TTL',0]].map(([key,label,digits])=>[label,number(accounting[key],digits)])))+'<p class="micro">Totali dagli eventi PHY osservati, incluse le ritrasmissioni. I messaggi ricevuti dopo TTL restano separati dalle consegne valide.</p>':'');
   const s=latest,series=s.series||[],node=$('#metric-node').value,pair=$('#metric-pair').value,opts={window:Number($('#metric-window').value)};
   $('#analysis-empty').hidden=series.length>0||analysisGroup==='compare';$('#analysis-charts').hidden=!series.length||analysisGroup==='compare';$('#compare-panel').hidden=analysisGroup!=='compare';
-  $('#metric-window').disabled=analysisGroup==='compare';$('#node-filter-label').hidden=analysisGroup!=='channel';$('#pair-filter-label').hidden=analysisGroup!=='geometry';
+  $('#metric-window').disabled=analysisGroup==='compare';$('#node-filter-label').hidden=analysisGroup!=='channel';$('#pair-filter-label').hidden=!['geometry','ranging'].includes(analysisGroup);
   document.querySelectorAll('.metric-panel').forEach(p=>p.hidden=p.dataset.group!==analysisGroup);
   if(analysisGroup==='compare'){const allowed=s.state==='finished'&&!s.standalone&&!!s.configuration;$('#retain').disabled=!allowed||busy;$('#retain').title=allowed?'':'Completa una corsa integrata per conservarne il riepilogo.';$('#compare-note').textContent=allowed?'Puoi conservare il riepilogo di questa corsa.':'Il riepilogo si può conservare dopo una corsa integrata e completata. Nessun confronto parte automaticamente.';return}
   if(!series.length)return;
@@ -122,7 +122,8 @@ function metrics(){
   }else if(analysisGroup==='channel'){
     chart('#queue-chart',series,[{value:p=>p.nodes?.[node]?.mac_queue,color:palette.blue}],{...opts,step:true});
     chart('#phy-chart',series,['noise_error','interference_error','not_synchronized'].map((key,i)=>({value:p=>p.nodes?.[node]?.phy?.[key]??(p.nodes?.[node]?0:null),color:[palette.amber,palette.red,palette.gray][i]})),opts);
-  }else{chart('#distance-chart',series,[{value:p=>p.distances_m?.[pair],color:palette.blue}],opts);chart('#drift-chart',series,[line('wall_drift_s',palette.gray)],opts)}
+  }else if(analysisGroup==='ranging')ranging(s,pair,opts);
+  else{chart('#distance-chart',series,[{value:p=>p.distances_m?.[pair],color:palette.blue}],opts);chart('#drift-chart',series,[line('wall_drift_s',palette.gray)],opts)}
   const keys=Object.keys(nodeStatsLabels);$('#mac-stats').innerHTML='<table><thead><tr><th>Drone</th>'+keys.map(k=>'<th>'+esc(nodeStatsLabels[k])+'</th>').join('')+'</tr></thead><tbody>'+Object.entries(s.stats||{}).map(([n,values])=>'<tr><td>'+esc(drone(n))+'</td>'+keys.map(k=>'<td>'+number(values[k],0)+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
   $('#mac-stats').insertAdjacentHTML('beforeend',Object.entries(s.mac_specific_stats||{}).filter(([node,values])=>Object.keys(values).length).map(([node,values])=>'<details><summary>Contatori nativi '+esc(drone(node))+'</summary>'+fields(values)+'</details>').join(''));
   $('#application-history').hidden=!(s.transitions||[]).length;
@@ -131,6 +132,17 @@ function metrics(){
   $('#configured-route-details').innerHTML=(s.configured_routes||[]).map(r=>'<div class="distance-row"><span>'+esc(drone(r.source)+' → '+drone(r.destination))+'</span><b>via '+esc(drone(r.next_hop))+'</b></div>').join('');
   preserve($('#channel-events'),eventTimeline((s.observations||[]).slice(-25).reverse()).replace(/^<ol[^>]*>|<\/ol>$/g,''));
 }
+// Native ranging estimates against the HoloOcean geometry; never mixed into one value.
+function ranging(s,pair,opts){
+  const data=s.ranging||{series:{},latest:[]},points=data.series?.[pair]||[],observers=[...new Set(points.flatMap(p=>Object.keys(p.estimates)))],colors=[palette.blue,palette.green,palette.amber,palette.red];
+  const empty=!data.latest?.length;$('#ranging-empty').hidden=!empty;['#ranging-chart','#ranging-key','#ranging-table','#ranging-note'].forEach(id=>$(id).hidden=empty);
+  if(empty){$('#ranging-empty').textContent='Nessuna stima di distanza in questa corsa. Le stime native arrivano con un MAC di ranging (Ranging-TokenBus o Ranging-TDMA), una volta al secondo di tempo simulato.';return}
+  chart('#ranging-chart',points,[{value:p=>p.geometric_distance_m,color:palette.gray},...observers.map((o,i)=>({value:p=>p.estimates[o],color:colors[i%colors.length]}))],opts);
+  $('#ranging-key').innerHTML='<i class="line-key gray"></i>Distanza geometrica HoloOcean · riferimento'+observers.map((o,i)=>'<i class="line-key" style="background:'+colors[i%colors.length]+'"></i>Stima DESERT misurata da '+esc(drone(o))).join('');
+  const protocol=data.latest[0]?.protocol||'',sound=s.configuration?.network?.acoustic?.sound_speed_mps;
+  $('#ranging-table').innerHTML='<table><thead><tr><th>Coppia</th><th>Osservatore</th><th>Stima DESERT [m]</th><th>Tempo di volo [s]</th><th>Distanza geometrica [m]</th><th>Differenza [m]</th><th>Lettura [s]</th></tr></thead><tbody>'+data.latest.map(r=>'<tr><td>'+esc(drone(r.peer_a)+' ↔ '+drone(r.peer_b))+'</td><td>'+esc(drone(r.observer))+'</td><td>'+(r.valid?number(r.distance_m,2):'Non ancora misurata')+'</td><td>'+(r.valid?number(r.travel_time_s,6):'N/D')+'</td><td>'+number(r.geometric_distance_m,2)+'</td><td>'+number(r.error_m,2)+'</td><td>'+number(r.time,1)+'</td></tr>').join('')+'</tbody></table>';
+  $('#ranging-note').textContent='Stima: tempo di volo misurato dal MAC '+protocol+' × velocità del suono configurata ('+number(sound,0)+' m/s). Il modulo non espone l’istante della misura: la distanza geometrica è l’ultimo campione HoloOcean al momento della lettura e un valore non aggiornato resta invariato. La differenza è stima meno riferimento.';
+}
 async function loadComparisons(){
   const data=await api('/api/comparisons'),runs=data.runs;if(!runs.length){$('#comparison').innerHTML='<p>Nessun riepilogo conservato. Completa una corsa integrata per iniziare il confronto.</p>';return}
   const rows=[['Messaggi generati',x=>x.generated],['Messaggi consegnati',x=>x.received],['Messaggi scaduti',x=>x.timed_out],['In attesa',x=>x.pending],['Consegna riuscita',x=>x.pdr_resolved==null?'N/D':number(x.pdr_resolved*100,1)+'%'],['Goodput medio [bit/s]',x=>number(x.goodput_bps,1)],['Throughput envelope [bit/s]',x=>number(x.application_wire_throughput_bps,1)],['Latenza media [s]',x=>number(x.mean_latency_s,3)],['Esiti del ramo PHY interferenza',x=>x.phy_observations.interference_error],['Errori PHY di rumore',x=>x.phy_observations.noise_error],['PHY non sincronizzati',x=>x.phy_observations.not_synchronized],['Picco coda MAC campionato',x=>x.mac_queue_peak??'N/D']];
@@ -138,7 +150,7 @@ async function loadComparisons(){
   $('#comparison').innerHTML='<p>'+esc(data.equivalent?'I parametri comuni coincidono: cambia il MAC.':runs.length===1?'Primo riepilogo conservato. Esegui un’altra corsa cambiando solo MAC.':'I parametri comuni differiscono o il MAC coincide: il confronto non è controllato.')+'</p><div class="table-scroll"><table><thead><tr><th>Metrica</th>'+runs.map(r=>'<th>'+esc(moduleName('mac',r.mac))+'</th>').join('')+'</tr></thead><tbody>'+rows.map(([name,read])=>'<tr><td>'+name+'</td>'+runs.map(r=>'<td>'+esc(read(r.summary))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div><p class="micro">Al massimo sei riepiloghi in memoria. I risultati negativi restano visibili. Geometria configurata e seed uguali non garantiscono traiettorie misurate identiche.</p>';
 }
 function render(){
-  const s=latest,hasRun=s.state!=='idle'&&!!s.configuration;renderServices();
+  const s=latest,hasRun=s.state!=='idle'&&!!s.configuration;renderServices();setInterfaceNames(s.configuration);
   $('#configure').disabled=busy||active()||!configuration||view==='editor'||(view==='home'&&libraryTab==='user'&&!catalog.some(s=>s.kind==='user'));$('#configure').title=active()?'Le impostazioni si possono cambiare dopo l’arresto.':'Parametri della prossima simulazione';
   renderHome();if(view==='editor'){editor.resize();return}
   $('#run-status').textContent=names[s.state]||s.state;$('#run-status').className='status-label '+s.state+(s.state==='starting'?' loading-dot':'');
