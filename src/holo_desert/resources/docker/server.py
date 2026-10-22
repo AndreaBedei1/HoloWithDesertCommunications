@@ -28,12 +28,24 @@ except ImportError:
     from stack_builder import render, validate, CATALOG_VERSION, effective_nodes
 
 
+def _fingerprint():
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "engine-fingerprint")) as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+
+ENGINE_FINGERPRINT = _fingerprint()
+
+
 class Handler(socketserver.StreamRequestHandler):
     def handle(self):
         self.connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         first = self.rfile.readline(131072)
         if first == b'HEALTH\n':
-            self.wfile.write(b'{"event":"health","backend":"desert","release":"4.0.0"}\n')
+            self.wfile.write((json.dumps({"event": "health", "backend": "desert", "release": "4.0.0",
+                                          "engine_fingerprint": ENGINE_FINGERPRINT}) + "\n").encode())
             return
         # A stopped predecessor can still be reaping its child for a moment.
         if not self.server.owner.acquire(timeout=2):
@@ -45,7 +57,7 @@ class Handler(socketserver.StreamRequestHandler):
             commit = subprocess.check_output(["git", "-C", "/home/DESERT_Underwater", "rev-parse", "HEAD"], text=True).strip()
             self.wfile.write((json.dumps({"event": "engine_info", "time": 0,
                 "desert_release": "4.0.0", "desert_source_commit": commit,
-                "stack_builder": CATALOG_VERSION, "phy_patch": {"optical":"native-optical-lambert-beer-body-frame-v1","em":"em-power-lut-v1"}.get(config['network'].get('medium'), "conditional-bpsk-v1" if any(n["acoustic"].get("phy")=="bpsk_corrected" for n in effective_nodes(config)) else "upstream-original"),
+                "stack_builder": CATALOG_VERSION, "engine_fingerprint": ENGINE_FINGERPRINT, "phy_patch": {"optical":"native-optical-lambert-beer-body-frame-v1","em":"em-power-lut-v1"}.get(config['network'].get('medium'), "conditional-bpsk-v1" if any(n["acoustic"].get("phy")=="bpsk_corrected" for n in effective_nodes(config)) else "upstream-original"),
                 "effective_network": config["network"], "effective_nodes": effective_nodes(config)}) + "\n").encode())
             self.wfile.flush()
             with tempfile.TemporaryDirectory(prefix="holo-desert-") as temp:

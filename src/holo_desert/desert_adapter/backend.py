@@ -110,9 +110,11 @@ class DESERTAdapter(CommunicationBackend):
             initial = self._until_barrier()
             self.initial_events = initial
             self.versions = next((e for e in initial if e["event"] == "engine_info"), {})
-            from ..resources.docker.stack_builder import CATALOG_VERSION
-            if self.versions.get('stack_builder') != CATALOG_VERSION:
-                raise BackendError('DESERT engine image is outdated: rebuild with holo-desert engine up before using this laboratory version')
+            from ..resources.docker.stack_builder import CATALOG_VERSION, engine_fingerprint
+            expected = engine_fingerprint()
+            if self.versions.get('stack_builder') != CATALOG_VERSION or self.versions.get('engine_fingerprint') != expected:
+                raise BackendError(f"DESERT engine image is outdated (engine {self.versions.get('engine_fingerprint')}, "
+                                   f"package {expected}): rebuild with holo-desert engine up")
             if self.time != 0 or any(e["event"] == "rx" for e in initial):
                 raise BackendError("DESERT did not initialize at time zero")
         except Exception:
@@ -120,12 +122,17 @@ class DESERTAdapter(CommunicationBackend):
             raise
 
     def health(self):
+        return self.health_info() is not None
+
+    def health_info(self):
+        """HEALTH reply of the service on this port, or None when unreachable."""
         try:
             with socket.create_connection((self.host, self.port), 1) as s:
                 s.sendall(b"HEALTH\n")
-                return json.loads(s.recv(4096)).get("event") == "health"
+                reply = json.loads(s.recv(4096))
+                return reply if reply.get("event") == "health" else None
         except (OSError, ValueError):
-            return False
+            return None
 
     def _command(self, command: str):
         if self.socket is None:

@@ -119,8 +119,10 @@ def test_engine_death_is_reported_and_new_session_recovers(engine):
     try:
         backend.start(scenario)
         import os
-        target=os.environ.get('DESERT_TEST_CONTAINER')
-        command=["exec",target] if target else [*COMPOSE,"exec","-T","desert"]
+        # Kill only the engine serving this test's port, never another service.
+        target=os.environ.get('DESERT_TEST_CONTAINER') or docker_command(
+            "ps","-q","--filter",f"publish={backend.port}",timeout=10).stdout.split()[0]
+        command=["exec",target]
         docker_command(*command, "pkill", "-9", "-x", "ns", timeout=10)
         with pytest.raises(BackendError):
             backend.advance(1)

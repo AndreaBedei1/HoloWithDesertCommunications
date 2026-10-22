@@ -12,6 +12,7 @@ except ImportError:
         from environment_config import validate_woss, validate_woss_position, validate_woss_separation
 
 import copy
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -57,6 +58,25 @@ PHYS={'bpsk_upstream':'Module/MPhy/BPSK/Underwater/HOLO',
 ROUTING={'static':('Module/UW/StaticRouting','libuwstaticrouting.so'),
          'flooding':('Module/UW/FLOODING','libuwflooding.so'),
          'sun':('Module/UW/SUNNode','libsun.so')}
+
+
+# Files copied into the engine image (see Dockerfile). Their digest identifies
+# the bridge, adapters and builder actually running, so a stale image that
+# would silently ignore new options is rejected by the host client.
+ENGINE_FILES=('server.py','stack_builder.py','environment_config.py','medium_config.py','multiphy_config.py',
+              'application_config.py','communication-catalog.json','desert-inventory.json','build-extension.sh')
+
+
+def engine_fingerprint(docker_dir=HERE,desert_dir=None):
+    docker_dir=Path(docker_dir)
+    desert_dir=Path(desert_dir) if desert_dir else (docker_dir/'desert' if (docker_dir/'desert').is_dir() else docker_dir.parent/'desert')
+    entries=[(name,docker_dir/name) for name in ENGINE_FILES]
+    entries+=[('desert/'+p.relative_to(desert_dir).as_posix(),p) for p in desert_dir.rglob('*')
+              if p.is_file() and '__pycache__' not in p.parts and p.suffix!='.pyc']
+    digest=hashlib.sha256()
+    for name,path in sorted(entries):
+        digest.update(name.encode()+b'\x00'+path.read_bytes().replace(b'\r\n',b'\n')+b'\x00')
+    return digest.hexdigest()[:16]
 
 
 def catalog():
@@ -287,3 +307,7 @@ def render(config):
         matrix='\n'.join(' '.join('1' if col==slots[n] else '0' for col in range(len(ids))) for n in ids)+'\n'
         lines+=['set frame_matrix [file join [pwd] tdma_matrix.txt]','set matrix_file [open $frame_matrix w]','puts -nonewline $matrix_file {'+matrix+'}','close $matrix_file']
     return '\n'.join(lines)+'\n'+render_native_applications(c,number)
+
+
+if __name__=='__main__':
+    print(engine_fingerprint())
