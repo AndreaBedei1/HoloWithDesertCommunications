@@ -158,6 +158,26 @@ test('real catalogue: an optical interface has its own fields, shared optical pa
   expect(saved.network.multiphy.interfaces[1]).toMatchObject({id:'short',medium:'optical',optical:{tx_power_w:5}});
   expect(saved.network.multiphy.thresholds).toContainEqual({from_interface:'short',to_interface:'long',power_linear:3e-8});
 });
+test('real catalogue: position-based routing has anchors, ranges and anchor tables',async({page})=>{
+  const form=await realDesigner(page);
+  await form.locator('[data-path="network.routing"]').selectOption('position_based');
+  await expect(form.locator('[data-path="network.mac.protocol"] option:not([disabled])')).toHaveText(['CSMA-ALOHA']);
+  await expect(form.locator('[data-path="network.acoustic.propagation"] option[value="woss"]')).toContainText('non verificato');
+  expect(await helpOf(form,'network.position_based.anchor_range_m')).toContain('Unità: m');
+  // Both drones are static: the first becomes an anchor, the last stays a vehicle.
+  await expect(form.locator('[data-pbr-row][data-node="auv_01"] [data-pbr-anchor]')).toBeChecked();
+  await expect(form.locator('[data-pbr-row][data-node="auv_02"] [data-pbr-anchor]')).not.toBeChecked();
+  await expect(form.locator('[data-static-routes]')).toBeVisible();
+  await form.locator('[data-pbr-row][data-node="auv_01"] [data-pbr-survey="0"]').fill('1');
+  await page.getByRole('button',{name:'Applica alla prossima corsa'}).click();
+  await expect(page.locator('#config-error')).toHaveText('Indica tutte e tre le coordinate della posizione rilevata o nessuna.');
+  for(const [k,v] of [[1,'2'],[2,'-19']])await form.locator('[data-pbr-row][data-node="auv_01"] [data-pbr-survey="'+k+'"]').fill(v);
+  await form.locator('[data-path="network.position_based.anchor_range_m"]').fill('450');
+  const saved=await applied(page);
+  expect(saved.network.routing).toBe('position_based');
+  expect(saved.network.position_based).toMatchObject({anchor_range_m:450,anchors:{auv_01:{surveyed_position:[1,2,-19]}}});
+  expect(Object.keys(saved.network.position_based.anchors)).toEqual(['auv_01']);
+});
 test('real catalogue: native CBR/VBR generators expose native timers and disable Python-only options',async({page})=>{
   const form=await realDesigner(page);await form.locator('summary').filter({hasText:'Flussi applicativi'}).click();const flow=form.locator('.flow-card').first();
   await expect(flow.locator('[data-field="generator"] option',{hasText:'VBR'})).toContainText('non genera risposte');

@@ -124,8 +124,17 @@ class Scenario(Strict):
                 raise ValueError("Unknown node in static route")
             if src in routes or src in routes.values():
                 raise ValueError("Static routes cannot route to or through their own source")
-        if self.network.routing != 'static' and self.network.routes:
+        if self.network.routing not in ('static', 'position_based') and self.network.routes:
             raise ValueError('Static routes cannot be used with Flooding')
+        if self.network.routing == 'position_based':
+            anchors = self.network.position_based.anchors
+            if not anchors or set(anchors) - ids or len(anchors) == len(ids):
+                raise ValueError("Position-based routing needs at least one anchor and one vehicle among the nodes")
+            if any(n.waypoints for n in self.nodes if n.id in anchors):
+                raise ValueError("Position-based anchors are static: they cannot have waypoints")
+            if any(src not in anchors or any(hop != dst and hop not in anchors for dst, hop in table.items())
+                   for src, table in self.network.routes.items()):
+                raise ValueError("Position-based tables belong to anchors; a next hop is an anchor or the destination")
         # Unspecified entries are direct routes, exactly as rendered by the backend.
         for src in ids:
             for dst in ids - {src}:

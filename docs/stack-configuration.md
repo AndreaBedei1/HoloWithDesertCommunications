@@ -231,9 +231,9 @@ message freshness, not a safety system.
 | `medium` | `acoustic` | `acoustic`, `optical`, `em` (single interface per node) |
 | `acoustic` | see below | acoustic PHY and analytic propagation |
 | `mac` | `csma_aloha` | [MAC catalogue](#mac-protocols) |
-| `routing` | `static` | `static`, `flooding`, `sun` |
-| `routes` | `{}` | static routes `{source: {destination: next_hop}}` |
-| `flooding`, `sun` | defaults | routing parameters |
+| `routing` | `static` | `static`, `flooding`, `sun`, `position_based` |
+| `routes` | `{}` | static routes `{source: {destination: next_hop}}`; with `position_based`, the anchors' tables |
+| `flooding`, `sun`, `position_based` | defaults | routing parameters |
 | `woss`, `optical`, `em` | defaults | used only when selected |
 | `multiphy` | `null` | 2–3 interfaces per node, acoustic or optical |
 | `max_wire_bytes` | `4096` | 256–4096; limit on the serialised application envelope |
@@ -255,7 +255,9 @@ Combinations rejected by both validators:
 - `csburst`, `tokenbus`, `ranging_tokenbus` require `routing: static` and `ack: false`;
 - `routing: flooding` with `csma_ca` or `dacap`;
 - `tdma` or `tdma_frame` with `ack: true`;
-- static `routes` with any routing other than `static`;
+- static `routes` with `flooding` or `sun`;
+- `routing: position_based` with anything other than analytic acoustic
+  `csma_aloha` and one interface;
 - `csma_ca` with a non-integer bitrate (must be 1–2147483647 bit/s);
 - `multiphy` with anything other than analytic acoustic BPSK, `csma_aloha`
   without ACK and `static` routing.
@@ -738,6 +740,63 @@ network:
   acoustic: {tx_power_db: 140}
 flows:
   - {source: auv_01, destination: auv_03, start: 20, stop: 80, interval: 10, payload_bytes: 16, ttl: 40}
+```
+
+#### Position-Based (`routing: position_based`) — experimental
+
+`Module/UW/PosBasedRt` (anchors) and `Module/UW/PosBasedRt/ROV` (vehicles),
+`libuwposbasedrt.so` with `libuwsmposition.so`. The protocol distinguishes
+static **anchors** from moving **vehicles**, and no module receives another
+node's live position (no HoloOcean ground truth):
+
+- an anchor knows its own surveyed position (`surveyed_position`, default the
+  node's scenario position, copied once), its next-hop table and the vehicle
+  states carried in the headers of the packets it receives;
+- a vehicle knows its own fix, copied at every `POSITION` from its own pose
+  into a private `Position/UWSM` (the channel keeps using the bridge's
+  `Position/BM`), and the surveyed positions of the anchors.
+
+A vehicle sends every packet, its own or relayed, to the closest surveyed
+anchor within `vehicle_range_m` of its own position; with none in range the
+native module drops the packet before the MAC (no `forward` event). An anchor
+sends directly to a vehicle when its estimate of the vehicle is within
+`anchor_range_m`, otherwise to the next hop of its table; anchor tables come
+from `network.routes` (sources are anchors, a next hop is an anchor or the
+destination, a missing entry is direct). The estimate is the vehicle's last
+reported position ("hold"): the native straight-line extrapolation moves
+towards +x/+y/+z only, so it is not used.
+
+| Field (`network.position_based`) | Default | Meaning |
+|---|---|---|
+| `anchor_range_m` | `3000` | > 0 m; anchor gate for direct delivery to a vehicle (`maxTxRange_`) |
+| `vehicle_range_m` | `3000` | > 0 m; vehicle gate for the closest anchor (`maxTxRange_` of the ROV class) |
+| `anchors` | `{}` | `{node: {surveyed_position: [x, y, z] or null}}`; at least one anchor and one vehicle; anchors have no waypoints |
+
+Verified with CSMA-ALOHA, analytic acoustic propagation and one interface per
+node. Not supported by the native module: direct vehicle-to-vehicle links,
+moving anchors, a time-to-live, routing counters, and more than one vehicle
+state per packet; the routing header takes no airtime. Before a vehicle's first
+packet reaches an anchor, the anchor estimates the vehicle at (0, 0, 0); the
+native estimator starts at timestamp 0 and accepts only newer headers, so a
+packet sent at t = 0 does not update it.
+
+```yaml
+nodes:
+  - {id: auv_01, position: [-500, 0, -100]}
+  - {id: auv_02, position: [0, 0, -100]}
+  - {id: auv_03, position: [500, 0, -100]}
+  - {id: auv_04, position: [-500, 200, -100], waypoints: [[20, 500, 200, -100]]}
+network:
+  acoustic: {tx_power_db: 132}
+  routing: position_based
+  position_based:
+    anchor_range_m: 450
+    vehicle_range_m: 450
+    anchors: {auv_01: {}, auv_02: {}, auv_03: {surveyed_position: [500, 0, -100]}}
+  routes:
+    auv_01: {auv_03: auv_02, auv_04: auv_02}
+    auv_02: {auv_04: auv_03}
+    auv_03: {auv_01: auv_02}
 ```
 
 ## WOSS / Bellhop

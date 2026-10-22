@@ -196,7 +196,11 @@ available in the personal scenario editor.
      vehicles outside 0–20 m depth and, with the received-power policy, before
      an acoustic interface. Renaming an
      interface updates the initial interface, thresholds and availability.
-   - *Routing e relay*, *Override acustici per drone* (acoustic medium only),
+   - *Routing e relay*: parameters of the selected routing and the static
+     route table; with Position-Based routing also the anchor table (anchor
+     or vehicle per drone, optional surveyed position) and the anchors'
+     next-hop tables.
+   - *Override acustici per drone* (acoustic medium only),
      *Flussi applicativi* and the execution mode.
    - Each flow chooses its **Generatore**: Python application messages, or the
      native DESERT CBR/VBR generators with packet size and, for VBR, the second

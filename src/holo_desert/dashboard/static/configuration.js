@@ -65,6 +65,8 @@ function moduleReason(config,layer,m){
     if(m.id==='sun'&&n.mac.ack)return 'richiede il MAC senza ACK';
     if(m.id!=='static'&&medium!=='acoustic')return 'con la tecnologia '+mediumLabel(medium).toLowerCase()+' è verificato solo il routing statico';
     if(m.id!=='static'&&n.multiphy)return 'il multi-PHY è verificato solo con il routing statico';
+    if(m.compatibility?.propagation&&!m.compatibility.propagation.includes(propagationOf(config)))return 'non verificato con la propagazione WOSS';
+    if(m.id==='position_based'&&config.nodes.every(node=>(node.waypoints||[]).length))return 'serve almeno un drone senza waypoint come ancora';
   }
   if(layer==='phy'&&m.id!=='bpsk_upstream'&&propagationOf(config)==='woss')return 'WOSS usa il PHY BPSK originale';
   return '';
@@ -203,6 +205,30 @@ function readMultiphy(root,result){
     if(available.length<ids.length)(node.communication??={}).interfaces=available;
   }
 }
+// Anchors of the position-based routing: static drones with an optional surveyed position.
+function anchorsEditor(config){
+  const s=selector('position_based_anchors')||{label:'Ancore'},anchors=config.network.position_based?.anchors||{};
+  return '<h3>'+esc(s.label)+tip(helpText(s))+'</h3><div class="table-scroll network-routes"><table><thead><tr><th>Drone</th><th>Ancora</th><th>Posizione rilevata x [m]</th><th>y [m]</th><th>z [m]</th></tr></thead><tbody>'+config.nodes.map(node=>{const anchor=node.id in anchors,moving=(node.waypoints||[]).length>0,survey=anchors[node.id]?.surveyed_position;return '<tr data-pbr-row data-node="'+esc(node.id)+'"><td>'+esc(drone(node.id))+'</td><td><input type="checkbox" data-pbr-anchor data-rerender aria-label="'+esc(drone(node.id)+' · ancora')+'"'+(anchor?' checked':'')+(moving?' disabled title="Un drone con waypoint è un veicolo"':'')+'></td>'+[0,1,2].map(k=>'<td><input type="number" step="any" data-pbr-survey="'+k+'" aria-label="'+esc(drone(node.id)+' · posizione rilevata '+'xyz'[k]+' [m]')+'" placeholder="'+esc(format(node.position[k]))+'" value="'+esc(survey?.[k]??'')+'"'+(anchor?'':' disabled')+'></td>').join('')+'</tr>'}).join('')+'</tbody></table></div><p class="micro">Posizione rilevata vuota: quella dello scenario. I droni non selezionati sono veicoli e conoscono solo la propria posizione.</p>';
+}
+function readAnchors(root,result){
+  const n=result.network,rows=[...root.querySelectorAll('[data-pbr-row]')];
+  if(n.routing!=='position_based')return;
+  if(!rows.length){
+    // First selection: drones without waypoints become anchors, keeping at least one vehicle.
+    if(Object.keys(n.position_based?.anchors||{}).length)return;
+    const fixed=result.nodes.filter(node=>!(node.waypoints||[]).length).map(node=>node.id);
+    n.position_based={...(n.position_based||{}),anchors:Object.fromEntries((fixed.length===result.nodes.length?fixed.slice(0,-1):fixed).map(id=>[id,{}]))};
+    return;
+  }
+  const anchors={};
+  for(const row of rows){
+    if(!row.querySelector('[data-pbr-anchor]').checked)continue;
+    const values=[...row.querySelectorAll('[data-pbr-survey]')].map(el=>el.value);
+    if(values.some(v=>v!=='')&&values.some(v=>v===''))throw Error('Indica tutte e tre le coordinate della posizione rilevata o nessuna.');
+    anchors[row.dataset.node]=values.every(v=>v!=='')?{surveyed_position:values.map(Number)}:{};
+  }
+  n.position_based={...(n.position_based||{}),anchors};
+}
 function addRoute(root,config,src,dst,hop){
   const row=document.createElement('tr');row.innerHTML='<td>'+nodeSelect(config.nodes,'source',src)+'</td><td>'+nodeSelect(config.nodes,'destination',dst)+'</td><td>'+nodeSelect(config.nodes,'hop',hop)+'</td><td><button type="button" class="text-button danger" aria-label="Rimuovi route">Rimuovi</button></td>';
   row.querySelector('button').onclick=()=>row.remove();root.querySelector('[data-routes]').append(row);
@@ -243,7 +269,7 @@ export function renderNetwork(root,config,{includeFlows=true,mode=null}={}){
     +'<details class="advanced-settings" open><summary>'+(acoustic?'Propagazione acustica e ambiente':'Parametri della tecnologia '+esc(mediumLabel(medium).toLowerCase()))+'</summary>'+mediumSection(config)+'</details>'
     +'<details class="advanced-settings" open><summary>'+(acoustic?'Canale acustico e accesso al mezzo':'Accesso al mezzo')+'</summary><div class="form-grid">'+(acoustic?selectedParameters(config,'phy',phy):'')+selectedParameters(config,'mac',mac)+'</div>'+(mac==='tdma'||mac==='tdma_frame'?'<h3>Slot per drone</h3><p class="micro">Indice dello slot nel frame DESERT, a partire da zero.</p><div class="form-grid">'+config.nodes.map((n,i)=>parameter(config,{path:'network.mac.tdma.slot_assignment.'+n.id,label:drone(n.id)+' · slot',type:'integer',min:0,max:config.nodes.length-1,help:'Slot assegnato a questa interfaccia nel frame condiviso.',constraint:'slot unici, uno per drone',default:i})).join('')+'</div>':'')+'</details>'
     +(acoustic?'<details class="advanced-settings"'+(config.network.multiphy?' open':'')+'><summary>Interfacce multiple (multi-PHY)</summary>'+multiphyEditor(config)+'</details>':'')
-    +'<details class="advanced-settings" open><summary>Routing e relay</summary><div class="form-grid">'+selectedParameters(config,'routing',routing)+'</div><div data-static-routes '+(routing!=='static'?'hidden':'')+'><p class="network-note">Senza una route esplicita il prossimo nodo è la destinazione stessa. Una route configurata non garantisce che il segnale arrivi.</p><div class="table-scroll network-routes"><table><thead><tr><th>Dal drone</th><th>Alla destinazione</th><th>Tramite</th><th></th></tr></thead><tbody data-routes></tbody></table></div><button class="subtle" type="button" data-add-route>+ Aggiungi route</button></div></details>'
+    +'<details class="advanced-settings" open><summary>Routing e relay</summary><div class="form-grid">'+selectedParameters(config,'routing',routing)+'</div>'+(routing==='position_based'?anchorsEditor(config):'')+'<div data-static-routes '+(!['static','position_based'].includes(routing)?'hidden':'')+'><p class="network-note">'+(routing==='position_based'?'Tabelle delle ancore: un’ancora invia direttamente al veicolo quando la sua stima è entro la portata, altrimenti al prossimo nodo indicato; senza una voce, alla destinazione stessa. Il prossimo nodo è un’ancora o la destinazione.':'Senza una route esplicita il prossimo nodo è la destinazione stessa.')+' Una route configurata non garantisce che il segnale arrivi.</p><div class="table-scroll network-routes"><table><thead><tr><th>Dal drone</th><th>Alla destinazione</th><th>Tramite</th><th></th></tr></thead><tbody data-routes></tbody></table></div><button class="subtle" type="button" data-add-route>+ Aggiungi route</button></div></details>'
     +'<details class="advanced-settings"><summary>Override acustici per drone</summary>'+(acoustic?'<p class="micro">I campi vuoti ereditano il canale globale. La velocità del suono resta condivisa. Un override cambia soltanto l’interfaccia del drone indicato'+(config.network.multiphy?' e vale per tutte le sue interfacce acustiche, prima dei valori di ciascuna interfaccia':'')+'.</p>'+config.nodes.map((n,i)=>'<details><summary>'+esc(drone(n.id))+'</summary><div class="form-grid">'+parameter(config,{path:'nodes.'+i+'.communication.acoustic.phy',label:'PHY del drone',help:'Classe PHY indipendente; vuoto eredita il profilo globale.',constraint:propagationOf(config)==='woss'?'con WOSS è ammesso solo il PHY BPSK originale':'',choices:[{value:'',label:'Eredita profilo globale'},...catalog.modules.filter(m=>m.layer==='phy'&&m.operational&&![...MEDIA,'woss'].includes(m.id)).map(m=>({value:m.id,label:moduleName('phy',m.id)}))]},{value:n.communication?.acoustic?.phy||''})+(catalog.modules.find(m=>m.layer.toLowerCase()==='phy'&&m.id===phy)?.parameters||[]).filter(p=>p.path.startsWith('network.acoustic.')&&!['network.acoustic.phy','network.acoustic.sound_speed_mps'].includes(p.path)&&!p.choices).map(p=>parameter(config,{...p,help:p.help+' Campo vuoto: eredita il valore globale.'},{path:'nodes.'+i+'.communication.acoustic.'+p.path.split('.').at(-1),optional:true,value:n.communication?.acoustic?.[p.path.split('.').at(-1)]??''})).join('')+'</div></details>').join(''):'<p class="unavailable-note">Non disponibile: gli override acustici non si applicano alla tecnologia '+esc(mediumLabel(medium).toLowerCase())+'.</p>')+'</details>'
     +(includeFlows?'<details class="advanced-settings"><summary>Flussi applicativi</summary><div data-flow-editor></div></details>':'')+(mode!==null?'<details class="advanced-settings"><summary>Motori dell’esperimento</summary><label class="field"><span>Modalità di esecuzione'+tip('Integrata: HoloOcean muove i droni con la fisica e DESERT simula la rete sulle pose misurate. Solo DESERT: posizioni fisse configurate, nessun movimento né waypoint. Predefinito: integrata.')+'</span><select data-mode aria-label="Modalità di esecuzione"><option value="integrated">HoloOcean e DESERT · simulazione completa</option><option value="standalone">Solo DESERT · posizioni fisse configurate</option></select></label><p class="network-note">La modalità solo DESERT non simula movimento e non è disponibile per Droni in movimento e Coordinamento.</p></details>':'')+'</details>';
   for(const [src,routes]of Object.entries(config.network.routes||{}))for(const [dst,hop]of Object.entries(routes))addRoute(root,config,src,dst,hop);
@@ -268,6 +294,7 @@ export function readNetwork(root,config,{includeFlows=true}={}){
   const points=root.querySelector('[data-ssp-points]');
   if(points)result.network.woss.ssp=[...points.querySelectorAll('[data-ssp-row]')].map(row=>{const read=key=>row.querySelector('[data-ssp="'+key+'"]').value;if(read('depth_m')===''||read('speed_mps')==='')throw Error('Completa profondità e velocità di ogni punto SSP.');return {depth_m:Number(read('depth_m')),speed_mps:Number(read('speed_mps'))}});
   readMultiphy(root,result);
+  readAnchors(root,result);
   const routes={};for(const row of root.querySelector('[data-routes]').children){const read=k=>row.querySelector('[data-field="'+k+'"]').value,src=read('source'),dst=read('destination');routes[src]??={};if(dst in routes[src])throw Error('La route '+src+' → '+dst+' è duplicata.');routes[src][dst]=read('hop')}result.network.routes=routes;
   if(includeFlows&&!config.coordination)result.flows=readFlows(root.querySelector('[data-flow-editor]'));
   return result;

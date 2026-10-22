@@ -50,6 +50,7 @@ a short reason.
 | Medium | `medium: optical` | `UwOpticalPhy`, `UwOpticalMPropagation`, optical channel + noise LUT | yes | yes | yes | body-frame Lambert–Beer gain adapter; depth limited to 0–20 m by the pinned noise LUT; no receiver FOV/occlusion |
 | Medium | `medium: em` | EM channel/propagation/antenna + patched PHY `em-power-lut-v1` | yes | yes | yes | patch fixes the LUT end-iterator and percent/probability handling; default 868 MHz decodes only up to ≈2 m in fresh water; power events in dBm, negative values included |
 | PHY | `bpsk_corrected` | project class `…/HOLO/Corrected` (`conditional-bpsk-v1`) | yes | yes | yes | statistical correction of the interference branch; not a modem calibration |
+| Routing | `routing: position_based` | `Module/UW/PosBasedRt` (anchors), `Module/UW/PosBasedRt/ROV` (vehicles) | yes | test added, not run yet | test added, not run yet | no global ground truth: anchors know only their surveyed position, tables and the vehicle states carried by received headers; a vehicle knows only its own fix and the anchors' surveyed positions; estimate held at the last report; CSMA-ALOHA, analytic acoustic, one interface |
 
 The HoloOcean evidence for multi-PHY is `tests/end_to_end/test_multiphy_holoocean.py`:
 with the native received-power controller, the master moved from `long` to
@@ -104,7 +105,6 @@ traffic from the peer.
 | Polling | NODE/AUV/SINK roles with data only node → AUV → sink; the adaptive back-off queries the PHY's lost-packet counter, which the bridge PHY does not answer |
 | UFetch | loads only with a global promotion of `libuwip`/`libuwcbr`; three roles and about 17 timing bindings; no official sample in the pinned tree to validate against |
 | ICRP | needs the same loader promotion in production plus node/sink roles; no official reference run |
-| Position-Based routing | would need other nodes' positions; feeding HoloOcean ground truth would leak global knowledge, and the ROV variant needs `UWSMPosition` |
 | Real modem drivers (Ahoi, EvoLogics, …) | drivers installed, no hardware mapped or tested; hardware use is outside this simulation package |
 
 ## Known limits that apply to every stack

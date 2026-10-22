@@ -71,12 +71,17 @@ summary of verified capabilities is in [capabilities.md](capabilities.md).
   differs from TDMA.
 - SUN supports only convergecast to one sink without replies; its cumulative
   counters are class-wide.
+- Position-Based routing has static anchors and vehicles only: no direct
+  vehicle-to-vehicle link, no moving anchor, no TTL or routing counters; the
+  anchors' estimate of a vehicle is its last reported position, (0, 0, 0)
+  before its first packet arrives (a packet sent at t = 0 does not count), and
+  a vehicle with no anchor in range drops its packets before the MAC.
 - Ranging-TokenBus and Ranging-TDMA do not expose measurement age
   (`measurement_time` is always `null`); Ranging-TDMA keeps the last value of a
   pair that lost contact. Ranging-TDMA slots follow the node order.
 - Native UW/CBR/VBR packets have no JSON envelope and no Python TTL.
 - Modules installed but not integrated (Polling, T-LOHI, ALOHA-Q/Sync, UFetch,
-  ICRP, Position-Based routing, OFDM, HMM, ranging TDOA, modem drivers) are
+  ICRP, OFDM, HMM, ranging TDOA, modem drivers) are
   listed with their blockers in [capabilities.md](capabilities.md#not-integrated).
 - The dashboard Designer has no controls for power events or for per-vehicle
   values of individual multi-PHY interfaces; these are configured through YAML

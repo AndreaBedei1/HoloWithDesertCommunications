@@ -238,6 +238,8 @@ proc barrier {} {
                         $position($id) setY_ $y
                         $position($id) setZ_ $z
                     }
+                    # A routing adapter that uses positions receives only this node's own fix.
+                    if {[llength [info procs routing_position_applied]]} { routing_position_applied $id $x $y $z $now }
                     puts "{\"event\":\"position_applied\",\"time\":$now,\"node\":$id,\"x\":$x,\"y\":$y,\"z\":$z$geographic}"
                 }
                 SEND {

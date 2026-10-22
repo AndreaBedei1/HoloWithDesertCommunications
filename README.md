@@ -39,7 +39,7 @@ Status from executed tests (details and blockers: [capability matrix](docs/capab
 | Area | Operational | Experimental (verified) | Not integrated |
 |---|---|---|---|
 | MAC | ALOHA, CSMA-ALOHA, TDMA, TDMA Frame, CSMA/CA, DACAP, TokenBus, CS-Burst, Ranging-TokenBus, Ranging-TDMA | — | Polling, T-LOHI, ALOHA-Q, UFetch |
-| Routing | Static (multi-hop), Flooding, SUN | — | ICRP, Position-Based |
+| Routing | Static (multi-hop), Flooding, SUN | Position-Based (static anchors, own-fix vehicles, no ground truth) | ICRP |
 | PHY / channel | BPSK + analytic Underwater/Thorp + MIV; WOSS/Bellhop (synthetic SSP) | corrected BPSK, optical, electromagnetic | OFDM, HMM |
 | Interfaces | one interface per vehicle | multi-PHY: 2–3 acoustic or optical interfaces, native manual or received-power switching | — |
 | Traffic & measurement | Python generators, JSON/binary messages, native UW/CBR and UW/VBR, native ranging (TokenBus, TDMA) | — | ranging TDOA |

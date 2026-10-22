@@ -1488,16 +1488,38 @@
       "id": "position_based",
       "name": "Position-Based Routing",
       "layer": "routing",
-      "description": "Classe Module/UW/PosBasedRt caricabile, ma nessuna distribuzione di posizione ammessa dal protocollo ancora integrata; non fornire ground truth globale.",
-      "reason": "Classe Module/UW/PosBasedRt caricabile, ma nessuna distribuzione di posizione ammessa dal protocollo ancora integrata; non fornire ground truth globale.",
-      "operational": false,
-      "validation": "not_integrated",
+      "description": "Routing nativo DESERT basato sulla posizione, senza ground truth globale. Le ancore sono droni fermi che conoscono solo la propria posizione rilevata e le proprie tabelle; un veicolo conosce solo la propria posizione (dal proprio fix) e le posizioni rilevate delle ancore, e invia all’ancora più vicina. Le ancore stimano la posizione del veicolo dalle intestazioni dei pacchetti ricevuti e lo raggiungono direttamente quando la stima è entro la portata, altrimenti tramite la tabella.",
+      "reason": "",
+      "operational": true,
+      "validation": "verified_native",
       "source_present": true,
       "compiled": true,
       "loadable": true,
-      "bridge_compatible": false,
-      "parameters": [],
+      "bridge_compatible": true,
+      "parameters": [
+        {
+          "path": "network.position_based.anchor_range_m",
+          "label": "Portata delle ancore",
+          "type": "number",
+          "default": 3000,
+          "min": 0.001,
+          "unit": "m",
+          "help": "Distanza entro cui un’ancora invia direttamente al veicolo, confrontata con la sua stima della posizione del veicolo (maxTxRange_ di Module/UW/PosBasedRt); oltre usa la tabella di inoltro.",
+          "constraint": "valore positivo"
+        },
+        {
+          "path": "network.position_based.vehicle_range_m",
+          "label": "Portata del veicolo",
+          "type": "number",
+          "default": 3000,
+          "min": 0.001,
+          "unit": "m",
+          "help": "Il veicolo invia all’ancora rilevata più vicina se è entro questa distanza dalla propria posizione (maxTxRange_ di Module/UW/PosBasedRt/ROV); altrimenti il modulo nativo scarta il pacchetto.",
+          "constraint": "valore positivo"
+        }
+      ],
       "libraries": [
+        "libuwsmposition.so",
         "libuwposbasedrt.so"
       ],
       "tcl_classes": [
@@ -1509,7 +1531,20 @@
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/test_uwmulti_traffic/test_uwmulti_traffic.tcl"
       ],
       "official_example": "library load only; full scheduler example not executed",
-      "unavailable": "richiede le posizioni degli altri nodi senza ground truth"
+      "experimental": true,
+      "tcl_class": "Module/UW/PosBasedRt (ancore) / Module/UW/PosBasedRt/ROV (veicoli)",
+      "compatibility": {
+        "mac": [
+          "csma_aloha"
+        ],
+        "media": [
+          "acoustic"
+        ],
+        "propagation": [
+          "underwater"
+        ]
+      },
+      "compatibility_reason": "Verificato con CSMA-ALOHA, mezzo acustico analitico e una interfaccia per drone. Le ancore non hanno waypoint; la stima del veicolo è l’ultima posizione ricevuta (modello «hold»)."
     },
     {
       "id": "woss",
@@ -2776,6 +2811,13 @@
           "label": "Ottico"
         }
       ]
+    },
+    "position_based_anchors": {
+      "label": "Ancore del routing per posizione",
+      "type": "checkbox",
+      "unit": "m",
+      "help": "Un’ancora è un drone fermo: il routing conosce solo la sua posizione rilevata (vuota: la posizione dello scenario) e la sua tabella di inoltro. Gli altri droni sono veicoli e conoscono solo la propria posizione e quelle rilevate delle ancore.",
+      "constraint": "almeno un’ancora e un veicolo; le ancore non hanno waypoint; nelle tabelle solo ancore, con prossimo nodo un’ancora o la destinazione"
     }
   }
 }

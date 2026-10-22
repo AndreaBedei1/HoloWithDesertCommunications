@@ -59,7 +59,8 @@ PHYS={'bpsk_upstream':'Module/MPhy/BPSK/Underwater/HOLO',
       'bpsk_corrected':'Module/MPhy/BPSK/Underwater/HOLO/Corrected'}
 ROUTING={'static':('Module/UW/StaticRouting','libuwstaticrouting.so'),
          'flooding':('Module/UW/FLOODING','libuwflooding.so'),
-         'sun':('Module/UW/SUNNode','libsun.so')}
+         'sun':('Module/UW/SUNNode','libsun.so'),
+         'position_based':('Module/UW/PosBasedRt','libuwposbasedrt.so')}
 
 
 # Files copied into the engine image (see Dockerfile). Their digest, with the
@@ -128,6 +129,7 @@ def defaults(config):
     net=config['network'];net.setdefault('flooding',{})
     validate_media_stack(config)
     net.setdefault('routing','static');net.setdefault('seed',1);net.setdefault('routes',{})
+    pbr=net.setdefault('position_based',{});pbr.setdefault('anchors',{})
     sun=net.setdefault('sun',{})
     for key,value in {'sink':'auv_02','probe_interval_s':2,'buffer_interval_s':1,'data_interval_s':1,'status_interval_s':1,'poisson_timing':True,'max_ack_errors':3,'max_retransmissions':3,'buffer_packets':5,'probe_min_snr_db':0}.items():sun.setdefault(key,value)
     net['acoustic'].setdefault('phy','bpsk_upstream')
@@ -164,6 +166,24 @@ def validate(config):
             number(sun['max_retransmissions'],0,100,True)
             if any(f['destination']!=sun['sink'] or f['source']==sun['sink'] or f.get('reply') for f in c.get('flows',[])) or c.get('coordination'):
                 raise ValueError('SUN supports convergecast flows to the designated sink without replies')
+        if net['routing']=='position_based':
+            p=net['position_based'];anchors=p['anchors']
+            if set(p)-{'anchor_range_m','vehicle_range_m','anchors'}:raise ValueError('Unsupported position-based parameter')
+            if not isinstance(anchors,dict) or not anchors or set(anchors)-set(ids) or len(anchors)==len(ids):
+                raise ValueError('Position-based routing needs at least one anchor and one vehicle')
+            for node in nodes:
+                if node['id'] not in anchors:continue
+                anchor=anchors[node['id']] or {}
+                if not isinstance(anchor,dict) or set(anchor)-{'surveyed_position'} or node.get('waypoints'):
+                    raise ValueError('Position-based anchors are static nodes with an optional surveyed position')
+                survey=anchor.get('surveyed_position')
+                if survey is not None:
+                    if not isinstance(survey,(list,tuple)) or len(survey)!=3:raise ValueError('A surveyed position has three coordinates')
+                    for value in survey:number(value)
+            if any(src not in anchors or any(hop!=dst and hop not in anchors for dst,hop in table.items()) for src,table in net.get('routes',{}).items()):
+                raise ValueError('Position-based tables belong to anchors; a next hop is an anchor or the destination')
+            if net['medium']!='acoustic' or net['acoustic'].get('propagation','underwater')!='underwater' or net.get('multiphy') or net['mac']['protocol']!='csma_aloha':
+                raise ValueError('Position-based routing is verified only with analytic acoustic CSMA-ALOHA and one interface')
         native_flows(c)
         if net['mac']['queue_mode'] not in ('legacy','bounded'):raise ValueError('Unsupported MAC queue mode')
         if net['routing']=='flooding' and net['mac']['protocol'] in ('csma_ca','dacap'):
@@ -227,7 +247,7 @@ def validate(config):
                 for waypoint in node.get('waypoints',[]):validate_woss_position(waypoint[1:],net['woss']['water_depth_m'])
         if net['mac']['protocol']=='csma_ca':
             for node in effective:number(node['acoustic']['bitrate_bps'],1,2147483647,True)
-        if net['routing']!='static' and net.get('routes'):raise ValueError('Static routes cannot be used with Flooding')
+        if net['routing'] not in ('static','position_based') and net.get('routes'):raise ValueError('Static routes cannot be used with Flooding')
         for src,routes in net.get('routes',{}).items():
             if src not in ids or any(dst not in ids or hop not in ids or src==hop or src==dst for dst,hop in routes.items()):
                 raise ValueError('Invalid static route reference')
@@ -302,7 +322,7 @@ def render(config):
         lines.append('set woss_ssp {'+' '.join('{'+number(p['depth_m'])+' '+number(p['speed_mps'])+'}' for p in w['ssp'])+'}')
     lines.append('set bounded_queue '+str(int(mac['queue_mode']=='bounded')))
     lines+=['set mac_adapter '+adapter,'set mac_class '+macclass,'set routing_adapter '+net['routing'],'set routing_class '+routingclass,
-            'set extra_libraries {'+' '.join(libs+(['libuwcbr.so'] if net['routing']=='sun' else [])+[routinglib])+'}',
+            'set extra_libraries {'+' '.join(libs+{'sun':['libuwcbr.so'],'position_based':['libuwsmposition.so']}.get(net['routing'],[])+[routinglib])+'}',
             'set sound_speed '+number(a['sound_speed_mps'])]
     if net['routing']=='sun':
         lines.append('set sun_parameters {'+' '.join(k+' '+number(ids[v] if k=='sink' else int(v) if isinstance(v,bool) else v) for k,v in net['sun'].items())+'}')
@@ -330,6 +350,21 @@ def render(config):
         for dst,did in ids.items():
             if src!=dst:routes.append('{%d %d %d}'%(sid,did,ids[net.get('routes',{}).get(src,{}).get(dst,dst)]))
     lines.append('set routes {'+' '.join(routes)+'}')
+    if net['routing']=='position_based':
+        # Anchors: surveyed position and a complete next-hop table (missing entry: direct).
+        p=net['position_based'];anchors=p['anchors'];tables=[]
+        lines.append('set pbr_parameters {anchor_range_m '+number(p['anchor_range_m'])+' vehicle_range_m '+number(p['vehicle_range_m'])+'}')
+        for node in c['nodes']:
+            i=ids[node['id']]
+            if node['id'] not in anchors:
+                lines.append('set pbr_role(%d) vehicle'%i);continue
+            survey=(anchors[node['id']] or {}).get('surveyed_position') or node['position']
+            lines+=['set pbr_role(%d) anchor'%i,'set pbr_survey(%d) {%s}'%(i,' '.join(number(v) for v in survey))]
+            for dst,did in ids.items():
+                if dst!=node['id']:
+                    hop=net.get('routes',{}).get(node['id'],{}).get(dst,dst)
+                    tables.append('{%d %d %d %s}'%(i,did,ids[hop],'anchor' if dst in anchors else 'vehicle'))
+        lines.append('set pbr_routes {'+' '.join(tables)+'}')
     if adapter=='tdma_frame':
         slots=params.get('slot_assignment') or {n:i for i,n in enumerate(ids)}
         # Numeric matrix in the session temp directory, never a user path.

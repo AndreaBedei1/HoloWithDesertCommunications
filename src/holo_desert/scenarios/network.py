@@ -150,6 +150,18 @@ class Flooding(Strict):
     optimize: bool = True
 
 
+class PositionBasedAnchor(Strict):
+    # Position given to the routing modules; default: the node's scenario position.
+    surveyed_position: tuple[float,float,float] | None = None
+
+
+class PositionBased(Strict):
+    """Native position-based routing: static anchors know their surveyed positions; every other node is a vehicle."""
+    anchor_range_m: float = Field(default=3000,gt=0)
+    vehicle_range_m: float = Field(default=3000,gt=0)
+    anchors: dict[str,PositionBasedAnchor] = Field(default_factory=dict)
+
+
 class Network(Strict):
     profile_id: str | None = Field(default=None,pattern=r'^(builtin_[a-z_]+|profile_[0-9a-f]{32})$')
     backend: Literal['desert'] = 'desert'
@@ -160,8 +172,9 @@ class Network(Strict):
     acoustic: Acoustic = Field(default_factory=Acoustic)
     woss: Woss = Field(default_factory=Woss)
     mac: Mac = Field(default_factory=Mac)
-    routing: Literal['static','flooding','sun'] = 'static'
+    routing: Literal['static','flooding','sun','position_based'] = 'static'
     sun: Sun = Field(default_factory=Sun)
+    position_based: PositionBased = Field(default_factory=PositionBased)
     flooding: Flooding = Field(default_factory=Flooding)
     max_wire_bytes: int = Field(default=4096,ge=256,le=4096)
     seed: int = Field(default=1,ge=1,le=100000)
@@ -181,8 +194,11 @@ class Network(Strict):
             raise ValueError('Flooding broadcast is not supported by the verified CSMA/CA or DACAP handshake stack')
         if self.mac.protocol in ('tdma','tdma_frame') and self.mac.ack:
             raise ValueError('TDMA does not support the ALOHA ACK option')
-        if self.routing!='static' and self.routes:
+        # Position-based routing reads the anchors' next-hop tables from the same field.
+        if self.routing not in ('static','position_based') and self.routes:
             raise ValueError('Static routes cannot be used with Flooding')
+        if self.routing=='position_based' and (self.medium!='acoustic' or self.acoustic.propagation!='underwater' or self.multiphy or self.mac.protocol!='csma_aloha'):
+            raise ValueError('Position-based routing is verified only with analytic acoustic CSMA-ALOHA and one interface')
         if self.mac.protocol=='csma_ca' and (self.acoustic.bitrate_bps%1 or self.acoustic.bitrate_bps<1 or self.acoustic.bitrate_bps>2147483647):
             raise ValueError('CSMA-CA requires integer bitrate in 1..2147483647')
         return self
