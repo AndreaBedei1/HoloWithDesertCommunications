@@ -196,11 +196,27 @@ power_events:
 ```
 
 A power event sends a `POWER` command at the first tick with `time ≤ now`; the
-engine changes the PHY source level (acoustic: `MaxTxSPL_dB_`/`MinTxSPL_dB_`)
-and emits `power_applied`. Outages are produced by the DESERT power model;
-messages are never dropped in Python. The schema bounds `tx_power_db` to
-0–200; for a non-acoustic medium the value is forwarded in that medium's power
-unit (W optical, dBm EM) and checked against its range by the engine.
+engine changes the transmit power of that node's PHY and emits
+`power_applied`. Outages are produced by the DESERT power model; messages are
+never dropped in Python. Each event carries exactly one value, in the native
+unit of the configured `network.medium`; a field of another medium is
+rejected:
+
+| Medium | Field | Unit | Range | Native binding |
+|---|---|---|---|---|
+| `acoustic` | `tx_power_db` | dB re 1 µPa (source level) | 0–200 | `MaxTxSPL_dB_` = `MinTxSPL_dB_` |
+| `optical` | `tx_power_w` | W | 1e-15–10000 | `TxPower_` |
+| `em` | `tx_power_dbm` | dBm (negative values allowed) | −100–100 | `TxPower_` |
+
+```yaml
+network: {medium: em, em: {tx_power_dbm: 20}}
+power_events:
+  - {time: 8, node: auv_01, tx_power_dbm: -20}   # 2 m apart in fresh water: no longer decoded
+  - {time: 16, node: auv_01, tx_power_dbm: 20}
+```
+
+With multi-PHY the `POWER` command changes the first interface of the node
+only; per-interface power is set in the interface definition.
 
 `coordination: true` replaces flows with the built-in heartbeat demo (exactly
 two nodes, no other flows): the leader sends a 5-byte heartbeat every second

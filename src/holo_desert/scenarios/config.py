@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Literal
 import yaml
 from .network import Acoustic, Mac, Network, NodeCommunication
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
 RESOURCE_ROOT = Path(__file__).resolve().parents[1] / "resources"
 
@@ -63,10 +63,35 @@ class Flow(Strict):
         return self
 
 
+# Native transmit-power field of each medium; the bridge applies it unchanged.
+POWER_UNITS = {"acoustic": "tx_power_db", "optical": "tx_power_w", "em": "tx_power_dbm"}
+
+
 class PowerEvent(Strict):
+    """Transmit power change in the configured medium's unit (exactly one field)."""
     time: float = Field(ge=0)
     node: str
-    tx_power_db: float = Field(ge=0, le=200)
+    tx_power_db: float | None = Field(default=None, ge=0, le=200)  # acoustic source level, dB re 1 uPa
+    tx_power_w: float | None = Field(default=None, ge=1e-15, le=10000)  # optical, W
+    tx_power_dbm: float | None = Field(default=None, ge=-100, le=100)  # EM, dBm; negative values are valid
+
+    @model_validator(mode="after")
+    def one_value(self):
+        if sum(getattr(self, unit) is not None for unit in POWER_UNITS.values()) != 1:
+            raise ValueError("A power event needs exactly one of tx_power_db, tx_power_w or tx_power_dbm")
+        return self
+
+    @model_serializer(mode="wrap")
+    def set_value_only(self, handler):
+        return {k: v for k, v in handler(self).items() if v is not None}
+
+    @property
+    def unit(self) -> str:
+        return next(unit for unit in POWER_UNITS.values() if getattr(self, unit) is not None)
+
+    @property
+    def value(self) -> float:
+        return getattr(self, self.unit)
 
 
 class Scenario(Strict):
@@ -110,6 +135,10 @@ class Scenario(Strict):
                     current = self.network.routes.get(current, {}).get(dst, dst)
         if any(e.node not in ids for e in self.power_events):
             raise ValueError("Unknown node in power event")
+        unit = POWER_UNITS[self.network.medium]
+        for event in self.power_events:
+            if event.unit != unit:
+                raise ValueError(f"The {self.network.medium} medium expects power event values in {unit}, not {event.unit}")
         if self.coordination and len(self.nodes) != 2:
             raise ValueError("Coordination demo requires two nodes")
         if self.coordination and self.flows:

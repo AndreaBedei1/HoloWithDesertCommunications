@@ -77,6 +77,26 @@ def test_optical_native_rotated_body_offset_changes_received_gain(engine):
     assert power(offset)>power(baseline)
 
 
+def test_em_power_events_apply_negative_dbm_with_native_effect(engine):
+    from holo_desert.core.orchestrator import SimulationOrchestrator
+    data=ScenarioManager().load('e01_chat').model_dump()
+    data.update(duration=10,realtime=False,
+                power_events=[{'time':3,'node':'auv_01','tx_power_dbm':-20},{'time':6,'node':'auv_01','tx_power_dbm':-60}])
+    data['network']['medium']='em'
+    for i,node in enumerate(data['nodes']):node['position']=[i,0,-10]
+    # At 1 m the native LUT still decodes -20 dBm (about -100 dBm received) but not -60 dBm.
+    data['flows']=[{'source':'auv_01','destination':'auv_02','start':1,'interval':1,'stop':9,'ttl':2,'payload_bytes':8}]
+    run=SimulationOrchestrator(Scenario.model_validate(data),standalone=True,manage_docker=False)
+    try:
+        run.run();state=run.snapshot()
+        assert run.state=='finished',run.error
+        assert [e['tx_power_dbm'] for e in state['transitions'] if e['event']=='power_applied']==[-20,-60]
+        outcome={round(p['creation_time']):p['status'] for p in state['packets']}
+        assert {t for t,s in outcome.items() if s=='received'}=={1,2,3,4,5}
+        assert {t for t,s in outcome.items() if s!='received'}=={6,7,8}
+    finally:run.close()
+
+
 @pytest.mark.parametrize('medium,power,key',[('optical',1e-15,'tx_power_w'),('em',-100,'tx_power_dbm')])
 def test_native_medium_power_command_preserves_units(engine,medium,power,key):
     data=ScenarioManager().load('e01_chat').model_dump()
