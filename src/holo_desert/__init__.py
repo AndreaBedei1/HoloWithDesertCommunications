@@ -5,7 +5,7 @@ Public API (see docs/api.md)::
     from holo_desert import NetworkSession, HoloOceanLink, ManagedSimulation, load_scenario
 """
 
-__version__ = "0.2.0"
+__version__ = "1.0.0"
 
 from .api import (CallbackError, CommunicationProfile, Delivery, Flow, HoloOceanLink, ManagedSimulation,  # noqa: E402
                   Message, Network, NetworkNode, NetworkSession, NodeConfig, Pose, ProfileLibrary, Scenario,

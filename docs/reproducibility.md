@@ -10,7 +10,7 @@ sea-trial measurements. How to cite the software: [`CITATION.cff`](../CITATION.c
 
 | Component | Version used for the recorded results | Where it is pinned |
 |---|---|---|
-| Source code | branch `feat/desert-laboratory`; cite the exact commit you ran (`git rev-parse HEAD`) | Git |
+| Source code | `master` (release 1.0.0); cite the exact commit you ran (`git rev-parse HEAD`) | Git |
 | Python packages | Python 3.10.20 on Windows (CI: 3.10 and 3.12 on Ubuntu 24.04) | `requirements-lock.txt`, `pyproject.toml` |
 | HoloOcean client | 2.3.0, commit `49e70552dfd97273b7dfbe755fbe65d7738b24b7` | `dependencies.lock.json`, `scripts/install_holoocean.py` |
 | HoloOcean world | Ocean package 2.3.0, world `OpenWater` | installed with `holoocean.install("Ocean")` |
@@ -25,7 +25,7 @@ on Linux has not been verified (see [limitations.md](limitations.md)).
 ## Steps
 
 ```bash
-git clone -b feat/desert-laboratory https://github.com/AndreaBedei1/HoloWithDesertCommunications.git
+git clone https://github.com/AndreaBedei1/HoloWithDesertCommunications.git
 cd HoloWithDesertCommunications
 git checkout <commit to reproduce>
 ```

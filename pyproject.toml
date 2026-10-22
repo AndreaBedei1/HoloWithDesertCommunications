@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "holoocean-desert"
-version = "0.2.0"
+version = "1.0.0"
 description = "Python library coupling HoloOcean 2.3 vehicles with the DESERT 4.0 underwater network simulator"
 readme = "README.md"
 license = {text = "MIT"}

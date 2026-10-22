@@ -52,7 +52,7 @@ HoloOcean is not a pip dependency of the package; it is installed separately
 Library and dashboard, without cloning:
 
 ```bash
-pip install "holoocean-desert[dashboard] @ git+https://github.com/AndreaBedei1/HoloWithDesertCommunications.git@feat/desert-laboratory"
+pip install "holoocean-desert[dashboard] @ git+https://github.com/AndreaBedei1/HoloWithDesertCommunications.git"
 ```
 
 Library only (no web dashboard): omit `[dashboard]`. Then build and check the
@@ -67,13 +67,12 @@ holo-desert doctor --library-only   # skips HoloOcean, GPU and dashboard checks
 ## Option B: development checkout with the pinned lock file
 
 ```bash
-git clone -b feat/desert-laboratory https://github.com/AndreaBedei1/HoloWithDesertCommunications.git
+git clone https://github.com/AndreaBedei1/HoloWithDesertCommunications.git
 cd HoloWithDesertCommunications
 ```
 
-The work described in this documentation is on branch `feat/desert-laboratory`
-until it is merged into `master`; to repeat a recorded result, check out the
-exact commit (see [reproducibility.md](reproducibility.md)).
+To repeat a recorded result, check out the exact commit (see
+[reproducibility.md](reproducibility.md)).
 
 The setup scripts create `.venv`, install `requirements-lock.txt` (exact
 versions, with platform markers for `pywin32` on Windows and `posix_ipc` on

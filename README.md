@@ -1,5 +1,11 @@
 # HoloOcean–DESERT
 
+[![Tests](https://github.com/AndreaBedei1/HoloWithDesertCommunications/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/AndreaBedei1/HoloWithDesertCommunications/actions/workflows/tests.yml)
+![Python](https://img.shields.io/badge/python-3.10%E2%80%933.12-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![DESERT](https://img.shields.io/badge/DESERT%20Underwater-4.0-informational)
+![HoloOcean](https://img.shields.io/badge/HoloOcean-2.3-informational)
+
 A Python library and web laboratory for simulating communication between
 underwater vehicles. [HoloOcean](https://byu-holoocean.github.io/holoocean-docs/)
 2.3 provides the environment, vehicle dynamics and sensors;
@@ -56,11 +62,8 @@ Status from executed tests (details and blockers: [capability matrix](docs/capab
 
 ## Quick start
 
-The current version is on branch `feat/desert-laboratory` (the default branch
-`master` does not contain it yet).
-
 ```bash
-git clone -b feat/desert-laboratory https://github.com/AndreaBedei1/HoloWithDesertCommunications.git
+git clone https://github.com/AndreaBedei1/HoloWithDesertCommunications.git
 cd HoloWithDesertCommunications
 python -m venv .venv
 .venv/bin/pip install -e ".[dashboard]"      # Windows: .venv\Scripts\pip ...
@@ -70,7 +73,7 @@ python -m venv .venv
 
 Windows scripted setup including HoloOcean: `scripts/setup.ps1`; Ubuntu:
 `scripts/setup.sh`. As a dependency of another project:
-`pip install "holoocean-desert @ git+https://github.com/AndreaBedei1/HoloWithDesertCommunications.git@feat/desert-laboratory"`.
+`pip install "holoocean-desert @ git+https://github.com/AndreaBedei1/HoloWithDesertCommunications.git"`.
 The library core needs only PyYAML and pydantic; `[dashboard]` adds FastAPI and
 uvicorn. See [installation](docs/installation.md).
 
@@ -114,7 +117,8 @@ with ManagedSimulation("e03_mobility", realtime=False) as sim:
 ```
 
 Runnable programs: [`examples/`](examples) (standalone, attached, managed,
-multi-PHY and an install check that imports only the public API). The
+multi-PHY, hybrid acoustic/optical, Position-Based Routing and an install
+check that imports only the public API). The
 [API reference](docs/api.md) documents the clock model, operation order,
 callbacks, session life cycle and error handling.
 
@@ -127,10 +131,13 @@ holo-desert dashboard            # http://127.0.0.1:8000
 Choose a scenario, start it, follow vehicles and messages on the map and
 timeline, then open *Analisi* for metrics and comparisons. *Impostazioni →
 Network Designer* selects medium (acoustic, optical, EM), MAC, PHY, routing,
-WOSS with its sound-speed profile, multi-PHY interfaces and native CBR/VBR
-generators, with contextual help (meaning, unit, default, constraints) for each
-parameter and a reason for every unavailable option; *Analisi → Ranging*
-compares native distance estimates with the HoloOcean geometry; *I miei
+WOSS with its sound-speed profile, acoustic or optical multi-PHY
+interfaces, Position-Based Routing anchors and native CBR/VBR generators, with
+contextual help (meaning, unit, default, constraints) for each parameter and a
+reason for every unavailable option; *Analisi → Interfacce* shows which
+interface each transmission used and when the controller switched;
+*Analisi → Ranging* compares native distance estimates with the HoloOcean
+geometry; *I miei
 scenari* edits vehicles, waypoints, flows and routes and imports/exports YAML.
 The interface is in Italian.
 
