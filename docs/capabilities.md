@@ -50,7 +50,7 @@ a short reason.
 | Medium | `medium: optical` | `UwOpticalPhy`, `UwOpticalMPropagation`, optical channel + noise LUT | yes | yes | yes | body-frame Lambert–Beer gain adapter; depth limited to 0–20 m by the pinned noise LUT; no receiver FOV/occlusion |
 | Medium | `medium: em` | EM channel/propagation/antenna + patched PHY `em-power-lut-v1` | yes | yes | yes | patch fixes the LUT end-iterator and percent/probability handling; default 868 MHz decodes only up to ≈2 m in fresh water; power events in dBm, negative values included |
 | PHY | `bpsk_corrected` | project class `…/HOLO/Corrected` (`conditional-bpsk-v1`) | yes | yes | yes | statistical correction of the interference branch; not a modem calibration |
-| Routing | `routing: position_based` | `Module/UW/PosBasedRt` (anchors), `Module/UW/PosBasedRt/ROV` (vehicles) | yes | test added, not run yet | test added, not run yet | no global ground truth: anchors know only their surveyed position, tables and the vehicle states carried by received headers; a vehicle knows only its own fix and the anchors' surveyed positions; estimate held at the last report; CSMA-ALOHA, analytic acoustic, one interface |
+| Routing | `routing: position_based` | `Module/UW/PosBasedRt` (anchors), `Module/UW/PosBasedRt/ROV` (vehicles) | yes | yes | yes | no global ground truth: anchors know only their surveyed position, tables and the vehicle states carried by received headers; a vehicle knows only its own fix and the anchors' surveyed positions; estimate held at the last report; CSMA-ALOHA, analytic acoustic, one interface |
 
 The HoloOcean evidence for multi-PHY is `tests/end_to_end/test_multiphy_holoocean.py`:
 with the native received-power controller, the master moved from `long` to
@@ -60,10 +60,13 @@ switched interfaces manually through `select_interface`.
 
 ## Mixed acoustic/optical stacks
 
-**Experimental, verified natively and in the Network Designer**
-(`tests/integration/test_hybrid_multiphy_stack.py`,
-`tests/frontend/network-designer.spec.cjs`); the HoloOcean end-to-end test is
-`tests/end_to_end/test_hybrid_holoocean.py`. A multi-PHY interface may be
+**Experimental, verified natively, in HoloOcean end-to-end runs and in the
+Network Designer** (`tests/integration/test_hybrid_multiphy_stack.py`,
+`tests/end_to_end/test_hybrid_holoocean.py`,
+`tests/frontend/network-designer.spec.cjs`). In the end-to-end run the master
+used the optical interface while HoloOcean held the other vehicle 8 m away and
+returned to acoustic after HoloOcean's controller drove it beyond the optical
+range. A multi-PHY interface may be
 `medium: optical`. Each optical interface gets its own
 `Module/UW/OPTICAL/PHY/HOLO` observer, `Module/UW/OPTICAL/Propagation/HOLO`
 and noise LUT, as `medium: optical` does, and all optical interfaces share one

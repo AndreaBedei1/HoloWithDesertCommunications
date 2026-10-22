@@ -997,9 +997,9 @@ delivery. Both carry `interface_index` (0 outside multi-PHY).
 ## Multi-PHY and interface switching
 
 Status: experimental, verified natively, in HoloOcean end-to-end runs (manual
-and received-power controller) and in the Network Designer. Mixed
-acoustic/optical interfaces: see the status in
-[capabilities.md](capabilities.md#mixed-acousticoptical-stacks).
+and received-power controller) and in the Network Designer, mixed
+acoustic/optical interfaces included
+([capabilities.md](capabilities.md#mixed-acousticoptical-stacks)).
 
 `network.multiphy` gives every node 2–3 interfaces under DESERT's multi-stack
 controller (`libuwmulti_stack_controller.so`); one MAC (CSMA-ALOHA without
