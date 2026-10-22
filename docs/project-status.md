@@ -30,14 +30,15 @@ consolidation session; continue from here.
 
 | Suite | Result |
 |---|---|
-| Unit (`-m "not desert and not holoocean"`) | see final run below |
-| Native DESERT on a freshly built isolated engine (port 5560) | 83/83 before this session's additions; + public API (5) and demos (2) |
-| HoloOcean E2E (`tests/end_to_end`) | 17/19 first run; the 2 failures were test assumptions (optical/EM, see commit 18a2b07); 19/19 after fix + 2 new API E2E tests |
-| Playwright frontend (Edge) | 24/24 |
-| Clean wheel install (fresh venv, Windows) | core deps only; `examples/external_app/check_install.py --engine` OK |
-| Dashboard HTTP + browser check | new MACs/SUN selectable with help; e07/e09 runs finish, services stopped |
+| Unit (`-m "not desert and not holoocean"`), Windows Python 3.10 | 126 passed, 1 skipped |
+| Unit, clean Ubuntu 24.04 container, Python 3.12 (`scripts/check_linux_package.sh`) | 123 passed; `pip check` clean; wheel-only external check OK |
+| Native DESERT, freshly built isolated engine | 90/90 full suite; after the review fixes the API, demo, media, WOSS and additional-protocol files were re-run (all passed) |
+| HoloOcean E2E (`tests/end_to_end`) | 17/19 first run; both failures were wrong test assumptions (optical/EM), fixed; 19/19 after the fix; the 2 new API E2E tests pass |
+| Playwright frontend (Edge, Windows) | 24/24 |
+| Clean wheel install in a fresh Windows venv | core deps only; real DESERT round trip with matching engine fingerprint |
+| Dashboard over HTTP and in the browser | new MACs and SUN selectable with help icons; e07/e09 runs finish with services stopped; results equal to the library path |
 
-Final numbers of the closing run are in the session report / commit log.
+GitHub Actions was not run (no push).
 
 ## Open items / next steps
 
@@ -57,7 +58,16 @@ Final numbers of the closing run are in the session report / commit log.
 
 ## Local resources created by this session
 
-Docker containers `holo-consolidation-qa` (127.0.0.1:5560) and
-`holo-consolidation-qa2` (127.0.0.1:5561) from image
-`holo-desert-engine:consolidation-dev`; safe to remove with
-`docker rm -f holo-consolidation-qa holo-consolidation-qa2`.
+Docker image `holo-desert-engine:consolidation-dev` (built from this branch,
+used by the isolated test containers, which were removed at the end). Remove it with
+`docker image rm holo-desert-engine:consolidation-dev` when no longer needed.
+
+## Review findings still open
+
+* `ENGINE_FILES` does not include the Dockerfile, so changing the base image
+  digest does not change the fingerprint; the base digest is not recorded per
+  run in `engine_info`.
+* Power events (`PowerEvent.tx_power_db`, bounded 0–200) cannot express the
+  negative dBm values that are valid for the EM medium.
+* The `t_lohi` catalog entry says `loadable: false`, but the inventory probe
+  loads `libuwtlohi.so` (only `libuwtlohiTracer.so` fails). It stays not integrated either way.
