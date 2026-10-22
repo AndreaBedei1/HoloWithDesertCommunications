@@ -1,9 +1,8 @@
 import time
 import pytest
 from fastapi.testclient import TestClient
-from holo_desert.core.orchestrator import SimulationOrchestrator
+from holo_desert import ManagedSimulation, ScenarioManager
 from holo_desert.dashboard.server import DashboardServer
-from holo_desert.scenarios.config import ScenarioManager
 
 pytestmark = [pytest.mark.desert, pytest.mark.holoocean]
 
@@ -11,7 +10,7 @@ pytestmark = [pytest.mark.desert, pytest.mark.holoocean]
 def test_two_real_holoocean_drones_desert_and_dashboard(engine):
     scenario = ScenarioManager().load("e01_chat")
     scenario.realtime = False
-    run = SimulationOrchestrator(scenario, manage_docker=False, show_viewport=False)
+    run = ManagedSimulation(scenario, manage_engine=False)
     try:
         run.run()
         assert run.error is None, run.error
@@ -26,8 +25,7 @@ def test_two_real_holoocean_drones_desert_and_dashboard(engine):
         server = DashboardServer(initial_run=run, manage_docker=False)
         with TestClient(server.application()) as client:
             data = client.get("/api/state").json()
-            assert data["counts"]["received"] >= 2
+            assert data["counts"]["received"] >= 2 and data["scenario_id"] == "e01_chat"
             assert client.get("/api/export").content[:2] == b"PK"
     finally:
-        if not run.telemetry.log.closed:
-            run.close()
+        run.close()

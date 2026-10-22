@@ -28,13 +28,17 @@ from .common.models import Delivery, Message, Pose
 from .communications.manager import CommunicationManager
 from .desert_adapter.backend import BackendError, DESERTAdapter
 from .scenarios.config import Flow, Node as NodeConfig, Scenario, ScenarioManager
-from .scenarios.network import Network
+from .scenarios.library import ScenarioConflict, ScenarioLibrary
+from .scenarios.network import CommunicationProfile, Network
+from .scenarios.profiles import ProfileLibrary, builtin_profiles
 from .synchronization.clock import ClockSynchronizer
 from .telemetry.collector import TelemetryCollector
 
 __all__ = ["NetworkSession", "NetworkNode", "HoloOceanLink", "ManagedSimulation", "SessionError", "CallbackError",
            "Scenario", "NodeConfig", "Network", "Flow", "Pose", "Message", "Delivery",
-           "load_scenario", "list_examples", "pose_from_sensors"]
+           "load_scenario", "list_examples", "pose_from_sensors", "network_catalog", "network_inventory",
+           "ScenarioManager", "ScenarioLibrary", "ScenarioConflict", "ProfileLibrary", "CommunicationProfile",
+           "builtin_profiles"]
 
 
 class SessionError(RuntimeError):
@@ -52,6 +56,22 @@ def load_scenario(name_or_path: str | Path) -> Scenario:
 
 def list_examples() -> list[str]:
     return ScenarioManager().list()
+
+
+def network_catalog() -> dict:
+    """Catalogue of DESERT modules: verification status, parameters, units, defaults and limits.
+
+    The same document is copied into the engine image and validates every
+    configuration there; unknown parameters can never reach generated Tcl.
+    """
+    from .resources.docker.stack_builder import catalog
+    return catalog()
+
+
+def network_inventory() -> dict:
+    """Audit of what the pinned DESERT image installs (libraries, Tcl classes, samples)."""
+    path = Path(__file__).parent / "resources/docker/desert-inventory.json"
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _as_pose(value) -> Pose:
@@ -437,9 +457,14 @@ class ManagedSimulation:
         if realtime is not None:
             scenario = Scenario.model_validate({**scenario.model_dump(), "realtime": realtime})
         self.scenario = scenario
+        self.holoocean = holoocean
         self._run = SimulationOrchestrator(scenario, standalone=not holoocean, persist=persist,
                                            backend=DESERTAdapter(port=port, manage_docker=manage_engine),
                                            show_viewport=show_viewport, application_factory=application_factory)
+
+    @property
+    def run_id(self) -> str:
+        return self._run.run_id
 
     @property
     def state(self) -> str:
@@ -448,6 +473,19 @@ class ManagedSimulation:
     @property
     def error(self) -> str | None:
         return self._run.error
+
+    @property
+    def versions(self) -> dict:
+        """Platform, HoloOcean and engine identity recorded when the run started."""
+        return json.loads(json.dumps(self._run.telemetry.versions, default=str))
+
+    def annotate(self, event: str, **fields) -> None:
+        """Add a caller-defined event to this run's log; it is exported with the results."""
+        self._run.telemetry.emit(event, self._run.clock.time, **fields)
+
+    def trajectory_fingerprint(self) -> dict:
+        """SHA-256 per vehicle of the observed fleet telemetry, to compare trajectories of runs."""
+        return self._run.telemetry.trajectory()
 
     def run(self) -> dict:
         """Run to completion in this thread; returns the summary or raises SessionError."""
@@ -482,7 +520,12 @@ class ManagedSimulation:
     def export(self, path: str | Path) -> Path:
         return _export(self._run.telemetry, self.summary(), path)
 
+    def export_bytes(self) -> bytes:
+        """The export ZIP of :meth:`export` as bytes."""
+        return _export_bytes(self._run.telemetry, self.summary())
+
     def close(self) -> None:
+        """Stop the run and release its temporary results; calling it again is harmless."""
         self._run.close()
 
     def __enter__(self):
@@ -492,12 +535,18 @@ class ManagedSimulation:
         self.close()
 
 
-def _export(telemetry, summary, path):
+def _export_bytes(telemetry, summary):
+    import io
     import zipfile
-    path = Path(path)
-    path.write_bytes(telemetry.export())
-    with zipfile.ZipFile(path, "a", zipfile.ZIP_DEFLATED) as archive:
+    buffer = io.BytesIO(telemetry.export())
+    with zipfile.ZipFile(buffer, "a", zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("summary.json", json.dumps(summary, indent=2, default=str))
+    return buffer.getvalue()
+
+
+def _export(telemetry, summary, path):
+    path = Path(path)
+    path.write_bytes(_export_bytes(telemetry, summary))
     return path
 
 

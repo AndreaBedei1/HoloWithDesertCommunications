@@ -13,12 +13,14 @@ holo-desert dashboard --port 8010 --no-manage-docker
 Open `http://127.0.0.1:8000` (or the chosen `--port`). Opening the page does not
 start a simulation. `Ctrl+C` closes the server and cleans up the current run.
 
-**It is not a second communication engine.** Every run started from the
-dashboard is a `SimulationOrchestrator` (`src/holo_desert/core/orchestrator.py`),
-the same class used by the library's `ManagedSimulation` and by
-`holo-desert run`. The browser polls `GET /api/state` every 500 ms and renders
-the orchestrator's telemetry snapshot; there is no separate frontend server and
-no Python network fallback. All delivery, loss and timing come from DESERT.
+**It is not a second communication engine.** The dashboard server is a client
+of the public library API only (`from holo_desert import …`; a unit test rejects
+any other import): every run it starts is a `ManagedSimulation`, the class
+also used by `holo-desert run`, and the module catalogue, scenario library and
+profiles come from `network_catalog()`, `ScenarioManager` and `ProfileLibrary`.
+The browser polls `GET /api/state` every 500 ms and renders the run's telemetry
+snapshot; there is no separate frontend server and no Python network fallback.
+All delivery, loss and timing come from DESERT.
 
 The user interface is in Italian. Labels are quoted below in Italian with an
 English gloss.
@@ -244,7 +246,8 @@ the profile do not change earlier results. Profiles are stored in the
 ## Results and memory
 
 Ordinary results are temporary. **Esporta risultati** saves the ZIP
-(`config.json`, `events.jsonl`, `packets.csv`); export before reset or closing.
+(`config.json`, `events.jsonl`, `packets.csv`, `summary.json`); export before
+reset or closing.
 `holo-desert run --persist DIR` is the CLI option for explicit persistence.
 Personal saves concern configurations, not results.
 

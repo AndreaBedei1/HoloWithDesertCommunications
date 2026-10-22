@@ -35,7 +35,7 @@ Python API is documented in [api.md](api.md); configuration in
 | `src/holo_desert/holoocean_adapter/` | `HoloOceanAdapter` (environment, Windows IPC wait, teardown), `StaticNetworkFixture` (DESERT-only mode), `vehicles.py` (vehicle profiles; only `HoveringAUV`) |
 | `src/holo_desert/desert_adapter/backend.py` | `DESERTAdapter`: framed TCP client of the engine, Docker Compose management, fingerprint check |
 | `src/holo_desert/telemetry/collector.py` | `TelemetryCollector`: event log, packet records, metrics, export |
-| `src/holo_desert/dashboard/` | FastAPI server, comparison logic, static ES-module frontend |
+| `src/holo_desert/dashboard/` | FastAPI server (a client of the public API only), comparison logic, static ES-module frontend |
 | `src/holo_desert/resources/docker/` | Engine image: `Dockerfile`, `compose.yaml`, `server.py` (TCP transport), `stack_builder.py` (whitelist validator and Tcl renderer, shared by host and container; stdlib only), `*_config.py` validators (WOSS, media, multi-PHY, native applications), `communication-catalog.json`, `desert-inventory.json`, `build-extension.sh`, `probe-sockets.py` |
 | `src/holo_desert/resources/desert/tcl/bridge.tcl` | NS-MIRACLE bridge: builds nodes, runs the barrier callback and executes commands |
 | `src/holo_desert/resources/desert/tcl/modules/` | One trusted adapter per MAC (`mac_*.tcl`), routing (`routing_*.tcl`), environment (`environment_*.tcl`), `multiphy.tcl`, `native_applications.tcl` |

@@ -10,12 +10,9 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..core.orchestrator import SimulationOrchestrator
-from ..scenarios.config import ScenarioManager, Scenario
-from ..scenarios.library import ScenarioConflict
-from ..scenarios.profiles import ProfileLibrary, builtin_profiles
-from ..scenarios.network import CommunicationProfile
-from ..resources.docker.stack_builder import catalog
+# The web laboratory is a client of the public library API only.
+from .. import (ManagedSimulation, ProfileLibrary, Scenario, ScenarioConflict, ScenarioManager, builtin_profiles,
+                network_catalog, network_inventory)
 from .comparison import experiment, differences
 
 
@@ -53,6 +50,7 @@ class DashboardServer:
         self.profiles = ProfileLibrary(self.manager.library.directory / 'profiles',
                                        [p['name'] for p in builtin_profiles()])
         self.run = initial_run
+        self.scenario_id = initial_run.scenario.name if initial_run else None
         self.manage_docker = manage_docker
         self.control_lock = threading.Lock()
         self.comparisons = []
@@ -97,13 +95,12 @@ class DashboardServer:
             raise HTTPException(422, str(exc)) from exc
 
         @app.get('/api/network-catalog')
-        def network_catalog():
-            return catalog()
+        def catalog():
+            return network_catalog()
 
         @app.get('/api/network-inventory')
-        def network_inventory():
-            path = Path(__file__).parents[1] / 'resources/docker/desert-inventory.json'
-            return json.loads(path.read_text(encoding='utf-8'))
+        def inventory():
+            return network_inventory()
 
         @app.get('/api/network-profiles')
         def network_profiles():
@@ -228,7 +225,7 @@ class DashboardServer:
         @app.get("/api/state")
         def state():
             if self.run:
-                return self.run.snapshot()
+                return {**self.run.snapshot(), "scenario_id": self.scenario_id}
             return {"state": "idle", "services": {"holoocean": "not_started", "desert": "not_started"},
                     "fleet": {}, "packets": [], "series": [], "counts": {}, "events": [], "edges": [], "trails": {}}
 
@@ -254,7 +251,7 @@ class DashboardServer:
         @app.post("/api/comparison")
         def retain_comparison():
             with self.control_lock:
-                if not self.run or self.run.state != "finished" or self.run.standalone:
+                if not self.run or self.run.state != "finished" or not self.run.holoocean:
                     raise HTTPException(409, "Complete an integrated run before retaining its summary")
                 config = self.run.scenario.model_dump()
                 if any(r["run_id"] == self.run.run_id for r in self.comparisons):
@@ -267,9 +264,9 @@ class DashboardServer:
                 self.comparisons.append({"run_id": self.run.run_id, "mac": mac, "fingerprint": fingerprint,
                                          "configuration": self.run.scenario.model_dump(),
                                          "experiment":experiment(self.run.scenario.model_dump()),
-                                         "versions":dict(self.run.telemetry.versions),
-                                         "observed_trajectory":self.run.telemetry.trajectory(),
-                                         "summary": self.run.telemetry.summary()})
+                                         "versions":self.run.versions,
+                                         "observed_trajectory":self.run.trajectory_fingerprint(),
+                                         "summary": self.run.summary()})
                 self.comparisons = self.comparisons[-6:]
                 return {"ok": True}
 
@@ -284,11 +281,11 @@ class DashboardServer:
                     scenario = Scenario.model_validate(request.configuration) if request.configuration is not None else self.manager.load(request.scenario)
                     if self.run:
                         self.run.close()
-                    self.run = SimulationOrchestrator(scenario, standalone=request.standalone,
-                                                       manage_docker=self.manage_docker)
-                    self.run.scenario_id=request.scenario
-                    self.run.telemetry.emit('run_selection',0,scenario_id=request.scenario,
-                                            profile_id=scenario.network.profile_id)
+                    self.run = ManagedSimulation(scenario, holoocean=not request.standalone, show_viewport=True,
+                                                 manage_engine=self.manage_docker)
+                    self.scenario_id = request.scenario
+                    self.run.annotate('run_selection', scenario_id=request.scenario,
+                                      profile_id=scenario.network.profile_id)
                     self.run.start_background()
                 except (ValueError, RuntimeError) as exc:
                     raise HTTPException(422, str(exc)) from exc
@@ -322,7 +319,7 @@ class DashboardServer:
             with self.control_lock:
                 if self.run is None:
                     raise HTTPException(409, "No results to export")
-                return Response(self.run.telemetry.export(), media_type="application/zip",
+                return Response(self.run.export_bytes(), media_type="application/zip",
                                 headers={"Content-Disposition": 'attachment; filename="holo-desert-results.zip"'})
 
         return app

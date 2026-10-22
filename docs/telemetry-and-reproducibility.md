@@ -149,8 +149,7 @@ simulators at a barrier.
 
 | Export | Contents |
 |---|---|
-| Dashboard **Esporta risultati** / `GET /api/export` | ZIP with `config.json` (the validated scenario as run), `events.jsonl` (complete event log), `packets.csv` (`id`, `source`, `destination`, `size`, `wire_size`, `creation_time`, `status`, `delay` of the retained message rows) |
-| `NetworkSession.export(path)`, `ManagedSimulation.export(path)` | the same three files plus `summary.json` (the summary dictionary above) |
+| `NetworkSession.export(path)`, `ManagedSimulation.export(path)` / `export_bytes()`, dashboard **Esporta risultati** (`GET /api/export`) | ZIP with `config.json` (the validated scenario as run), `events.jsonl` (complete event log), `packets.csv` (`id`, `source`, `destination`, `size`, `wire_size`, `creation_time`, `status`, `delay` of the retained message rows) and `summary.json` (the summary dictionary above) |
 | `holo-desert run … --persist DIR` / `persist=` in the API | keeps `config.json` and `events.jsonl` in `DIR` instead of a temporary directory (`NetworkSession` writes one `run-NNN` subdirectory per start) |
 
 Ordinary runs live in a temporary directory deleted at reset/close; export

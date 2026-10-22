@@ -217,14 +217,36 @@ Methods: `attach(state)`, `sync(state, ticks=1) -> events`, `read_poses(state)`.
 ### `ManagedSimulation(scenario, *, holoocean=True, show_viewport=False, realtime=None, manage_engine=True, port=None, persist=None, application_factory=None)`
 
 `run() -> summary`, `start_background()`, `wait(timeout)`, `pause()`,
-`resume()`, `stop()`, `summary()`, `snapshot()`, `export(path)`, `close()`,
-`state`, `error`. `application_factory(node, communication, scenario)` replaces
+`resume()`, `stop()`, `summary()`, `snapshot()`, `export(path)`,
+`export_bytes()` (the same ZIP in memory), `close()` (idempotent), `state`,
+`error`, `run_id`, `holoocean` (whether HoloOcean drives the poses),
+`versions` (platform, HoloOcean and engine identity recorded at start),
+`trajectory_fingerprint()` (SHA-256 per vehicle of the observed fleet
+telemetry) and `annotate(event, **fields)` (adds a caller event to the
+exported log). `application_factory(node, communication, scenario)` replaces
 the built-in traffic applications with your own objects exposing
 `update(now, own_pose, received) -> pose target or None`.
 
 ### Helpers
 
 `load_scenario(name_or_path)`, `list_examples()`, `pose_from_sensors(sensors)`.
+
+`network_catalog()` returns the module catalogue that the engine also uses
+for validation (verification status, parameters with unit, default, bounds
+and help, selectors for medium, propagation and SSP); `network_inventory()`
+returns the audit of what the pinned DESERT image installs.
+
+### Scenario and profile libraries
+
+`ScenarioManager(root=None, user_root=None)` lists and loads the bundled
+examples and the personal scenarios (`list()`, `load(name_or_id)`,
+`list_user()`, `get_user(id)`, `save_user(configuration, id=None,
+expected_revision=None)`, `delete_user(id, expected_revision)`; the store is
+`ScenarioLibrary`, which raises `ScenarioConflict` on a stale revision).
+`ProfileLibrary(directory, reserved_names)` stores communication profiles
+(`CommunicationProfile`: name, description, network); `builtin_profiles()`
+returns the bundled ones. The dashboard uses exactly these public objects and
+`ManagedSimulation`; it has no private access to the engine or orchestrator.
 
 ## Command line equivalents
 

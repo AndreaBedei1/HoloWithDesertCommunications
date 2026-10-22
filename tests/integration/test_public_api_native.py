@@ -1,5 +1,8 @@
 """Public API against the real DESERT engine, without HoloOcean or dashboard."""
+import io
+import json
 import math
+import zipfile
 
 import pytest
 
@@ -69,7 +72,15 @@ def test_sequential_sessions_and_clean_restart(engine):
 
 def test_managed_simulation_without_holoocean(engine, tmp_path):
     with ManagedSimulation("e01_chat", holoocean=False, realtime=False, manage_engine=False) as sim:
+        sim.annotate("run_selection", scenario_id="e01_chat")
         summary = sim.run()
-        assert sim.state == "finished"
+        assert sim.state == "finished" and sim.holoocean is False and sim.run_id
         assert summary["generated"] >= 2 and summary["received"] >= 2
         assert sim.export(tmp_path / "e01.zip").stat().st_size > 0
+        assert sim.versions["engine"]["engine_fingerprint"] == sim.snapshot()["engine_info"]["engine_fingerprint"]
+        assert set(sim.trajectory_fingerprint()["nodes"]) == {"auv_01", "auv_02"}
+        archive = zipfile.ZipFile(io.BytesIO(sim.export_bytes()))
+        assert {"config.json", "events.jsonl", "packets.csv", "summary.json"} <= set(archive.namelist())
+        events = [json.loads(line) for line in archive.read("events.jsonl").splitlines()]
+        assert any(e["event"] == "run_selection" and e["scenario_id"] == "e01_chat" for e in events)
+    sim.close()  # a second close after the context manager is harmless

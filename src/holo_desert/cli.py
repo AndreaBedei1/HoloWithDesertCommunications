@@ -6,7 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 import socket
-from .core.orchestrator import SimulationOrchestrator
+from .api import ManagedSimulation, SessionError
 from .desert_adapter.backend import docker_command, COMPOSE, BASE_IMAGE, BackendError
 from .doctor import doctor
 from .scenarios.config import ScenarioManager, RESOURCE_ROOT, Network
@@ -134,22 +134,23 @@ def main(argv=None):
                 network.mac.protocol = args.mac
                 overrides["network"] = network
             scenario = type(scenario).model_validate({**scenario.model_dump(), **overrides})
-            run = SimulationOrchestrator(scenario, standalone=args.standalone,
-                                          manage_docker=not args.no_manage_docker, persist=args.persist,
-                                          show_viewport=not args.headless)
+            run = ManagedSimulation(scenario, holoocean=not args.standalone, show_viewport=not args.headless,
+                                    manage_engine=not args.no_manage_docker, persist=args.persist)
             try:
                 if args.no_dashboard:
-                    run.run()
-                    print(json.dumps({"state": run.state, "error": run.error, "counts": run.telemetry.snapshot()["counts"]}, indent=2))
+                    try:
+                        run.run()
+                    except SessionError:
+                        pass  # reported below with the counts observed so far
+                    print(json.dumps({"state": run.state, "error": run.error, "counts": run.snapshot()["counts"]}, indent=2))
                     return 1 if run.error else 0
                 print(f"Dashboard: http://127.0.0.1:{args.port} (Ctrl+C to close and clean up)")
                 serve_dashboard(dashboard_server(initial_run=run, manage_docker=not args.no_manage_docker).application(),
                                 args.port, run.start_background)
                 return 1 if run.error else 0
             finally:
-                # Dashboard lifespan already closes its current run.
-                if not run.telemetry.log.closed:
-                    run.close()
+                # The dashboard lifespan may already have closed it; closing twice is harmless.
+                run.close()
         elif args.command == "test":
             marker = "holoocean" if args.end_to_end else "desert and not holoocean" if args.integration else "not desert and not holoocean"
             return subprocess.call([sys.executable, "-m", "pytest", "-q", "-m", marker])

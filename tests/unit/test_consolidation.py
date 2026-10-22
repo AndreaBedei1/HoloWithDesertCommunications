@@ -131,15 +131,20 @@ def test_terminal_state_waits_for_cleanup_and_factory_needs_no_engine_api():
         run.close()
 
 
+def public_run(scenario, run_id, collector):
+    # The dashboard reads a run only through ManagedSimulation's public members.
+    return SimpleNamespace(state="finished", holoocean=True, scenario=scenario, run_id=run_id,
+                           versions=collector.versions, trajectory_fingerprint=collector.trajectory,
+                           summary=collector.summary, close=collector.close)
+
+
 def test_dashboard_validation_comparison_equivalence_and_reset():
     server = DashboardServer(manage_docker=False)
 
     def completed(mac, run_id):
         scenario = ScenarioManager().load("e04_congestion")
         scenario.network.mac.protocol = mac
-        collector = TelemetryCollector(scenario.model_dump())
-        return SimpleNamespace(state="finished", standalone=False, scenario=scenario,
-                               telemetry=collector, run_id=run_id, close=collector.close)
+        return public_run(scenario, run_id, TelemetryCollector(scenario.model_dump()))
 
     with TestClient(server.application()) as client:
         config = ScenarioManager().load("e05_multihop").model_dump()
@@ -185,8 +190,7 @@ def test_comparison_records_phy_changes_versions_and_common_experiment():
                 collector=TelemetryCollector(scenario.model_dump());collectors.append(collector)
                 collector.emit('run_started',0,versions={'engine':{'desert_source_commit':'compiled-test'}})
                 collector.positions({'auv_01':Pose(index,0,-20),'auv_02':Pose(20,0,-20)},0,origin='holoocean')
-                server.run=SimpleNamespace(state='finished',standalone=False,scenario=scenario,
-                                          telemetry=collector,run_id=str(index),close=lambda:None)
+                server.run=public_run(scenario,str(index),collector)
                 assert client.post('/api/comparison').status_code==200
             result=client.get('/api/comparisons').json()
             assert result['same_experiment']
