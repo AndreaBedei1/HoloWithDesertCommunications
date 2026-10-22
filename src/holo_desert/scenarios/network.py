@@ -88,7 +88,7 @@ class RangingTdma(Strict):
     frame_duration_s: float = Field(default=3,gt=0)
     guard_time_s: float = Field(default=.1,ge=0)
     # The native ranging frame is the first transmission of every own slot.
-    max_packets_per_slot: int = Field(default=2,ge=2)
+    max_packets_per_slot: int = Field(default=2,ge=2,le=10000)
 
 
 class CsmaCa(Strict):

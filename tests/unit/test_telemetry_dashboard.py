@@ -78,6 +78,27 @@ def test_ranging_estimates_are_kept_beside_the_geometric_reference():
         collector.close()
 
 
+def test_ranging_rows_record_when_the_estimate_last_changed_and_series_are_thinned():
+    from holo_desert.common.models import Pose
+    collector = TelemetryCollector(ScenarioManager().load("e01_chat").model_dump())
+    inverse = {1: "auv_01", 2: "auv_02"}
+    try:
+        collector.positions({"auv_01": Pose(0, 0, -20), "auv_02": Pose(30, 40, -20)}, 1)
+        # The native module repeats its last estimate until a new measurement arrives.
+        for time, travel in [(t, 0.0333 if t < 600 else 0.034) for t in range(1, 1001)]:
+            collector.engine_event({"event": "ranging_estimate", "time": time, "node": 1, "peer_a": 1, "peer_b": 2,
+                                    "travel_time_s": travel, "distance_m": travel * 1500, "valid": True,
+                                    "measurement_time": None, "protocol": "ranging_tdma"}, inverse)
+            if time == 599:
+                assert collector.snapshot()["ranging"]["latest"][0]["changed_time"] == 1
+        ranging = collector.snapshot()["ranging"]
+        assert ranging["latest"][0]["changed_time"] == 600 and ranging["latest"][0]["time"] == 1000
+        series = ranging["series"]["auv_01>auv_02"]
+        assert len(series) == 200 and series[-1]["time"] == 1000 and series[0]["time"] < 10
+    finally:
+        collector.close()
+
+
 def test_native_bindings_are_kept_per_node_and_shared():
     collector = TelemetryCollector(ScenarioManager().load("e01_chat").model_dump())
     try:

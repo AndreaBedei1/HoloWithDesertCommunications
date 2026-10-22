@@ -111,6 +111,37 @@ test('real catalogue: multi-PHY editor validates thresholds, availability and re
   expect(automatic.network.multiphy.thresholds).toEqual([{from_interface:'long',to_interface:'fast',power_linear:2e12},{from_interface:'fast',to_interface:'long',power_linear:1e11}]);
   expect(automatic.nodes[1].communication?.interfaces??null).toBeNull();
 });
+const editJson=async(page,change)=>{await page.locator('summary').filter({hasText:'Configurazione completa in JSON'}).click();const config=JSON.parse(await page.locator('#config-editor').inputValue());change(config);await page.locator('#config-editor').fill(JSON.stringify(config));await page.locator('#json-to-form').click();await expect(page.locator('#config-error')).toHaveText('')};
+test('real catalogue: an unchanged save keeps the multi-PHY fields the table does not show',async({page})=>{
+  const form=await realDesigner(page);
+  const long={frequency_hz:25000,bandwidth_hz:5000,bitrate_bps:4800,tx_power_db:150,phy:'bpsk_corrected',spreading:1.5,shipping:.2,wind_speed_mps:3,rx_snr_penalty_db:-3,acquisition_threshold_db:2};
+  await editJson(page,c=>{c.network.multiphy={interfaces:[{id:'long',acoustic:long},{id:'short',acoustic:{frequency_hz:50000,bandwidth_hz:9000}}],initial_interface:'long'};c.nodes[1].communication={interface_overrides:{short:{tx_power_db:120}}}});
+  await expect(form.locator('[data-mp-row]')).toHaveCount(2);
+  const saved=await applied(page);expect(saved.network.multiphy.interfaces[0].acoustic).toMatchObject(long);
+  expect(saved.nodes[1].communication.interface_overrides.short.tx_power_db).toBe(120);
+});
+test('real catalogue: power events keep the medium in their unit and a MAC without ACK turns ACK off',async({page})=>{
+  const form=await realDesigner(page);
+  await editJson(page,c=>{c.power_events=[{time:2,node:'auv_01',tx_power_db:150}];c.network.mac.ack=true});
+  await expect(form.locator('[data-path="network.medium"] option[value="optical"]')).toContainText('eventi di potenza');
+  await expect(form.locator('[data-path="network.medium"] option[value="em"]')).toHaveAttribute('disabled','');
+  await expect(form.locator('[data-path="network.mac.ack"]')).toBeChecked();
+  await form.locator('[data-path="network.mac.protocol"]').selectOption('tdma');
+  const saved=await applied(page);expect(saved.network.mac).toMatchObject({protocol:'tdma',ack:false});
+  expect(saved.power_events).toEqual([{time:2,node:'auv_01',tx_power_db:150}]);
+});
+test('real catalogue: the initial interface is kept on every drone and thresholds must be positive',async({page})=>{
+  const form=await realDesigner(page);await form.locator('summary').filter({hasText:'Interfacce multiple'}).click();await form.locator('[data-multiphy]').check();
+  const box=form.locator('[data-available][data-node="auv_02"][data-interface="short"]');await box.uncheck();
+  await form.locator('[data-path="network.multiphy.initial_interface"]').selectOption('short');
+  await expect(box).toBeChecked();await expect(box).toBeDisabled();
+  await form.locator('[data-path="network.multiphy.policy"]').selectOption('received_power');
+  await form.locator('[data-threshold][data-from="long"] input').fill('0');
+  await page.getByRole('button',{name:'Applica alla prossima corsa'}).click();
+  await expect(page.locator('#config-error')).toHaveText('Le soglie di commutazione devono essere maggiori di zero.');
+  await form.locator('[data-threshold][data-from="long"] input').fill('2e12');
+  const saved=await applied(page);expect(saved.network.multiphy.initial_interface).toBe('short');
+});
 test('real catalogue: native CBR/VBR generators expose native timers and disable Python-only options',async({page})=>{
   const form=await realDesigner(page);await form.locator('summary').filter({hasText:'Flussi applicativi'}).click();const flow=form.locator('.flow-card').first();
   await expect(flow.locator('[data-field="generator"] option',{hasText:'VBR'})).toContainText('non genera risposte');

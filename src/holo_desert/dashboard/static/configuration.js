@@ -4,6 +4,8 @@ import {drone} from './presentation.js';
 import {openProfiles} from './network-profiles.js';
 
 let catalog={modules:[],selectors:{}};
+// The configuration each form currently shows: values without a control are kept from it.
+const rendered=new WeakMap();
 export function setNetworkCatalog(value){catalog=value}
 const mod=id=>catalog.modules.find(m=>m.id===id);
 const selector=key=>catalog.selectors?.[key];
@@ -73,7 +75,11 @@ function moduleSelect(config,layer,path,label){
   const current=rows.find(r=>r.m.id===value)?.m;
   return '<label><span>'+esc(label)+tip((current?.description||'')+' Sono selezionabili soltanto adapter verificati nel laboratorio.'+unavailable(rows.filter(r=>r.reason).map(r=>[r.m.name,r.reason])))+'</span><select aria-label="'+esc(label)+'" data-path="'+path+'" data-module required>'+(!current?.operational?'<option value="" selected disabled>Seleziona un modulo operativo</option>':'')+rows.map(({m,reason})=>choice(m.id,moduleName(layer,m.id),m.id===value,reason)).join('')+'</select></label>';
 }
+// Each power event carries the native unit of one technology (POWER_UNITS in scenarios/config.py).
+const POWER_UNITS={acoustic:['tx_power_db','dB re 1 µPa'],optical:['tx_power_w','W'],em:['tx_power_dbm','dBm']};
 function mediumReason(config,value){
+  const [unit,label]=POWER_UNITS[value];
+  if((config.power_events||[]).some(e=>e[unit]==null))return 'gli eventi di potenza dello scenario devono essere in '+label+' (campo '+unit+', modificabile nel JSON)';
   if(value==='acoustic')return '';
   const n=config.network,need=mod(value)?.compatibility||{};
   if(unverified(value))return unverified(value);
@@ -84,10 +90,13 @@ function mediumReason(config,value){
   if(value==='optical'&&config.nodes.some(node=>[node.position,...(node.waypoints||[]).map(w=>w.slice(1))].some(p=>!(p[2]>=-20&&p[2]<0))))return 'il rumore ottico è tabulato solo fra 0 e 20 m di profondità';
   return '';
 }
+// MAC and routing a catalogued feature has been verified with (its compatibility block).
+const stackReason=(config,id)=>{const need=mod(id)?.compatibility||{},n=config.network;return need.mac&&!need.mac.includes(n.mac.protocol)?'non verificato con '+(mod(n.mac.protocol)?.name||n.mac.protocol):need.routing&&!need.routing.includes(n.routing||'static')?'non verificato con il routing '+(mod(n.routing||'static')?.name||n.routing):''};
 function propagationReason(config,value){
   if(value!=='woss')return '';
   if(unverified('woss'))return unverified('woss');
   const n=config.network,depth=n.woss?.water_depth_m??100,points=config.nodes.flatMap(node=>[node.position,...(node.waypoints||[]).map(w=>w.slice(1))]);
+  if(stackReason(config,'woss'))return stackReason(config,'woss');
   if(mediumOf(config)!=='acoustic')return 'solo per la tecnologia acustica';
   if(n.multiphy)return 'il multi-PHY usa la propagazione analitica';
   if((n.acoustic.phy||'bpsk_upstream')!=='bpsk_upstream'||config.nodes.some(node=>(node.communication?.acoustic?.phy||'bpsk_upstream')!=='bpsk_upstream'))return 'richiede il PHY BPSK originale su tutti i droni';
@@ -136,7 +145,7 @@ function multiphyEditor(config){
   if(!m)return html;
   const ids=m.interfaces.map(i=>i.id),phy=mod('bpsk_upstream')?.parameters||[],field=key=>phy.find(p=>p.path==='network.acoustic.'+key)||{label:key};
   const header=key=>{const p=field(key);return '<th>'+esc(p.label+unitLabel(p))+tip(helpText(p)+' Campo vuoto: eredita il valore globale ('+format(n.acoustic[key])+(p.unit?' '+p.unit:'')+').')+'</th>'};
-  html+='<div class="table-scroll network-routes"><table><thead><tr><th>'+esc(s.multiphy_interface?.label||'Interfaccia')+tip(helpText(s.multiphy_interface||{label:'Interfaccia'}))+'</th>'+INTERFACE_FIELDS.map(header).join('')+'<th>PHY</th><th></th></tr></thead><tbody>'+m.interfaces.map((item,k)=>'<tr data-mp-row><td><input data-mp-id data-previous="'+esc(item.id)+'" aria-label="Nome interfaccia '+(k+1)+'" value="'+esc(item.id)+'" pattern="[a-z][a-z0-9_]{0,15}" required data-rerender></td>'+INTERFACE_FIELDS.map(key=>'<td><input type="number" step="any" min="0" data-mp-field="'+key+'" aria-label="'+esc(field(key).label+unitLabel(field(key))+' interfaccia '+(k+1))+'" placeholder="'+esc(format(n.acoustic[key]))+'" value="'+esc(item.acoustic?.[key]??'')+'"></td>').join('')+'<td><select data-mp-field="phy" aria-label="PHY interfaccia '+(k+1)+'">'+choice('','Eredita',!item.acoustic?.phy)+catalog.modules.filter(x=>x.layer==='phy'&&x.operational&&![...MEDIA,'woss'].includes(x.id)).map(x=>choice(x.id,x.name,item.acoustic?.phy===x.id)).join('')+'</select></td><td><button type="button" class="text-button danger" data-mp-remove="'+k+'"'+(ids.length<=2?' disabled title="Servono almeno due interfacce"':'')+'>Rimuovi</button></td></tr>').join('')+'</tbody></table></div><button type="button" class="subtle" data-mp-add'+(ids.length>=3?' disabled title="Al massimo tre interfacce"':'')+'>+ Interfaccia</button>'+(ids.length>=3?note('al massimo tre interfacce per drone'):'');
+  html+='<div class="table-scroll network-routes"><table><thead><tr><th>'+esc(s.multiphy_interface?.label||'Interfaccia')+tip(helpText(s.multiphy_interface||{label:'Interfaccia'}))+'</th>'+INTERFACE_FIELDS.map(header).join('')+'<th>PHY</th><th></th></tr></thead><tbody>'+m.interfaces.map((item,k)=>'<tr data-mp-row><td><input data-mp-id data-previous="'+esc(item.id)+'" aria-label="Nome interfaccia '+(k+1)+'" value="'+esc(item.id)+'" pattern="[a-z][a-z0-9_]{0,15}" required data-rerender></td>'+INTERFACE_FIELDS.map(key=>'<td><input type="number" step="any" min="'+(field(key).min??0)+'"'+(field(key).max!=null?' max="'+field(key).max+'"':'')+' data-mp-field="'+key+'" aria-label="'+esc(field(key).label+unitLabel(field(key))+' interfaccia '+(k+1))+'" placeholder="'+esc(format(n.acoustic[key]))+'" value="'+esc(item.acoustic?.[key]??'')+'"></td>').join('')+'<td><select data-mp-field="phy" aria-label="PHY interfaccia '+(k+1)+'">'+choice('','Eredita',!item.acoustic?.phy)+catalog.modules.filter(x=>x.layer==='phy'&&x.operational&&![...MEDIA,'woss'].includes(x.id)).map(x=>choice(x.id,x.name,item.acoustic?.phy===x.id)).join('')+'</select></td><td><button type="button" class="text-button danger" data-mp-remove="'+k+'"'+(ids.length<=2?' disabled title="Servono almeno due interfacce"':'')+'>Rimuovi</button></td></tr>').join('')+'</tbody></table></div><button type="button" class="subtle" data-mp-add'+(ids.length>=3?' disabled title="Al massimo tre interfacce"':'')+'>+ Interfaccia</button>'+(ids.length>=3?note('al massimo tre interfacce per drone'):'');
   const policy=m.policy||'manual',automatic=policy==='received_power';
   html+='<div class="form-grid">'+selectorSelect(config,'multiphy_policy',()=>'')+parameter(config,{...(s.multiphy_initial||{label:'Interfaccia iniziale',path:'network.multiphy.initial_interface'}),type:'select',choices:ids.map(id=>({value:id,label:id}))},{value:m.initial_interface})+(automatic?parameter(config,{...(s.multiphy_master||{label:'Drone master',path:'network.multiphy.master'}),type:'select',choices:config.nodes.map(node=>({value:node.id,label:drone(node.id)}))},{value:m.master})+parameter(config,s.multiphy_alpha||{label:'Alpha',path:'network.multiphy.alpha',type:'number',min:0,max:1}):'')+'</div>';
   if(automatic){
@@ -154,14 +163,18 @@ function readMultiphy(root,result){
   if(!box.checked){n.multiphy=null;for(const node of result.nodes)if(node.communication){delete node.communication.interfaces;delete node.communication.interface_overrides}return}
   const rows=[...root.querySelectorAll('[data-mp-row]')],before=n.multiphy||{};
   if(!rows.length){n.multiphy={interfaces:structuredClone(DEFAULT_INTERFACES.slice(0,2)),policy:'manual',initial_interface:DEFAULT_INTERFACES[0].id,master:result.nodes[0]?.id||'auv_01',thresholds:[],alpha:.5};return}
-  const renamed={},interfaces=rows.map(row=>{const name=row.querySelector('[data-mp-id]'),acoustic={};renamed[name.dataset.previous]=name.value.trim();row.querySelectorAll('[data-mp-field]').forEach(el=>{if(el.value!=='')acoustic[el.dataset.mpField]=el.type==='number'?Number(el.value):el.value});return {id:name.value.trim(),acoustic}});
+  // The table edits a few fields; the others (spreading, noise, SNR penalty, ...) keep their configured values.
+  const renamed={},interfaces=rows.map(row=>{const name=row.querySelector('[data-mp-id]'),previous=structuredClone((before.interfaces||[]).find(i=>i.id===name.dataset.previous)||{}),acoustic={...previous.acoustic};renamed[name.dataset.previous]=name.value.trim();row.querySelectorAll('[data-mp-field]').forEach(el=>acoustic[el.dataset.mpField]=el.value===''?null:el.type==='number'?Number(el.value):el.value);return {...previous,id:name.value.trim(),acoustic}});
   const rename=id=>renamed[id]??id,ids=interfaces.map(i=>i.id),policy=before.policy||'manual',initial=rename(before.initial_interface);
-  n.multiphy={interfaces,policy,initial_interface:ids.includes(initial)?initial:ids[0],master:before.master||result.nodes[0]?.id,alpha:before.alpha??.5,
+  n.multiphy={...before,interfaces,policy,initial_interface:ids.includes(initial)?initial:ids[0],master:before.master||result.nodes[0]?.id,alpha:before.alpha??.5,
     thresholds:policy==='received_power'?[...root.querySelectorAll('[data-threshold]')].map(row=>({from_interface:rename(row.dataset.from),to_interface:rename(row.dataset.to),power_linear:Number(row.querySelector('input').value)})).filter(t=>ids.includes(t.from_interface)&&ids.includes(t.to_interface)):[]};
+  if(n.multiphy.thresholds.some(t=>!(t.power_linear>0)))throw Error('Le soglie di commutazione devono essere maggiori di zero.');
   for(const node of result.nodes){
     const boxes=[...root.querySelectorAll('[data-available]')].filter(b=>b.dataset.node===node.id),own=boxes.filter(b=>b.checked).map(b=>rename(b.dataset.interface)).filter(id=>ids.includes(id));
-    if(node.communication){delete node.communication.interfaces;if(node.communication.interface_overrides)node.communication.interface_overrides=Object.fromEntries(Object.entries(node.communication.interface_overrides).filter(([k])=>ids.includes(rename(k))).map(([k,v])=>[rename(k),v]))}
-    if(policy==='manual'&&boxes.length&&own.length<ids.length)(node.communication??={}).interfaces=ids.filter(id=>own.includes(id));
+    const available=policy==='manual'&&boxes.length&&own.length<ids.length?ids.filter(id=>own.includes(id)):ids,c=node.communication;
+    // Overrides follow a renamed interface and go with an interface the drone no longer has.
+    if(c){delete c.interfaces;if(c.interface_overrides)c.interface_overrides=Object.fromEntries(Object.entries(c.interface_overrides).map(([k,v])=>[rename(k),v]).filter(([k])=>available.includes(k)))}
+    if(available.length<ids.length)(node.communication??={}).interfaces=available;
   }
 }
 function addRoute(root,config,src,dst,hop){
@@ -177,7 +190,7 @@ function drawFlow(row,config,flow){
   const why=nativeReason(flow),patterns=[['periodic','Periodico'],['poisson','Poisson'],['burst','Burst'],['events','Eventi espliciti']];
   const nativeParameters=native?(mod(flow.generator==='desert_vbr'?'native_vbr':'native_cbr')?.flow_parameters||[]):[];
   row.innerHTML='<header><h3>Flusso di messaggi</h3><button type="button" class="text-button danger" data-remove>Rimuovi</button></header><div class="form-grid"><label><span>Mittente</span>'+nodeSelect(config.nodes,'source',flow.source)+'</label><label><span>Destinatario</span>'+nodeSelect(config.nodes,'destination',flow.destination)+'</label>'
-    +'<label><span>'+esc(generator.label)+tip(helpText(generator)+(!native&&why?' Generatori nativi non disponibili: '+why+'.':''))+'</span><select data-field="generator" aria-label="'+esc(generator.label)+'" data-redraw>'+generator.choices.map(c=>choice(c.value,c.label,c.value===(flow.generator||'python'),c.value==='python'||c.value===flow.generator?'':unverified(c.value==='desert_vbr'?'native_vbr':'native_cbr')||(!native?why:''))).join('')+'</select></label>'
+    +'<label><span>'+esc(generator.label)+tip(helpText(generator)+(!native&&why?' Generatori nativi non disponibili: '+why+'.':''))+'</span><select data-field="generator" aria-label="'+esc(generator.label)+'" data-redraw>'+generator.choices.map(c=>{const id=c.value==='desert_vbr'?'native_vbr':'native_cbr';return choice(c.value,c.label,c.value===(flow.generator||'python'),c.value==='python'||c.value===flow.generator?'':unverified(id)||stackReason(config,id)||(!native?why:''))}).join('')+'</select></label>'
     +'<label><span>Andamento del traffico'+tip((parameterHelp('pattern')||'')+(native?' I generatori nativi usano soltanto tempi periodici o Poisson.':''))+'</span><select data-field="pattern" aria-label="Andamento del traffico" data-redraw>'+patterns.map(([v,l])=>choice(v,l,flow.pattern===v,native&&!['periodic','poisson'].includes(v)?'non con i generatori nativi':'')).join('')+'</select></label>'
     +(['events','burst'].includes(flow.pattern)?'':numeric('interval','Intervallo [s]',.001))+(native?'':numeric('payload_bytes','Payload [byte]',1,{max:2048}))+'</div>'
     +'<div class="form-grid traffic-pattern">'+(flow.pattern==='burst'?numeric('burst_count','Messaggi per burst',1)+numeric('burst_interval_s','Intervallo nel burst [s]',.001)+numeric('burst_period_s','Periodo dei burst [s]',.001):flow.pattern==='events'?'<label class="wide"><span>Eventi · tempi assoluti simulati [s]'+tip('Elenco crescente di secondi dall’inizio della simulazione, separati da virgole.')+'</span><input data-field="events" aria-label="Eventi · tempi assoluti simulati [s]" value="'+esc((flow.events||[]).join(', '))+'"></label>':'')+nativeParameters.map(nativeField).join('')+'</div>'
@@ -196,6 +209,7 @@ export function renderFlows(root,config){
 function readFlow(row){return Object.fromEntries([...row.querySelectorAll('[data-field]')].map(el=>[el.dataset.field,el.dataset.field==='events'?el.value.split(',').filter(x=>x.trim()).map(x=>{const n=Number(x);if(!Number.isFinite(n))throw Error('I tempi degli eventi devono essere numeri.');return n}):el.type==='checkbox'?el.checked:el.type==='number'?(el.value===''?null:Number(el.value)):el.value]))}
 export function readFlows(root){return [...root.querySelectorAll('.flow-card')].map(readFlow)}
 export function renderNetwork(root,config,{includeFlows=true,mode=null}={}){
+  rendered.set(root,config);
   const opened=new Set([...root.querySelectorAll('details[open]>summary')].map(el=>el.textContent));
   const mac=config.network.mac.protocol,phy=config.network.acoustic.phy||'bpsk_upstream',routing=config.network.routing||'static',medium=mediumOf(config),acoustic=medium==='acoustic';
   const primary=(acoustic?catalog.modules.find(m=>m.layer.toLowerCase()==='phy'&&m.id===phy)?.parameters||[]:mod(medium)?.parameters||[]).filter(p=>PRIMARY[medium].includes(p.path));
@@ -210,7 +224,7 @@ export function renderNetwork(root,config,{includeFlows=true,mode=null}={}){
   root.querySelector('[data-add-route]').onclick=()=>addRoute(root,config,config.nodes[0]?.id,config.nodes[1]?.id,config.nodes[1]?.id);
   const error=document.createElement('p');error.className='inline-error';error.setAttribute('role','alert');root.append(error);
   const redraw=change=>{try{const next=readNetwork(root,config,{includeFlows});change?.(next);renderNetwork(root,next,{includeFlows,mode:root.querySelector('[data-mode]')?.value??mode})}catch(e){error.textContent=e.message}};
-  root.querySelectorAll('[data-module],[data-rerender],[data-path="network.mac.queue_mode"],[data-path="network.mac.ack"]').forEach(el=>el.onchange=()=>redraw());
+  root.querySelectorAll('[data-module],[data-rerender],[data-path="network.mac.queue_mode"],[data-path="network.mac.ack"],[data-path="network.multiphy.initial_interface"]').forEach(el=>el.onchange=()=>redraw());
   // A new SSP sample goes midway before the seabed sample, so the profile stays valid.
   root.querySelector('[data-add-ssp]')?.addEventListener('click',()=>redraw(next=>{const ssp=next.network.woss.ssp,[a,b]=ssp.slice(-2);if(a&&b)ssp.splice(ssp.length-1,0,{depth_m:(a.depth_m+b.depth_m)/2,speed_mps:(a.speed_mps+b.speed_mps)/2})}));
   root.querySelectorAll('[data-remove-ssp]').forEach((b,k)=>b.onclick=()=>redraw(next=>next.network.woss.ssp.splice(k,1)));
@@ -221,10 +235,12 @@ export function renderNetwork(root,config,{includeFlows=true,mode=null}={}){
   if(mode!==null)root.querySelector('[data-mode]').value=mode;root.querySelectorAll('details').forEach(el=>{if(opened.has(el.querySelector('summary')?.textContent))el.open=true});addHelp(root);
 }
 export function readNetwork(root,config,{includeFlows=true}={}){
-  const result=structuredClone(config);
+  const result=structuredClone(rendered.get(root)??config);
   root.querySelectorAll('[data-path]').forEach(el=>set(result,el.dataset.path,el.type==='checkbox'?el.checked:el.type==='number'?(el.value===''?undefined:Number(el.value)):(el.value===''?undefined:el.value)));
+  // Only MACs that implement the ALOHA-style ACK show its control; the others run without it.
+  if(!(mod(result.network.mac.protocol)?.parameters||[]).some(p=>p.path==='network.mac.ack'))result.network.mac.ack=false;
   const points=root.querySelector('[data-ssp-points]');
-  if(points)result.network.woss.ssp=[...points.querySelectorAll('[data-ssp-row]')].map(row=>({depth_m:Number(row.querySelector('[data-ssp="depth_m"]').value),speed_mps:Number(row.querySelector('[data-ssp="speed_mps"]').value)}));
+  if(points)result.network.woss.ssp=[...points.querySelectorAll('[data-ssp-row]')].map(row=>{const read=key=>row.querySelector('[data-ssp="'+key+'"]').value;if(read('depth_m')===''||read('speed_mps')==='')throw Error('Completa profondità e velocità di ogni punto SSP.');return {depth_m:Number(read('depth_m')),speed_mps:Number(read('speed_mps'))}});
   readMultiphy(root,result);
   const routes={};for(const row of root.querySelector('[data-routes]').children){const read=k=>row.querySelector('[data-field="'+k+'"]').value,src=read('source'),dst=read('destination');routes[src]??={};if(dst in routes[src])throw Error('La route '+src+' → '+dst+' è duplicata.');routes[src][dst]=read('hop')}result.network.routes=routes;
   if(includeFlows&&!config.coordination)result.flows=readFlows(root.querySelector('[data-flow-editor]'));

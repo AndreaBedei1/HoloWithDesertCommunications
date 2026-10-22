@@ -105,3 +105,19 @@ def test_duplicate_e03_keeps_waypoints_and_original(tmp_path):
     record = manager.save_user(copy)
     assert manager.load(record["id"]).nodes[0].waypoints == manager.load("e03_mobility").nodes[0].waypoints
     assert manager.load("e03_mobility").model_dump() == original
+
+
+@pytest.mark.parametrize("medium,unit,value", [("optical", "tx_power_w", 3), ("em", "tx_power_dbm", 7)])
+def test_files_saved_with_the_former_power_field_stay_listed_in_their_unit(tmp_path, medium, unit, value):
+    import json, yaml
+    legacy = json.loads(json.dumps(configuration("Vecchio " + medium)))
+    for node in legacy["nodes"]:
+        node["position"][2] = -10
+    legacy["network"]["medium"] = medium
+    legacy["network"]["routes"] = {}
+    legacy["flows"][0].update(destination="auv_02")
+    # Before per-medium units the bridge applied tx_power_db unchanged as W or dBm.
+    legacy["power_events"] = [{"time": 2, "node": "auv_01", "tx_power_db": value}]
+    (tmp_path / ("user_" + "a" * 32 + ".yaml")).write_text(yaml.safe_dump(legacy), encoding="utf-8")
+    [record] = ScenarioLibrary(tmp_path).list()
+    assert record["configuration"]["power_events"] == [{"time": 2, "node": "auv_01", unit: value}]

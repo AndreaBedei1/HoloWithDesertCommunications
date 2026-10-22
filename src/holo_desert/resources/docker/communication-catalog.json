@@ -1516,7 +1516,7 @@
       "name": "WOSS / Bellhop",
       "layer": "channel",
       "description": "Bellhop reale senza database globali: SSP esplicito, fondale e superficie piatti, sedimento sintetico. Cache locale alla sessione, posizioni aggiornate alle barriere. Separazione orizzontale ≥1 m; margine superficie/fondo >0,1 m.",
-      "reason": "Verificato con test nativi del bridge, con HoloOcean end-to-end e nel Network Designer (test Playwright, 2026-10-22). Configurabile anche da YAML e API Python.",
+      "reason": "Verificato con test nativi del bridge, con HoloOcean end-to-end e nel Network Designer (test Playwright, 2026-10-22). Configurabile anche da YAML e API Python. Combinazioni con ogni MAC, routing e mezzo elencati in compatibility verificate con consegna reale in DESERT (tests/integration/test_compatibility_matrix.py, 2026-10-22).",
       "operational": true,
       "validation": "verified_end_to_end",
       "source_present": true,
@@ -1602,7 +1602,32 @@
       ],
       "official_example": "official library sequence load verified; Bellhop environmental run not integrated",
       "experimental": true,
-      "tcl_class": "WOSS/Module/Channel + WOSS/MPropagation + WOSS/Module/MPhy/BPSK/HOLO"
+      "tcl_class": "WOSS/Module/Channel + WOSS/MPropagation + WOSS/Module/MPhy/BPSK/HOLO",
+      "compatibility": {
+        "mac": [
+          "aloha",
+          "csma_aloha",
+          "tdma",
+          "tdma_frame",
+          "csma_ca",
+          "dacap",
+          "csburst",
+          "tokenbus",
+          "ranging_tokenbus",
+          "ranging_tdma"
+        ],
+        "routing": [
+          "static",
+          "flooding",
+          "sun"
+        ],
+        "media": [
+          "acoustic"
+        ],
+        "phy": [
+          "bpsk_upstream"
+        ]
+      }
     },
     {
       "id": "optical",
@@ -2083,7 +2108,7 @@
       "name": "UW/CBR nativo",
       "layer": "application",
       "description": "Timer e pacchetti generati nel DESERT reale. Nessun envelope JSON o TTL Python; statistiche native distinte.",
-      "reason": "Verificato con test nativi del bridge, con HoloOcean end-to-end e nel Network Designer (test Playwright, 2026-10-22). Configurabile anche da YAML e API Python.",
+      "reason": "Verificato con test nativi del bridge, con HoloOcean end-to-end e nel Network Designer (test Playwright, 2026-10-22). Configurabile anche da YAML e API Python. Combinazioni con ogni MAC, routing e mezzo elencati in compatibility verificate con consegna reale in DESERT (tests/integration/test_compatibility_matrix.py, 2026-10-22).",
       "operational": true,
       "validation": "verified_end_to_end",
       "source_present": true,
@@ -2176,14 +2201,47 @@
           "min": 16,
           "max": 2048
         }
-      ]
+      ],
+      "compatibility": {
+        "mac": [
+          "aloha",
+          "csma_aloha",
+          "tdma",
+          "tdma_frame",
+          "csma_ca",
+          "dacap",
+          "csburst",
+          "tokenbus",
+          "ranging_tokenbus",
+          "ranging_tdma"
+        ],
+        "routing": [
+          "static",
+          "flooding",
+          "sun"
+        ],
+        "media": [
+          "acoustic",
+          "optical",
+          "em"
+        ],
+        "propagation": [
+          "underwater",
+          "woss"
+        ],
+        "multiphy": true,
+        "patterns": [
+          "periodic",
+          "poisson"
+        ]
+      }
     },
     {
       "id": "native_vbr",
       "name": "UW/VBR nativo",
       "layer": "application",
       "description": "Timer e pacchetti generati nel DESERT reale. Nessun envelope JSON o TTL Python; statistiche native distinte.",
-      "reason": "Verificato con test nativi del bridge, con HoloOcean end-to-end e nel Network Designer (test Playwright, 2026-10-22). Configurabile anche da YAML e API Python.",
+      "reason": "Verificato con test nativi del bridge, con HoloOcean end-to-end e nel Network Designer (test Playwright, 2026-10-22). Configurabile anche da YAML e API Python. Combinazioni con ogni MAC, routing e mezzo elencati in compatibility verificate con consegna reale in DESERT (tests/integration/test_compatibility_matrix.py, 2026-10-22).",
       "operational": true,
       "validation": "verified_end_to_end",
       "source_present": true,
@@ -2245,7 +2303,40 @@
           "type": "number",
           "min": 1e-06
         }
-      ]
+      ],
+      "compatibility": {
+        "mac": [
+          "aloha",
+          "csma_aloha",
+          "tdma",
+          "tdma_frame",
+          "csma_ca",
+          "dacap",
+          "csburst",
+          "tokenbus",
+          "ranging_tokenbus",
+          "ranging_tdma"
+        ],
+        "routing": [
+          "static",
+          "flooding",
+          "sun"
+        ],
+        "media": [
+          "acoustic",
+          "optical",
+          "em"
+        ],
+        "propagation": [
+          "underwater",
+          "woss"
+        ],
+        "multiphy": true,
+        "patterns": [
+          "periodic",
+          "poisson"
+        ]
+      }
     },
     {
       "id": "csburst",

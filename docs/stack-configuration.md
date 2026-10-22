@@ -239,6 +239,13 @@ message freshness, not a safety system.
 | `seed` | `1` | 1–100000; NS-2 RNG substream index (the bridge advances `defaultRNG` by `seed` substreams, as `rngstream` in the official samples). Also seeds the Python Poisson generators and the WOSS random generator. Recorded as `rng_substream` |
 | `profile_id` | `null` | provenance of a communication profile; not used by the engine |
 
+A serialised configuration (`Scenario.model_dump()`, saved YAML, exported
+`config.json`, `engine_info`) holds the default block of every catalogued
+protocol and medium, selected or not; only the selected ones reach the
+generated Tcl. A newly catalogued protocol therefore adds its block to the
+serialised form of existing scenarios (Ranging-TDMA added `mac.ranging_tdma`)
+without changing their generated Tcl.
+
 Combinations rejected by both validators:
 
 - `medium: optical` or `em` requires `mac.protocol: csma_aloha`, `routing: static`,
@@ -352,7 +359,7 @@ Common MAC fields (`network.mac`):
 | Field | Default | Constraints | Used by |
 |---|---|---|---|
 | `protocol` | `csma_aloha` | see table below | all |
-| `ack` | `false` | | ALOHA, CSMA-ALOHA, CSMA/CA, DACAP (`setAckMode`/`setNoAckMode`); rejected for TDMA, TDMA Frame, CS-Burst, TokenBus, Ranging-TokenBus |
+| `ack` | `false` | | ALOHA, CSMA-ALOHA, CSMA/CA, DACAP (`setAckMode`/`setNoAckMode`); rejected for TDMA, TDMA Frame, CS-Burst, TokenBus, Ranging-TokenBus, Ranging-TDMA (the Network Designer turns it off when one of these is selected) |
 | `max_tx_tries` | `3` | 1–20 | ALOHA/CSMA-ALOHA (`max_tx_tries_`, after construction), DACAP (`max_tx_tries`, before construction); not used by CSMA/CA. Meaningful only with ACK |
 | `buffer_packets` | `100` | 1–10000 | queue limit; binding per protocol below |
 | `queue_mode` | `legacy` | `legacy`, `bounded` | CSMA-ALOHA only |
@@ -372,7 +379,9 @@ Overview:
 | `ranging_tokenbus` | `Module/UW/RANGING_TOKENBUS`, + `libuwranging_tokenbus.so` | Operational | static | `get_buffer_size` |
 | `ranging_tdma` | `Module/UW/RANGING_TDMA`, `libuwtdma.so` + `libuwranging_tdma.so` | Operational | static | `get_buffer_size` |
 
-All MACs work with both acoustic BPSK variants. Only CSMA-ALOHA is accepted
+All MACs work with both acoustic BPSK variants, with WOSS propagation and
+with the native CBR/VBR generators (each combination delivers packets in
+`tests/integration/test_compatibility_matrix.py`). Only CSMA-ALOHA is accepted
 for the optical, EM and multi-PHY stacks. The CLI option `--mac <protocol>`
 changes only the MAC of a scenario, for example
 `holo-desert run e01_chat --mac tdma --headless`.
@@ -732,7 +741,7 @@ flows:
 
 ## WOSS / Bellhop
 
-Status: operational (native and HoloOcean end-to-end tests, `demos/e08_woss`), YAML/API only, synthetic environment only.
+Status: operational (native and HoloOcean end-to-end tests, `demos/e08_woss`), configurable from the Network Designer, YAML and the Python API, synthetic environment only. It delivers with every MAC and with Flooding and SUN routing (`tests/integration/test_compatibility_matrix.py`).
 
 Select `network.acoustic.propagation: woss` with `phy: bpsk_upstream` (the
 corrected analytic BPSK is rejected). The bridge uses `WOSS/Module/Channel`,
@@ -1059,7 +1068,9 @@ instance at `start` and stops it at `stop` (default: scenario `duration`).
 | `native_duration1_s`, `native_duration2_s` | VBR `timer_switch_1_`, `timer_switch_2_` |
 
 Restrictions: `message_type: data`, no `reply`, `pattern` `periodic` or
-`poisson`, no `final_interval`. Native packets carry no JSON envelope and no
+`poisson`, no `final_interval`. Both generators deliver with every MAC and
+routing protocol, the optical and EM media, WOSS and multi-PHY, periodic and
+Poisson (`tests/integration/test_compatibility_matrix.py`). Native packets carry no JSON envelope and no
 Python TTL (`python_ttl_applies: false`): they never time out in Python, and
 the run summary leaves goodput/envelope throughput empty (`null`) when native
 flows are present (`native_application.packet_throughput_bps` is reported

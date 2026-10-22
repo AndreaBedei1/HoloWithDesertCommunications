@@ -7,10 +7,10 @@ import subprocess
 import sys
 import socket
 from .api import ManagedSimulation, SessionError
-from .desert_adapter.backend import docker_command, COMPOSE, BASE_IMAGE, BackendError
+from .desert_adapter.backend import docker_command, COMPOSE, BackendError
 from .doctor import doctor
 from .scenarios.config import ScenarioManager, RESOURCE_ROOT, Network
-from .resources.docker.stack_builder import MACS
+from .resources.docker.stack_builder import MACS, pinned_base_image
 
 
 def dashboard_server(**options):
@@ -94,7 +94,8 @@ def main(argv=None):
             if result.stderr:
                 print(result.stderr, file=sys.stderr)
         elif args.command == "official-sample":
-            result = docker_command("run", "--rm", BASE_IMAGE, "bash", "-lc",
+            # Read when used: importing the library never depends on the bundled Dockerfile.
+            result = docker_command("run", "--rm", pinned_base_image(), "bash", "-lc",
                 "source /home/DESERT_Underwater/DESERT_buildCopy_LOCAL/environment && cd /tmp && ns /home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/Application/test_uwApplication.tcl", timeout=120)
             print(result.stdout)
             print(result.stderr, file=sys.stderr)

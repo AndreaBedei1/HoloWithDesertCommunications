@@ -11,7 +11,6 @@ import subprocess
 import time
 
 from ..common.models import Message, Pose
-from ..resources.docker.stack_builder import pinned_base_image
 from ..scenarios.config import RESOURCE_ROOT, Scenario
 
 
@@ -71,7 +70,6 @@ def docker_command(*args, timeout=120, check=True):
 
 
 COMPOSE = ["compose", "-p", "holo-desert", "-f", str(RESOURCE_ROOT / "docker/compose.yaml")]
-BASE_IMAGE = pinned_base_image()
 
 
 class DESERTAdapter(CommunicationBackend):

@@ -164,8 +164,12 @@ class TelemetryCollector:
         reference = (math.dist([self.fleet[a][k] for k in ('x', 'y', 'z')], [self.fleet[b][k] for k in ('x', 'y', 'z')])
                      if a in self.fleet and b in self.fleet else None)
         valid = bool(data.get('valid')) and data.get('distance_m') is not None
+        # The native estimate persists after contact is lost: keep when its value last changed.
+        previous = self.ranging_latest.get((data['node_id'], pair))
+        unchanged = previous and previous['valid'] == valid and previous['travel_time_s'] == (data.get('travel_time_s') if valid else None)
         self.ranging_latest[(data['node_id'], pair)] = {
-            'time': data['time'], 'observer': data['node_id'], 'pair': pair, 'peer_a': a, 'peer_b': b,
+            'time': data['time'], 'changed_time': previous['changed_time'] if unchanged else data['time'],
+            'observer': data['node_id'], 'pair': pair, 'peer_a': a, 'peer_b': b,
             'protocol': data.get('protocol'), 'valid': valid, 'travel_time_s': data.get('travel_time_s') if valid else None,
             'distance_m': data['distance_m'] if valid else None, 'geometric_distance_m': reference,
             'error_m': data['distance_m'] - reference if valid and reference is not None else None}
@@ -274,11 +278,17 @@ class TelemetryCollector:
                     "packets": [dict(self.packets[k]) for k in list(self.packet_order)[-500:]],
                     "events": list(self.events)[-100:], "series": list(self.series),
                     "applied_configuration": self.applied_configuration,
-                    "ranging": {"series": {pair: list(points) for pair, points in self.ranging_series.items()},
+                    "ranging": {"series": {pair: self._thin(points) for pair, points in self.ranging_series.items()},
                                 "latest": sorted(self.ranging_latest.values(), key=lambda r: (r['pair'], r['observer']))},
                     "counts": {"generated": self.generated_count, "received": self.received_count,
                                "timed_out": self.expired_count,
                                "pending": self.generated_count - self.received_count - self.expired_count}})
+
+    @staticmethod
+    def _thin(points, limit=200):
+        """At most ``limit`` evenly spaced samples of a series, always ending with the newest."""
+        points = list(points)
+        return points[::-1][::-(-len(points) // limit) or 1][::-1]
 
     @staticmethod
     def _packet_event(row, data):

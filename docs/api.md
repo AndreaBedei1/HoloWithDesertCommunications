@@ -245,11 +245,16 @@ returns the audit of what the pinned DESERT image installs.
 examples and the personal scenarios (`list()`, `load(name_or_id)`,
 `list_user()`, `get_user(id)`, `save_user(configuration, id=None,
 expected_revision=None)`, `delete_user(id, expected_revision)`; the store is
-`ScenarioLibrary`, which raises `ScenarioConflict` on a stale revision).
+`ScenarioManager.library`, a `ScenarioLibrary` with its `directory`, the `ID`
+pattern of personal identifiers and `parse_yaml(text)`, which raises
+`ScenarioConflict` on a stale revision). Files saved before power events used
+their medium's unit (an optical or EM `tx_power_db`, applied unchanged as W or
+dBm) are read with that value in `tx_power_w` or `tx_power_dbm`.
 `ProfileLibrary(directory, reserved_names)` stores communication profiles
 (`CommunicationProfile`: name, description, network); `builtin_profiles()`
-returns the bundled ones. The dashboard uses exactly these public objects and
-`ManagedSimulation`; it has no private access to the engine or orchestrator.
+returns the bundled ones. The dashboard uses these objects, the scenario
+library included, and `ManagedSimulation`; it has no private access to the
+engine or orchestrator.
 
 ## Command line equivalents
 
