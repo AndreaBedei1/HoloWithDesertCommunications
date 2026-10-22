@@ -157,8 +157,8 @@ class PositionBasedAnchor(Strict):
 
 class PositionBased(Strict):
     """Native position-based routing: static anchors know their surveyed positions; every other node is a vehicle."""
-    anchor_range_m: float = Field(default=3000,gt=0)
-    vehicle_range_m: float = Field(default=3000,gt=0)
+    anchor_range_m: float = Field(default=3000,ge=0.001)
+    vehicle_range_m: float = Field(default=3000,ge=0.001)
     anchors: dict[str,PositionBasedAnchor] = Field(default_factory=dict)
 
 

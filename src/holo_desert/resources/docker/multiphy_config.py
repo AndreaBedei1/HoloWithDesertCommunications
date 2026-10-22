@@ -63,7 +63,7 @@ def effective_interfaces(config):
             if interface['id'] not in available:continue
             if interface.get('medium','acoustic')=='optical':
                 own=interface.get('optical') or {}
-                if any(v is not None for v in (interface.get('acoustic') or {}).values()) or overrides.get(interface['id']):raise ValueError('An optical interface takes optical settings, not acoustic ones')
+                if any(v is not None for v in (interface.get('acoustic') or {}).values()) or any(v is not None for v in (overrides.get(interface['id']) or {}).values()):raise ValueError('An optical interface takes optical settings, not acoustic ones')
                 if not isinstance(own,dict) or set(own)-OPTICAL_FIELDS:raise ValueError('Unsupported multiPHY optical override')
                 # Same native bounds as the single-medium optical stack.
                 optical=validate_medium('optical',{**net['optical'],**{k:v for k,v in own.items() if v is not None}})
@@ -82,12 +82,13 @@ def effective_interfaces(config):
                 if isinstance(v,bool) or not isinstance(v,(int,float)) or not math.isfinite(v) or not low<=v<=high:raise ValueError('Invalid multiPHY '+key)
             if acoustic['phy'] not in ('bpsk_upstream','bpsk_corrected') or acoustic['bandwidth_hz']>=2*acoustic['frequency_hz']:raise ValueError('Invalid multiPHY acoustic band/PHY')
             effective.append({'id':interface['id'],'index':index,'medium':'acoustic','acoustic':acoustic})
-        # Acoustic interfaces share one channel; optical interfaces have their own.
-        acoustic_only=[x for x in effective if x['medium']=='acoustic']
-        for i,a in enumerate(acoustic_only):
-            for b in acoustic_only[i+1:]:
-                x,y=a['acoustic'],b['acoustic']
-                if abs(x['frequency_hz']-y['frequency_hz'])<=(x['bandwidth_hz']+y['bandwidth_hz'])/2:raise ValueError('MultiPHY interfaces require disjoint frequency bands')
+        # Acoustic interfaces share the acoustic channel and optical ones the optical channel: on one
+        # channel overlapping bands would receive and interfere with each other's frames.
+        for medium in ('acoustic','optical'):
+            same=[x[medium] for x in effective if x['medium']==medium]
+            for i,x in enumerate(same):
+                for y in same[i+1:]:
+                    if abs(x['frequency_hz']-y['frequency_hz'])<=(x['bandwidth_hz']+y['bandwidth_hz'])/2:raise ValueError('MultiPHY interfaces of one medium require disjoint frequency bands')
         result.append({'id':node['id'],'interfaces':effective})
     return result
 

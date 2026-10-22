@@ -172,6 +172,6 @@ class ScenarioLibrary:
         if len(text.encode("utf-8")) > self.MAX_BYTES:
             raise ValueError("Scenario troppo grande (massimo 256 KiB)")
         try:
-            return self.MODEL.model_validate(yaml.safe_load(text)).model_dump()
+            return self.MODEL.model_validate(self._upgrade(yaml.safe_load(text))).model_dump()
         except yaml.YAMLError as exc:
             raise ValueError("YAML non valido: controlla sintassi e indentazione") from exc

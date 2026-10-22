@@ -28,18 +28,29 @@ def test_render_gives_each_role_only_its_own_knowledge():
     assert 'set pbr_routes {{1 2 2 anchor} {1 3 2 vehicle} {2 1 1 anchor} {2 3 3 vehicle}}' in text
 
 
-@pytest.mark.parametrize('change,match', [
-    (lambda d: d['network']['position_based'].update(anchors={}), 'anchor and one vehicle'),
-    (lambda d: d['network']['position_based']['anchors'].update(auv_03={}), 'waypoints|anchor and one vehicle'),
-    (lambda d: d['network'].update(routes={'auv_03': {'auv_01': 'auv_02'}}), 'tables belong to anchors'),
-    (lambda d: d['network'].update(routes={'auv_02': {'auv_01': 'auv_03'}}), 'tables belong to anchors'),
-    (lambda d: d['network']['position_based'].update(anchor_range_m=0), 'greater than 0'),
-    (lambda d: d['network']['mac'].update(protocol='tdma'), 'CSMA-ALOHA'),
-    (lambda d: d['network'].update(medium='optical'), 'CSMA-ALOHA|StaticRouting')])
-def test_invalid_position_based_configurations_are_rejected_by_schema_and_builder(change, match):
+@pytest.mark.parametrize('change,match,builder', [
+    (lambda d: d['network']['position_based'].update(anchors={}), 'anchor and one vehicle', 'anchor and one vehicle'),
+    (lambda d: d['network']['position_based']['anchors'].update(auv_03={}), 'waypoints|anchor and one vehicle', 'static nodes|anchor and one vehicle'),
+    (lambda d: d['network'].update(routes={'auv_03': {'auv_01': 'auv_02'}}), 'tables belong to anchors', 'tables belong to anchors'),
+    (lambda d: d['network'].update(routes={'auv_02': {'auv_01': 'auv_03'}}), 'tables belong to anchors', 'tables belong to anchors'),
+    (lambda d: d['network']['position_based'].update(anchor_range_m=0), 'greater than or equal to 0.001', 'bounds'),
+    (lambda d: d['network']['mac'].update(protocol='tdma'), 'CSMA-ALOHA', 'CSMA-ALOHA'),
+    (lambda d: d['network'].update(medium='optical'), 'CSMA-ALOHA|StaticRouting', 'CSMA-ALOHA')])
+def test_invalid_position_based_configurations_are_rejected_by_schema_and_builder(change, match, builder):
     data = scenario()
     change(data)
     with pytest.raises(ValueError, match=match):
         Scenario.model_validate(data)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=builder):
         render(data)
+
+
+def test_route_display_lists_only_the_anchors_tables():
+    from holo_desert.telemetry.collector import TelemetryCollector
+    collector = TelemetryCollector(Scenario.model_validate(scenario()).model_dump())
+    try:
+        routes = collector.configured_routes()
+        assert {r['source'] for r in routes} == {'auv_01', 'auv_02'}
+        assert next(r for r in routes if r['source'] == 'auv_01' and r['destination'] == 'auv_03')['next_hop'] == 'auv_02'
+    finally:
+        collector.close()

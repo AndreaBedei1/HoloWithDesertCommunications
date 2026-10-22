@@ -758,7 +758,10 @@ node's live position (no HoloOcean ground truth):
 
 A vehicle sends every packet, its own or relayed, to the closest surveyed
 anchor within `vehicle_range_m` of its own position; with none in range the
-native module drops the packet before the MAC (no `forward` event). An anchor
+native module drops the packet before the MAC (no `forward` event). The
+native drop path frees the packet and still passes it down; it is discarded
+because UW/IP rejects the zeroed destination address, which this integration
+relies on and which the native test covers. An anchor
 sends directly to a vehicle when its estimate of the vehicle is within
 `anchor_range_m`, otherwise to the next hop of its table; anchor tables come
 from `network.routes` (sources are anchors, a next hop is an anchor or the
@@ -1022,8 +1025,11 @@ its own PHY, propagation, spectral mask and MIV object:
 | `thresholds` | `[]` | `{from_interface, to_interface, power_linear}`; only for `received_power`, between adjacent interfaces in list order, both directions required; `power_linear > 0` |
 | `alpha` | `0.5` | 0..1, `setAlpha` on the master |
 
-Rules: the bands of the acoustic interfaces must be disjoint
-(`|f1 − f2| > (b1 + b2)/2`; optical interfaces use their own channel); per
+Rules: the bands of the interfaces of one medium must be disjoint
+(`|f1 − f2| > (b1 + b2)/2`): acoustic interfaces share the acoustic channel and
+optical interfaces the optical channel, where overlapping bands would receive
+and interfere with each other's frames (two optical interfaces therefore need
+distinct `frequency_hz`/`bandwidth_hz`); per
 node, `communication.interfaces` may list a subset (manual policy only; it must
 include the initial interface) and `communication.interface_overrides` may
 override settings per acoustic interface. An interface takes only the settings
@@ -1183,9 +1189,10 @@ instance at `start` and stops it at `stop` (default: scenario `duration`).
 | `native_duration1_s`, `native_duration2_s` | VBR `timer_switch_1_`, `timer_switch_2_` |
 
 Restrictions: `message_type: data`, no `reply`, `pattern` `periodic` or
-`poisson`, no `final_interval`. Both generators deliver with every MAC and
-routing protocol, the optical and EM media, WOSS and multi-PHY, periodic and
-Poisson (`tests/integration/test_compatibility_matrix.py`). Native packets carry no JSON envelope and no
+`poisson`, no `final_interval`. Both generators deliver with every MAC, static,
+Flooding and SUN routing, the optical and EM media, WOSS and multi-PHY,
+periodic and Poisson (`tests/integration/test_compatibility_matrix.py`); they
+are not offered with Position-Based Routing. Native packets carry no JSON envelope and no
 Python TTL (`python_ttl_applies: false`): they never time out in Python, and
 the run summary leaves goodput/envelope throughput empty (`null`) when native
 flows are present (`native_application.packet_throughput_bps` is reported

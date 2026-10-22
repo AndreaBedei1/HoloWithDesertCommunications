@@ -126,3 +126,18 @@ def test_power_and_positions_follow_the_interface_medium():
     assert sent[2].startswith('POSITION 1 0 0 -10 0 1.57') and sent[3] == 'POSITION 2 8 0 -30 0'
     with pytest.raises(ValueError, match='20 m'):
         backend.update_node_position('auv_01', Pose(0, 0, -25), 0)
+
+
+def test_optical_interfaces_share_one_channel_so_their_bands_must_differ():
+    data = hybrid()
+    data['network']['multiphy']['interfaces'].append({'id': 'optical2', 'medium': 'optical', 'optical': {}})
+    with pytest.raises(ValueError, match='disjoint'):
+        Scenario.model_validate(data)                      # both inherit the default optical band
+    data['network']['multiphy']['interfaces'][2]['optical'] = {'frequency_hz': 2e7, 'bandwidth_hz': 1e5}
+    Scenario.model_validate(data)
+
+
+def test_empty_per_node_override_does_not_block_an_optical_interface():
+    data = hybrid()
+    data['nodes'][1]['communication'] = {'interface_overrides': {'optical': {}}}
+    Scenario.model_validate(data)

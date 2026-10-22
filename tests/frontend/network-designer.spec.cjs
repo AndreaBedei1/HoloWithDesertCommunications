@@ -160,6 +160,7 @@ test('real catalogue: an optical interface has its own fields, shared optical pa
 });
 test('real catalogue: position-based routing has anchors, ranges and anchor tables',async({page})=>{
   const form=await realDesigner(page);
+  await expect(form.locator('[data-path="network.routing"] option[value="position_based"]')).not.toHaveAttribute('disabled','');
   await form.locator('[data-path="network.routing"]').selectOption('position_based');
   await expect(form.locator('[data-path="network.mac.protocol"] option:not([disabled])')).toHaveText(['CSMA-ALOHA']);
   await expect(form.locator('[data-path="network.acoustic.propagation"] option[value="woss"]')).toContainText('non verificato');

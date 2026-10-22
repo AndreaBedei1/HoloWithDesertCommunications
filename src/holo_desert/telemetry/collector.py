@@ -308,14 +308,19 @@ class TelemetryCollector:
                 for i, a in enumerate(nodes) for b in nodes[i + 1:]}
 
     def configured_routes(self):
-        if self.config["network"].get("routing", "static") != "static":
+        network = self.config["network"]
+        routing = network.get("routing", "static")
+        if routing not in ("static", "position_based"):
             return []
         ids = [n["id"] for n in self.config["nodes"]]
-        routes = self.config["network"]["routes"]
+        # Position-based routing keeps next-hop tables at the anchors only.
+        anchors = (network.get("position_based") or {}).get("anchors", {})
+        sources = ids if routing == "static" else [i for i in ids if i in anchors]
+        routes = network["routes"]
         return [{"source": src, "destination": dst,
                  "next_hop": routes.get(src, {}).get(dst, dst),
                  "explicit": dst in routes.get(src, {})}
-                for src in ids for dst in ids if src != dst]
+                for src in sources for dst in ids if src != dst]
 
     def trajectory(self):
         with self.lock:

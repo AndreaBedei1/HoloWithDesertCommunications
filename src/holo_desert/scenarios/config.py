@@ -203,7 +203,7 @@ class ScenarioManager:
             if name_or_path not in self.list():
                 raise ValueError(f"Unknown scenario {name_or_path!r}; choose {', '.join(self.list())}")
             path = self.root / name_or_path / "scenario.yaml"
-        return Scenario.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
+        return Scenario.model_validate(self.library._upgrade(yaml.safe_load(path.read_text(encoding="utf-8"))))
 
 
 NetworkConfigurator = Network

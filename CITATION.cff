@@ -9,9 +9,11 @@ abstract: >-
   with the DESERT Underwater 4.0 / NS-MIRACLE network simulator running in a
   container. HoloOcean supplies the vehicle poses; DESERT executes the whole
   network stack (PHY, propagation, interference, MAC, routing, native traffic
-  generators and ranging) on a shared logical clock. The project adds no
-  network model of its own and records engine identity, effective
-  configuration and native object values with every run.
+  generators and ranging) on a shared logical clock. Beyond DESERT's own
+  models the project adds only documented, opt-in patches (a corrected BPSK
+  interference branch, a body-frame directional optical gain and an EM
+  look-up-table fix) and records engine identity, effective configuration and
+  native object values with every run.
 authors:
   - family-names: Bedei
     given-names: Andrea

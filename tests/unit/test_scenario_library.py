@@ -121,3 +121,18 @@ def test_files_saved_with_the_former_power_field_stay_listed_in_their_unit(tmp_p
     (tmp_path / ("user_" + "a" * 32 + ".yaml")).write_text(yaml.safe_dump(legacy), encoding="utf-8")
     [record] = ScenarioLibrary(tmp_path).list()
     assert record["configuration"]["power_events"] == [{"time": 2, "node": "auv_01", unit: value}]
+
+
+def test_imported_and_loaded_yaml_with_the_former_power_field_is_read_in_its_unit(tmp_path):
+    import json, yaml
+    legacy = json.loads(json.dumps(configuration("Import legacy")))
+    for node in legacy["nodes"]:
+        node["position"][2] = -10
+    legacy["network"].update(medium="optical", routes={})
+    legacy["flows"][0].update(destination="auv_02")
+    legacy["power_events"] = [{"time": 2, "node": "auv_01", "tx_power_db": 3}]
+    text = yaml.safe_dump(legacy)
+    assert ScenarioLibrary(tmp_path).parse_yaml(text)["power_events"] == [{"time": 2, "node": "auv_01", "tx_power_w": 3}]
+    path = tmp_path / "legacy.yaml"
+    path.write_text(text, encoding="utf-8")
+    assert ScenarioManager(user_root=tmp_path / "library").load(str(path)).power_events[0].tx_power_w == 3

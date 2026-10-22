@@ -14,6 +14,14 @@ import threading
 import time
 
 
+def phy_patch(config):
+    """Identifier of the PHY variant: medium patch, or acoustic BPSK variant plus optical interfaces."""
+    medium = {"optical": "native-optical-lambert-beer-body-frame-v1", "em": "em-power-lut-v1"}.get(config["network"].get("medium"))
+    acoustic = "conditional-bpsk-v1" if any(n["acoustic"].get("phy") == "bpsk_corrected" for n in effective_nodes(config)) else "upstream-original"
+    interfaces = (config["network"].get("multiphy") or {}).get("interfaces") or []
+    return medium or acoustic + ("+native-optical-lambert-beer-body-frame-v1" if any(i.get("medium") == "optical" for i in interfaces) else "")
+
+
 def finite(value):
     result = float(value)
     if not math.isfinite(result):
@@ -60,7 +68,7 @@ class Handler(socketserver.StreamRequestHandler):
             commit = subprocess.check_output(["git", "-C", "/home/DESERT_Underwater", "rev-parse", "HEAD"], text=True).strip()
             self.wfile.write((json.dumps({"event": "engine_info", "time": 0,
                 "desert_release": "4.0.0", "desert_source_commit": commit, "desert_base_image": ENGINE_BASE_IMAGE,
-                "stack_builder": CATALOG_VERSION, "engine_fingerprint": ENGINE_FINGERPRINT, "phy_patch": {"optical":"native-optical-lambert-beer-body-frame-v1","em":"em-power-lut-v1"}.get(config['network'].get('medium'), "conditional-bpsk-v1" if any(n["acoustic"].get("phy")=="bpsk_corrected" for n in effective_nodes(config)) else "upstream-original"),
+                "stack_builder": CATALOG_VERSION, "engine_fingerprint": ENGINE_FINGERPRINT, "phy_patch": phy_patch(config),
                 "effective_network": config["network"], "effective_nodes": effective_nodes(config)}) + "\n").encode())
             self.wfile.flush()
             with tempfile.TemporaryDirectory(prefix="holo-desert-") as temp:

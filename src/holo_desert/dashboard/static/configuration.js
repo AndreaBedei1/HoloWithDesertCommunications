@@ -67,6 +67,7 @@ function moduleReason(config,layer,m){
     if(m.id!=='static'&&n.multiphy)return 'il multi-PHY è verificato solo con il routing statico';
     if(m.compatibility?.propagation&&!m.compatibility.propagation.includes(propagationOf(config)))return 'non verificato con la propagazione WOSS';
     if(m.id==='position_based'&&config.nodes.every(node=>(node.waypoints||[]).length))return 'serve almeno un drone senza waypoint come ancora';
+    if((config.flows||[]).some(f=>(f.generator||'python')!=='python'&&!(mod(f.generator==='desert_vbr'?'native_vbr':'native_cbr')?.compatibility?.routing||[m.id]).includes(m.id)))return 'i generatori nativi CBR/VBR non sono verificati con questo routing';
   }
   if(layer==='phy'&&m.id!=='bpsk_upstream'&&propagationOf(config)==='woss')return 'WOSS usa il PHY BPSK originale';
   return '';
@@ -149,6 +150,8 @@ const opticalBeforeAcoustic=interfaces=>interfaces.some((item,k)=>interfaceMediu
 function interfaceMediumReason(config,k,value){
   const m=config.network.multiphy,ids=m.interfaces.map(i=>i.id),item=m.interfaces[k];
   if(m.policy==='received_power'&&opticalBeforeAcoustic(m.interfaces.map((i,j)=>j===k?{...i,medium:value}:i)))return 'con la selezione per potenza ricevuta le interfacce acustiche precedono quelle ottiche';
+  const [unit,label]=POWER_UNITS[value];
+  if((config.power_events||[]).some(e=>(e.interface===item.id||(!e.interface&&k===0))&&e[unit]==null))return 'gli eventi di potenza di questa interfaccia devono essere in '+label+' (campo '+unit+', modificabile nel JSON)';
   if(value!=='optical')return '';
   if(unverified('optical'))return unverified('optical');
   const holders=config.nodes.filter(node=>item.id===m.initial_interface||(node.communication?.interfaces||ids).includes(item.id));
@@ -192,10 +195,12 @@ function readMultiphy(root,result){
   if(!rows.length){n.multiphy={interfaces:structuredClone(DEFAULT_INTERFACES.slice(0,2)),policy:'manual',initial_interface:DEFAULT_INTERFACES[0].id,master:result.nodes[0]?.id||'auv_01',thresholds:[],alpha:.5};return}
   // The table edits a few fields; the others (spreading, noise, SNR penalty, ...) keep their configured values.
   // A new medium starts from its global values: the fields still shown belong to the previous medium.
-  const renamed={},interfaces=rows.map(row=>{const name=row.querySelector('[data-mp-id]'),previous=structuredClone((before.interfaces||[]).find(i=>i.id===name.dataset.previous)||{}),shown=interfaceMedium(previous),medium=row.querySelector('[data-mp-medium]')?.value||shown,settings=medium===shown?{...previous[medium]}:{};renamed[name.dataset.previous]=name.value.trim();if(medium===shown)row.querySelectorAll('[data-mp-field]').forEach(el=>settings[el.dataset.mpField]=el.value===''?null:el.type==='number'?Number(el.value):el.value);return {...previous,id:name.value.trim(),medium,acoustic:medium==='acoustic'?settings:{},optical:medium==='optical'?settings:{}}});
+  const renamed={},changed=new Set(),interfaces=rows.map(row=>{const name=row.querySelector('[data-mp-id]'),previous=structuredClone((before.interfaces||[]).find(i=>i.id===name.dataset.previous)||{}),shown=interfaceMedium(previous),medium=row.querySelector('[data-mp-medium]')?.value||shown,settings=medium===shown?{...previous[medium]}:{};renamed[name.dataset.previous]=name.value.trim();if(medium!==shown)changed.add(name.value.trim());if(medium===shown)row.querySelectorAll('[data-mp-field]').forEach(el=>settings[el.dataset.mpField]=el.value===''?null:el.type==='number'?Number(el.value):el.value);return {...previous,id:name.value.trim(),medium,acoustic:medium==='acoustic'?settings:{},optical:medium==='optical'?settings:{}}});
   const rename=id=>renamed[id]??id,ids=interfaces.map(i=>i.id),policy=before.policy||'manual',initial=rename(before.initial_interface);
   n.multiphy={...before,interfaces,policy,initial_interface:ids.includes(initial)?initial:ids[0],master:before.master||result.nodes[0]?.id,alpha:before.alpha??.5,
-    thresholds:policy==='received_power'?[...root.querySelectorAll('[data-threshold]')].map(row=>({from_interface:rename(row.dataset.from),to_interface:rename(row.dataset.to),power_linear:Number(row.querySelector('input').value)})).filter(t=>ids.includes(t.from_interface)&&ids.includes(t.to_interface)):[]};
+    // A threshold is in the unit of its from-interface: one whose medium changed returns to its default.
+    thresholds:policy==='received_power'?[...root.querySelectorAll('[data-threshold]')].map(row=>({from_interface:rename(row.dataset.from),to_interface:rename(row.dataset.to),power_linear:Number(row.querySelector('input').value)})).filter(t=>ids.includes(t.from_interface)&&ids.includes(t.to_interface)&&!changed.has(t.from_interface)):[]};
+  result.power_events=(result.power_events||[]).map(e=>e.interface?{...e,interface:rename(e.interface)}:e);
   if(n.multiphy.thresholds.some(t=>!(t.power_linear>0)))throw Error('Le soglie di commutazione devono essere maggiori di zero.');
   for(const node of result.nodes){
     const boxes=[...root.querySelectorAll('[data-available]')].filter(b=>b.dataset.node===node.id),own=boxes.filter(b=>b.checked).map(b=>rename(b.dataset.interface)).filter(id=>ids.includes(id));
@@ -208,7 +213,7 @@ function readMultiphy(root,result){
 // Anchors of the position-based routing: static drones with an optional surveyed position.
 function anchorsEditor(config){
   const s=selector('position_based_anchors')||{label:'Ancore'},anchors=config.network.position_based?.anchors||{};
-  return '<h3>'+esc(s.label)+tip(helpText(s))+'</h3><div class="table-scroll network-routes"><table><thead><tr><th>Drone</th><th>Ancora</th><th>Posizione rilevata x [m]</th><th>y [m]</th><th>z [m]</th></tr></thead><tbody>'+config.nodes.map(node=>{const anchor=node.id in anchors,moving=(node.waypoints||[]).length>0,survey=anchors[node.id]?.surveyed_position;return '<tr data-pbr-row data-node="'+esc(node.id)+'"><td>'+esc(drone(node.id))+'</td><td><input type="checkbox" data-pbr-anchor data-rerender aria-label="'+esc(drone(node.id)+' · ancora')+'"'+(anchor?' checked':'')+(moving?' disabled title="Un drone con waypoint è un veicolo"':'')+'></td>'+[0,1,2].map(k=>'<td><input type="number" step="any" data-pbr-survey="'+k+'" aria-label="'+esc(drone(node.id)+' · posizione rilevata '+'xyz'[k]+' [m]')+'" placeholder="'+esc(format(node.position[k]))+'" value="'+esc(survey?.[k]??'')+'"'+(anchor?'':' disabled')+'></td>').join('')+'</tr>'}).join('')+'</tbody></table></div><p class="micro">Posizione rilevata vuota: quella dello scenario. I droni non selezionati sono veicoli e conoscono solo la propria posizione.</p>';
+  return '<h3>'+esc(s.label)+tip(helpText(s))+'</h3><div class="table-scroll network-routes"><table><thead><tr><th>Drone</th><th>Ancora</th><th>Posizione rilevata x [m]</th><th>y [m]</th><th>z [m]</th></tr></thead><tbody>'+config.nodes.map(node=>{const moving=(node.waypoints||[]).length>0,anchor=node.id in anchors&&!moving,survey=anchors[node.id]?.surveyed_position;return '<tr data-pbr-row data-node="'+esc(node.id)+'"><td>'+esc(drone(node.id))+'</td><td><input type="checkbox" data-pbr-anchor data-rerender aria-label="'+esc(drone(node.id)+' · ancora')+'"'+(anchor?' checked':'')+(moving?' disabled title="Un drone con waypoint è un veicolo"':'')+'></td>'+[0,1,2].map(k=>'<td><input type="number" step="any" data-pbr-survey="'+k+'" aria-label="'+esc(drone(node.id)+' · posizione rilevata '+'xyz'[k]+' [m]')+'" placeholder="'+esc(format(node.position[k]))+'" value="'+esc(survey?.[k]??'')+'"'+(anchor?'':' disabled')+'></td>').join('')+'</tr>'}).join('')+'</tbody></table></div><p class="micro">Posizione rilevata vuota: quella dello scenario. I droni non selezionati sono veicoli e conoscono solo la propria posizione.</p>';
 }
 function readAnchors(root,result){
   const n=result.network,rows=[...root.querySelectorAll('[data-pbr-row]')];
@@ -222,7 +227,7 @@ function readAnchors(root,result){
   }
   const anchors={};
   for(const row of rows){
-    if(!row.querySelector('[data-pbr-anchor]').checked)continue;
+    const box=row.querySelector('[data-pbr-anchor]');if(!box.checked||box.disabled)continue;
     const values=[...row.querySelectorAll('[data-pbr-survey]')].map(el=>el.value);
     if(values.some(v=>v!=='')&&values.some(v=>v===''))throw Error('Indica tutte e tre le coordinate della posizione rilevata o nessuna.');
     anchors[row.dataset.node]=values.every(v=>v!=='')?{surveyed_position:values.map(Number)}:{};
@@ -281,13 +286,13 @@ export function renderNetwork(root,config,{includeFlows=true,mode=null}={}){
   root.querySelector('[data-add-ssp]')?.addEventListener('click',()=>redraw(next=>{const ssp=next.network.woss.ssp,[a,b]=ssp.slice(-2);if(a&&b)ssp.splice(ssp.length-1,0,{depth_m:(a.depth_m+b.depth_m)/2,speed_mps:(a.speed_mps+b.speed_mps)/2})}));
   root.querySelectorAll('[data-remove-ssp]').forEach((b,k)=>b.onclick=()=>redraw(next=>next.network.woss.ssp.splice(k,1)));
   root.querySelector('[data-mp-add]')?.addEventListener('click',()=>redraw(next=>{const used=new Set(next.network.multiphy.interfaces.map(i=>i.id));next.network.multiphy.interfaces.push(structuredClone(DEFAULT_INTERFACES.find(i=>!used.has(i.id))||{id:'extra',acoustic:{}}))}));
-  root.querySelectorAll('[data-mp-remove]').forEach(b=>b.onclick=()=>redraw(next=>{const m=next.network.multiphy,[gone]=m.interfaces.splice(Number(b.dataset.mpRemove),1);if(m.initial_interface===gone.id)m.initial_interface=m.interfaces[0].id;m.thresholds=m.thresholds.filter(t=>t.from_interface!==gone.id&&t.to_interface!==gone.id);for(const node of next.nodes)if(node.communication?.interfaces)node.communication.interfaces=node.communication.interfaces.filter(id=>id!==gone.id)}));
+  root.querySelectorAll('[data-mp-remove]').forEach(b=>b.onclick=()=>redraw(next=>{const m=next.network.multiphy,[gone]=m.interfaces.splice(Number(b.dataset.mpRemove),1);if(m.initial_interface===gone.id)m.initial_interface=m.interfaces[0].id;m.thresholds=m.thresholds.filter(t=>t.from_interface!==gone.id&&t.to_interface!==gone.id);next.power_events=(next.power_events||[]).filter(e=>e.interface!==gone.id);for(const node of next.nodes)if(node.communication?.interfaces)node.communication.interfaces=node.communication.interfaces.filter(id=>id!==gone.id)}));
   root.querySelector('[data-catalog]').onclick=()=>{let dialog=document.querySelector('#network-catalog-dialog');if(!dialog){dialog=document.createElement('dialog');dialog.id='network-catalog-dialog';dialog.className='settings-dialog';document.body.append(dialog)}dialog.innerHTML='<div class="dialog-heading"><h2>Catalogo DESERT</h2><button type="button" class="icon-button" aria-label="Chiudi catalogo">×</button></div>'+catalog.modules.map(m=>'<article class="catalog-module"><h3>'+esc(m.name)+' <small>'+esc(m.layer)+'</small></h3><p>'+esc(m.description)+'</p><p><strong>'+esc(m.experimental&&m.operational?'Sperimentale verificato':m.operational?'Operativo · verificato':'Non disponibile nel Designer')+'</strong> '+esc(m.reason||(typeof m.validation==='string'?m.validation:JSON.stringify(m.validation||{})))+'</p><details><summary>Dettagli della verifica</summary><pre>'+esc(JSON.stringify({tcl_class:m.tcl_class,libraries:m.libraries,source_present:m.source_present,compiled:m.compiled,loadable:m.loadable,official_example:m.official_example,bridge_compatible:m.bridge_compatible,validation:m.validation},null,2))+'</pre></details></article>').join('')+'<details><summary>Inventario dell’ambiente</summary><pre>'+esc(JSON.stringify(catalog.inventory||{},null,2))+'</pre></details>';dialog.querySelector('button').onclick=()=>dialog.close();dialog.showModal()};
   if(includeFlows)renderFlows(root.querySelector('[data-flow-editor]'),config);
   if(mode!==null)root.querySelector('[data-mode]').value=mode;root.querySelectorAll('details').forEach(el=>{if(opened.has(el.querySelector('summary')?.textContent))el.open=true});addHelp(root);
 }
 export function readNetwork(root,config,{includeFlows=true}={}){
-  const result=structuredClone(rendered.get(root)??config);
+  const result=structuredClone({...(rendered.get(root)??config),nodes:config.nodes});
   root.querySelectorAll('[data-path]').forEach(el=>set(result,el.dataset.path,el.type==='checkbox'?el.checked:el.type==='number'?(el.value===''?undefined:Number(el.value)):(el.value===''?undefined:el.value)));
   // Only MACs that implement the ALOHA-style ACK show its control; the others run without it.
   if(!(mod(result.network.mac.protocol)?.parameters||[]).some(p=>p.path==='network.mac.ack'))result.network.mac.ack=false;
