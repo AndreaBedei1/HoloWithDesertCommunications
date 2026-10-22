@@ -98,16 +98,28 @@ traffic from the peer.
 
 ## Not integrated
 
+Verdicts from source reading and earlier probes in the pinned image (assessment of 22–23 October 2026). A module is offered only after native tests through the bridge; the candidates below are listed in the recommended order of integration.
+
 | Module | Concrete blocker found |
 |---|---|
 | Ranging TDOA (`Module/UW/RANGING_TDOA` + `Module/UW/TAP`) | needs a RANGE layer above the MAC and a TAP layer below it, outside the bridge's fixed module chain; its pings share the data MAC queue; in the official sample the per-node mean error reached 198 m (maximum 5992 m) |
-| HMM PHY (`Module/UW/HMMPHYSICAL`) | its `setInterference` rejects the bridge's `MInterference/MIV` (needs `Module/UW/INTERFERENCE`); one Markov link object per directed link must be configured; channel-state errors are counted as noise, so observer outcomes need relabelling |
+| HMM PHY (`Module/UW/HMMPHYSICAL`) | not integrated on scientific grounds: inside the acquisition range its Markov error process ignores distance, SNR and motion, and DESERT ships no usable fitted parameters (the Haifa-harbour fit exists only as images, without its time base); it also needs `Module/UW/INTERFERENCE` with MEANPOWER and relabelled observer outcomes |
 | OFDM PHY (`Module/UW/OFDM/PHY`) | works only with an OFDM MAC: with CSMA-ALOHA the native PHY aborts (`USED BANDWIDTH = 0`, SIGFPE); with `OFDM_ALOHA` it delivered, which needs a new MAC adapter, carrier headers and an OFDM interference model |
 | T-LOHI | the MAC looks up a tone PHY (`Module/MPhy/Underwater/WKUP`) and its data PHY by Tcl class name below it; with one PHY the tone PHY id is never set, so the reservation mechanism does not exist |
 | ALOHA-Q, ALOHA-Q-Sync | node and sink find their PHYs by discovery tags that the bridge does not set; sharing one PHY for data and ACKs would change the native learning rewards; node/sink roles and convergecast |
 | Polling | NODE/AUV/SINK roles with data only node → AUV → sink; the adaptive back-off queries the PHY's lost-packet counter, which the bridge PHY does not answer |
 | UFetch | loads only with a global promotion of `libuwip`/`libuwcbr`; three roles and about 17 timing bindings; no official sample in the pinned tree to validate against |
 | ICRP | needs the same loader promotion in production plus node/sink roles; no official reference run |
+| Rogers shallow-water propagation (`Module/UW/PROPAGATIONROGERS`) | integrable (it only replaces the propagation object) but not yet validated: DESERT marks its sediment coefficient as unresolved (`get_Ks`, TODO), no official sample uses it, the gain is NaN when the sediment sound speed does not exceed the bottom one, and node depths do not enter the loss; first candidate once its loss is checked against the published model |
+| `Module/UW/PHYSICAL` (BFSK, 8/16/32-PSK error curves, energy accounting) | integrable with `Module/UW/INTERFERENCE` in MEANPOWER mode (the default CHUNK ignores collisions), copied class defaults and three observer hooks; energy defaults (3.3 W TX, 0.62 W RX) are uncited; second candidate |
+| `Module/UW/PHYSICALNOISE` (ship noise) | needs `Module/UW/PHYSICAL` and a bridge command for vessel position and speed; two vessel categories are broken in the source (`ferry` adds no noise, `auv` about 90 dB low by the formula) |
+| `Module/UW/USR` (selective-repeat ARQ MAC) | no official example; eleven `exit(1)` paths and a possible invalid map access at the retry limit; needs native smoke tests on lossy links before it can be offered |
+| HERMES PHY (`Module/UW/HERMES/PHY`) | interference never causes a packet error in the native code, and the shipped success table keeps 20 % delivery at any range beyond 180 m |
+| AHOI PHY (`Module/UW/AHOI/PHY`) | its data tables have no stated source, an unexplained −10 dB offset is applied, and every error is labelled as interference |
+| OFDM-ALOHA / SMART-OFDM MACs | ACK path broken, aborts with other MACs, undocumented parameters (in addition to the OFDM PHY blocker above) |
+| Database PHYs, BlueComm beam pattern, UWShannon, MPhy patch | no data shipped and libraries that fail to load; a hard range cut-off without source; idealised capacity models outside this project's scope |
+| Jammer, multi-traffic control, multi-destination | one MAC class per network in the bridge; several MLL/MAC/PHY stacks under IP; not needed by the unicast application layer |
+| ROV, tracker and swarm applications; DESERT mobility models; `Position/UDP` | they move DESERT positions themselves, read targets only from `Position/UWSM` or receive positions on wall-clock time, which conflicts with HoloOcean-driven poses |
 | Real modem drivers (Ahoi, EvoLogics, …) | drivers installed, no hardware mapped or tested; hardware use is outside this simulation package |
 
 ## Known limits that apply to every stack
