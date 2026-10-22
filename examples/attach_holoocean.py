@@ -37,7 +37,7 @@ def main():
     with holoocean.make(scenario_cfg=config, show_viewport=False, ticks_per_sec=HZ, frames_per_sec=False) as env, \
             NetworkSession(scenario, port=args.port, manage_engine=args.port is None) as net:
         link = HoloOceanLink(net, {"leader": "auv_01", "follower": "auv_02"}, ticks_per_sec=HZ)
-        link.attach(env.tick())
+        link.attach(env.reset())             # t=0 on both simulators
         net.node("auv_02").on_receive(
             lambda d: print(f"t={d.network_time:6.2f} s follower received {d.message.json()}"))
         leader = net.node("auv_01")

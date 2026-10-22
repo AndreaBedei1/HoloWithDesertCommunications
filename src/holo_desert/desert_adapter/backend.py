@@ -24,6 +24,18 @@ class CommunicationBackend(abc.ABC):
     @abc.abstractmethod
     def send(self, message: Message): ...
     @abc.abstractmethod
+    def validate_positions(self, poses: dict):
+        """Raise ValueError for geometry the configured model rejects; sends nothing."""
+        for pose in poses.values():
+            if self.woss_depth is not None:
+                from ..resources.docker.environment_config import validate_woss_position
+                validate_woss_position((pose.x, pose.y, pose.z), self.woss_depth)
+            if self.medium == 'optical' and not -20 <= pose.z < 0:
+                raise ValueError('Optical noise LUT covers underwater depths through 20 m')
+        if self.woss_depth is not None:
+            from ..resources.docker.environment_config import validate_woss_separation
+            validate_woss_separation([(p.x, p.y, p.z) for p in poses.values()])
+
     def update_node_position(self, node: str, pose: Pose, timestamp: float): ...
     @abc.abstractmethod
     def advance(self, target: float) -> list[dict]: ...
@@ -175,6 +187,18 @@ class DESERTAdapter(CommunicationBackend):
         except KeyError as exc:
             raise ValueError(f"Unknown node: {exc}") from exc
         self._command(f"SEND {src} {dst} {wire.hex()}")
+
+    def validate_positions(self, poses: dict):
+        """Raise ValueError for geometry the configured model rejects; sends nothing."""
+        for pose in poses.values():
+            if self.woss_depth is not None:
+                from ..resources.docker.environment_config import validate_woss_position
+                validate_woss_position((pose.x, pose.y, pose.z), self.woss_depth)
+            if self.medium == 'optical' and not -20 <= pose.z < 0:
+                raise ValueError('Optical noise LUT covers underwater depths through 20 m')
+        if self.woss_depth is not None:
+            from ..resources.docker.environment_config import validate_woss_separation
+            validate_woss_separation([(p.x, p.y, p.z) for p in poses.values()])
 
     def update_node_position(self, node: str, pose: Pose, timestamp: float):
         if not math.isfinite(timestamp) or abs(timestamp - self.time) > 1e-6:

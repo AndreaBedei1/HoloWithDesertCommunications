@@ -296,7 +296,8 @@ class TelemetryCollector:
 
     def export(self):
         with self.lock:
-            self.log.flush()
+            if not self.log.closed:
+                self.log.flush()
             buffer = io.BytesIO()
             with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
                 archive.write(self.config_path, "config.json")

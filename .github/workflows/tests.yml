@@ -51,7 +51,8 @@ jobs:
       - name: Drop unused third-party apt sources
         run: |
           echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
-          for f in $(grep -rlE 'packages\.microsoft\.com|azure' /etc/apt/sources.list.d 2>/dev/null); do
+          # Match the Microsoft host only: the Ubuntu mirror is azure.archive.ubuntu.com.
+          for f in $(grep -rl 'packages\.microsoft\.com' /etc/apt/sources.list.d 2>/dev/null); do
             echo "Disabling $f"; sudo rm -f "$f"
           done
       - name: Install Chromium system dependencies

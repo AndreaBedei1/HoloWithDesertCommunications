@@ -32,13 +32,17 @@ from .scenarios.network import Network
 from .synchronization.clock import ClockSynchronizer
 from .telemetry.collector import TelemetryCollector
 
-__all__ = ["NetworkSession", "NetworkNode", "HoloOceanLink", "ManagedSimulation", "SessionError",
+__all__ = ["NetworkSession", "NetworkNode", "HoloOceanLink", "ManagedSimulation", "SessionError", "CallbackError",
            "Scenario", "NodeConfig", "Network", "Flow", "Pose", "Message", "Delivery",
            "load_scenario", "list_examples", "pose_from_sensors"]
 
 
 class SessionError(RuntimeError):
     """A session operation failed; the session must be restarted or closed."""
+
+
+class CallbackError(RuntimeError):
+    """A receive callback raised. The tick completed; the session keeps running."""
 
 
 def load_scenario(name_or_path: str | Path) -> Scenario:
@@ -128,11 +132,11 @@ class NetworkNode:
 
     def set_tx_power(self, value: float) -> None:
         """Transmit power in the medium's native unit (dB re uPa SPL, W optical, dBm EM)."""
-        self._session._require_running().set_power(self.id, value)
+        self._session._command(lambda backend: backend.set_power(self.id, value))
 
     def select_interface(self, interface: str) -> None:
         """Choose the active interface; requires a multi-PHY stack with ``policy: manual``."""
-        self._session._require_running().set_interface(self.id, interface)
+        self._session._command(lambda backend: backend.set_interface(self.id, interface))
 
 
 class NetworkSession:
@@ -170,9 +174,12 @@ class NetworkSession:
     def start(self) -> NetworkSession:
         if self.state not in ("created", "closed", "failed"):
             raise SessionError(f"Cannot start a session in state {self.state}")
-        self._release()
-        self._runs += 1
-        persist = self._persist / f"run-{self._runs:03d}" if self._persist else None
+        self._release(results=True)
+        persist = None
+        if self._persist:
+            # Never overwrite an earlier run, also one from another session object.
+            existing = [int(p.name[4:]) for p in self._persist.glob("run-[0-9][0-9][0-9]")]
+            persist = self._persist / f"run-{max(existing, default=0) + 1:03d}"
         self._backend = self._backend_factory()
         self._telemetry = TelemetryCollector(self.scenario.model_dump(), persist)
         self._clock = ClockSynchronizer(self.scenario.physics_hz, realtime=False)
@@ -258,36 +265,48 @@ class NetworkSession:
             raise ValueError("ticks must be a positive integer")
         backend = self._require_running()
         observed = []
-        try:
-            for _ in range(ticks):
-                now = self._clock.time
-                for node_id, pose in self._poses.items():
-                    backend.update_node_position(node_id, pose, now)
-                self._communication.flush()
-                if self._clock.tick % self.scenario.physics_hz == 0:
-                    backend.request_stats()
-                target = self._clock.step()
-                events = backend.advance(target)
-                self._clock.verify(backend.time)
-                applied = set()
-                for event in events:
-                    self._telemetry.engine_event(event, self._inverse)
-                    if event["event"] == "position_applied":
-                        applied.add(event["node"])
-                    elif event["event"] == "rx":
-                        self._communication.ingest(event, self._inverse)
-                if applied != set(self._inverse):
-                    raise BackendError("DESERT did not acknowledge every position update")
-                self._communication.deliver_due()
-                if self._clock.time - self._last_fleet >= 0.1:
-                    self._telemetry.positions(dict(self._poses), self._clock.time,
-                                              origin="holoocean" if self._mode == "holoocean_attached" else "caller")
-                    self._last_fleet = self._clock.time
-                self._telemetry.sample(self._clock.time)
-                observed.extend(events)
-        except (BackendError, OSError, RuntimeError) as exc:
-            self._fail(exc)
+        for _ in range(ticks):
+            # Geometry errors are the caller's: reject them before any command is sent.
+            getattr(backend, "validate_positions", lambda poses: None)(self._poses)
+            try:
+                observed.extend(self._tick(backend))
+            except SessionError:
+                raise
+            except Exception as exc:
+                # Commands may already be in DESERT: the barrier state is unknown.
+                self._fail(exc)
+            errors, self._communication.callback_errors = self._communication.callback_errors, []
+            if errors:
+                raise CallbackError(f"{len(errors)} receive callback(s) raised at t={self.time:g}") from errors[0]
         return observed
+
+    def _tick(self, backend) -> list[dict]:
+        now = self._clock.time
+        for node_id, pose in self._poses.items():
+            backend.update_node_position(node_id, pose, now)
+        self._communication.flush()
+        if self._clock.tick % self.scenario.physics_hz == 0:
+            backend.request_stats()
+        # The shared clock moves only once DESERT has reached the new barrier.
+        events = backend.advance((self._clock.tick + 1) / self.scenario.physics_hz)
+        self._clock.step()
+        self._clock.verify(backend.time)
+        applied = set()
+        for event in events:
+            self._telemetry.engine_event(event, self._inverse)
+            if event["event"] == "position_applied":
+                applied.add(event["node"])
+            elif event["event"] == "rx":
+                self._communication.ingest(event, self._inverse)
+        if applied != set(self._inverse):
+            raise BackendError("DESERT did not acknowledge every position update")
+        self._communication.deliver_due()
+        if self._clock.time - self._last_fleet >= 0.1:
+            self._telemetry.positions(dict(self._poses), self._clock.time,
+                                      origin="holoocean" if self._mode == "holoocean_attached" else "caller")
+            self._last_fleet = self._clock.time
+        self._telemetry.sample(self._clock.time)
+        return events
 
     def run_until(self, time_s: float) -> list[dict]:
         """Step until simulated time reaches ``time_s`` (rounded up to a tick)."""
@@ -308,12 +327,21 @@ class NetworkSession:
         return [dict(row) for row in self._telemetry.packets.values()] if self._telemetry else []
 
     def export(self, path: str | Path) -> Path:
-        """Write config.json, events.jsonl, packets.csv and summary.json to a ZIP."""
+        """Write config.json, events.jsonl, packets.csv and summary.json to a ZIP.
+
+        Results stay available after close() or a failure, until the next start()."""
         if not self._telemetry:
             raise SessionError("Nothing to export before start()")
         return _export(self._telemetry, self.summary(), path)
 
     # -- internals --------------------------------------------------------
+    def _command(self, action):
+        backend = self._require_running()
+        try:
+            action(backend)
+        except BackendError as exc:
+            self._fail(exc)
+
     def _require_running(self):
         if self.state != "running":
             raise SessionError(f"Session is {self.state}; call start()" +
@@ -330,15 +358,20 @@ class NetworkSession:
             self._backend.stop()
         except Exception:
             pass
-        if release and self._telemetry is not None and not self._telemetry.log.closed:
-            self._telemetry.close()
+        if release:
+            self._release(results=True)
         raise SessionError(self.error) from exc
 
-    def _release(self):
+    def _release(self, results=False):
+        """Stop DESERT and close the log; ``results`` also deletes a temporary run directory."""
         if self._backend is not None:
             self._backend.stop()
-        if self._telemetry is not None and not self._telemetry.log.closed:
-            self._telemetry.close()
+        if self._telemetry is not None:
+            if results:
+                if not self._telemetry.log.closed or self._telemetry._temp:
+                    self._telemetry.close()
+            elif not self._telemetry.log.closed:
+                self._telemetry.log.close()
 
 
 class HoloOceanLink:
@@ -374,7 +407,11 @@ class HoloOceanLink:
         return poses
 
     def attach(self, state: Mapping) -> None:
-        """Align initial poses with the environment (state from reset/first tick)."""
+        """Set the t=0 poses from the state returned by ``env.reset()``.
+
+        Pass the state of the same instant as the network clock: attaching an
+        ``env.tick()`` result would leave HoloOcean one tick ahead of DESERT.
+        """
         self.session.update_poses(self.read_poses(state))
 
     def sync(self, state: Mapping, ticks: int = 1) -> list[dict]:

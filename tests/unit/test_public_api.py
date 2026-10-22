@@ -149,7 +149,6 @@ def test_export_contains_summary(tmp_path):
 
 
 def test_persisted_runs_are_separate(tmp_path):
-    net, _ = session()
     net = NetworkSession(load_scenario("e01_chat"), backend=ScriptedBackend(), persist=tmp_path)
     net.start(); net.step(); net.restart(); net.step(); net.close()
     assert sorted(p.name for p in tmp_path.iterdir()) == ["run-001", "run-002"]
@@ -217,3 +216,55 @@ def test_failed_start_releases_resources():
         with net:
             pass
     assert net.state == "failed" and net._telemetry.log.closed
+
+
+def test_callback_error_is_reported_after_complete_tick():
+    from holo_desert import CallbackError
+    net, _ = session()
+    calls = []
+    with net:
+        def bad(d):
+            calls.append("bad")
+            raise KeyError("user bug")
+        net.node("auv_02").on_receive(bad)
+        net.node("auv_02").on_receive(lambda d: calls.append("good"))
+        net.node("auv_01").send("auv_02", b"x")
+        with pytest.raises(CallbackError):
+            net.run_until(1)
+        assert calls == ["bad", "good"] and net.state == "running"
+        assert net.summary()["received"] == 1
+        net.step()
+
+
+def test_rejected_geometry_sends_nothing_and_keeps_clocks_aligned():
+    class Guarded(ScriptedBackend):
+        def validate_positions(self, poses):
+            if poses["auv_02"].z > 0:
+                raise ValueError("above surface")
+    backend = Guarded()
+    net = NetworkSession(load_scenario("e01_chat"), backend=backend)
+    with net:
+        net.step()
+        before = list(backend.log)
+        net.update_pose("auv_02", (30, 0, 5))
+        with pytest.raises(ValueError):
+            net.step()
+        assert backend.log == before and net.state == "running" and net.time == backend.time
+        net.update_pose("auv_02", (30, 0, -20))
+        net.step()
+
+
+def test_export_after_close(tmp_path):
+    net, _ = session()
+    with net:
+        net.node("auv_01").send("auv_02", b"abc")
+        net.run_until(1)
+    assert net.state == "closed"
+    assert net.export(tmp_path / "after.zip").stat().st_size > 0
+
+
+def test_persisted_runs_never_overwrite_other_sessions(tmp_path):
+    for _ in range(2):
+        net = NetworkSession(load_scenario("e01_chat"), backend=ScriptedBackend(), persist=tmp_path)
+        net.start(); net.step(); net.close()
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["run-001", "run-002"]

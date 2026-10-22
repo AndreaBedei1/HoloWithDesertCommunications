@@ -19,8 +19,7 @@ def test_link_follows_external_environment_without_second_instance(engine):
         received = []
         with net:
             net.node("auv_02").on_receive(received.append)
-            state = env.tick(publish=False)
-            link.attach(state)
+            link.attach(env.reset())   # same instant as the network clock (t=0)
             net.node("auv_01").send_json("auv_02", {"seq": 1})
             last = None
             for tick in range(1, 6 * scenario.physics_hz):

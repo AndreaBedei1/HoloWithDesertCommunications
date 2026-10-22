@@ -30,7 +30,11 @@ def doctor(library_only=False):
     def package():
         import importlib.metadata
         import holo_desert
-        return f"holoocean-desert {importlib.metadata.version('holoocean-desert')} (module {holo_desert.__version__})"
+        try:
+            installed = importlib.metadata.version('holoocean-desert')
+        except importlib.metadata.PackageNotFoundError:
+            installed = "not installed (source tree)"
+        return f"holoocean-desert {installed} (module {holo_desert.__version__})"
     check("package", package)
     def dashboard_extra():
         missing = [m for m in ("fastapi", "uvicorn") if importlib.util.find_spec(m) is None]

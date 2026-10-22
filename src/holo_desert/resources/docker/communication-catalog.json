@@ -1369,7 +1369,7 @@
           "unit": "tentativi",
           "help": "Limite del routing, distinto dai tentativi MAC.",
           "type": "integer",
-          "min": 1,
+          "min": 0,
           "max": 100
         },
         {

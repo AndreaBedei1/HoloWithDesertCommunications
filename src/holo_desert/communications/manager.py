@@ -40,6 +40,7 @@ class CommunicationManager:
         # node -> callbacks. A node with callbacks receives deliveries through
         # them instead of its inbox, so an unread inbox cannot overflow.
         self.listeners = listeners if listeners is not None else {}
+        self.callback_errors = []
 
     def drone(self, node):
         if node not in self.nodes:
@@ -97,7 +98,10 @@ class CommunicationManager:
             self.telemetry.received(delivery)
             if callbacks:
                 for callback in list(callbacks):
-                    callback(delivery)
+                    try:
+                        callback(delivery)
+                    except Exception as exc:  # reported after the tick, never lost mid-delivery
+                        self.callback_errors.append(exc)
             else:
                 self.inbox[delivery.receiver].append(delivery)
 
