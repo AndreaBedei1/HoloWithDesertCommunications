@@ -27,7 +27,7 @@ Contents:
 - [WOSS / Bellhop](#woss--bellhop)
 - [Optical and electromagnetic media](#optical-and-electromagnetic-media)
 - [Multi-PHY and interface switching](#multi-phy-and-interface-switching)
-- [Ranging (Ranging-TokenBus)](#ranging-ranging-tokenbus)
+- [Ranging (Ranging-TokenBus, Ranging-TDMA)](#ranging-ranging-tokenbus-ranging-tdma)
 - [Native applications (UW/CBR, UW/VBR)](#native-applications-uwcbr-uwvbr)
 - [Modules installed but not integrated](#modules-installed-but-not-integrated)
 - [Communication profiles](#communication-profiles)
@@ -41,10 +41,8 @@ it does not prove that a given geometry delivers packets.
 
 | Status | Meaning | Modules |
 |---|---|---|
-| **Operational** | Native bridge tests and HoloOcean end-to-end runs; selectable in the Network Designer | MAC: ALOHA, CSMA-ALOHA, TDMA, TDMA Frame, CSMA/CA, DACAP, CS-Burst, TokenBus, Ranging-TokenBus. Routing: StaticRouting (direct and multi-hop), Flooding, SUN. PHY: upstream BPSK with analytic `Underwater` propagation (Thorp), MIV interference |
-| **Operational, YAML/API only** | Native bridge tests and HoloOcean end-to-end runs; not yet exposed in the Designer | WOSS/Bellhop with a synthetic environment, native UW/CBR and UW/VBR generators |
-| **Experimental patch** | Same evidence, but a project-specific class with its own patch identifier (YAML/API only except corrected BPSK) | Corrected BPSK (`conditional-bpsk-v1`), optical medium with body-frame Lambert-Beer gain adapter (`native-optical-lambert-beer-body-frame-v1`), EM medium with patched PHY (`em-power-lut-v1`) |
-| **Native-verified only** | Real packets through the bridge in the native test suite; no HoloOcean end-to-end test yet | Multi-PHY (manual and received-power controller) |
+| **Operational** | Native bridge tests and HoloOcean end-to-end runs; selectable in the Network Designer | MAC: ALOHA, CSMA-ALOHA, TDMA, TDMA Frame, CSMA/CA, DACAP, CS-Burst, TokenBus, Ranging-TokenBus, Ranging-TDMA. Routing: StaticRouting (direct and multi-hop), Flooding, SUN. PHY: upstream BPSK with analytic `Underwater` propagation (Thorp), MIV interference; WOSS/Bellhop with a synthetic environment. Applications: Python generators, native UW/CBR and UW/VBR |
+| **Experimental** | Same evidence, but a project-specific class or adapter with its own identifier, or a native controller with restricted combinations | Corrected BPSK (`conditional-bpsk-v1`), optical medium with body-frame Lambert-Beer gain adapter (`native-optical-lambert-beer-body-frame-v1`), EM medium with patched PHY (`em-power-lut-v1`), multi-PHY (2–3 acoustic interfaces, manual or received-power controller) |
 | **Not integrated** | Installed in the DESERT image; a documented blocker prevents use | See [Modules installed but not integrated](#modules-installed-but-not-integrated) |
 
 The machine-readable catalogue is
@@ -52,10 +50,10 @@ The machine-readable catalogue is
 `/api/network-catalog`); the full audit of the image (116 libraries, 102 source
 modules, 181 `TclClass` declarations, 85 official examples) is
 `desert-inventory.json` (`/api/network-inventory`). 181 declarations are not
-181 verified constructors. The dashboard Network Designer offers, for the MAC,
-PHY and routing selectors, exactly the modules whose catalogue entry has
-`operational: true`; media, WOSS, multi-PHY and native generators have no
-Designer controls and are configured in YAML or through the API.
+181 verified constructors. The dashboard Network Designer offers every
+catalogued MAC, PHY, routing module, medium, propagation, multi-PHY setting and
+native generator; only entries with `operational: true` that fit the current
+choices are selectable, the others are shown disabled with a short reason.
 
 ## Scenario document
 
@@ -372,6 +370,7 @@ Overview:
 | `csburst` | `Module/UW/CSBURST`, `libuwcsburst.so` | Operational | static | `get_buffer_size` |
 | `tokenbus` | `Module/UW/TOKENBUS`, `libuwcbr.so` + `libuwtokenbus.so` | Operational | static | `get_buffer_size` |
 | `ranging_tokenbus` | `Module/UW/RANGING_TOKENBUS`, + `libuwranging_tokenbus.so` | Operational | static | `get_buffer_size` |
+| `ranging_tdma` | `Module/UW/RANGING_TDMA`, `libuwtdma.so` + `libuwranging_tdma.so` | Operational | static | `get_buffer_size` |
 
 All MACs work with both acoustic BPSK variants. Only CSMA-ALOHA is accepted
 for the optical, EM and multi-PHY stacks. The CLI option `--mac <protocol>`
@@ -599,7 +598,33 @@ flows:
 #### Ranging-TokenBus (`ranging_tokenbus`) — operational
 
 TokenBus with native ranging. Same fields under `network.mac.ranging_tokenbus`.
-See [Ranging](#ranging-ranging-tokenbus).
+See [Ranging](#ranging-ranging-tokenbus-ranging-tdma).
+
+#### Ranging-TDMA (`ranging_tdma`) — operational
+
+Native `Module/UW/RANGING_TDMA`, a UwTDMA subclass: in each own slot the node
+first sends a ranging frame of 4·(N−1)+2 bytes (N nodes), then its data frames.
+Fields under `network.mac.ranging_tdma`:
+
+| Field | Default | Unit | Bounds | Native binding |
+|---|---|---|---|---|
+| `frame_duration_s` | `3` | s | > 0 | `frame_duration` |
+| `guard_time_s` | `0.1` | s | ≥ 0, smaller than a slot (`frame_duration_s / N`) | `guard_time` |
+| `max_packets_per_slot` | `2` | packets | 2–10000 (the ranging frame takes one) | `max_packet_per_slot` |
+
+The adapter sets `fair_mode 1`, `tot_slots N`, the three fields above and
+`queue_size_ = buffer_packets` on the class **before** the first instance is
+created (the constructor sizes its tables from `tot_slots`; without it the
+native process aborts), starts every MAC at t = 0 and never calls
+`setSlotNumber`: slot and ranging index are the node order in the scenario,
+so there is no `slot_assignment`. The builder rejects ACK, routing other than
+static, fewer than two packets per slot, a guard time not shorter than a slot
+and any flow whose envelope (or native packet) plus the ranging frame does not
+fit `frame_duration_s / N − guard_time_s` at the slowest bitrate. Native
+counters: `get_buffer_size` (queue), `upper_data_rx`, `sent_packets`,
+`received_packets`, `ranging_tx` (ranging frames sent) and `ranging_rx_errors`
+(errored ranging frames); the native received-control counter also counts data
+frames and is not reported.
 
 ### Routing protocols
 
@@ -896,8 +921,8 @@ events establish delivery.
 
 ## Multi-PHY and interface switching
 
-Status: native-verified through the bridge (manual and received-power
-controller).
+Status: experimental, verified natively, in HoloOcean end-to-end runs (manual
+and received-power controller) and in the Network Designer.
 
 `network.multiphy` gives every node 2–3 acoustic BPSK interfaces, each with its
 own PHY, propagation, spectral mask and MIV object on the shared channel, under
@@ -910,7 +935,7 @@ DESERT's multi-stack controller (`libuwmulti_stack_controller.so`). One MAC
 | `initial_interface` | required | must exist and be available on every node |
 | `policy` | `manual` | `manual` (`Module/UW/MULTI_STACK_CONTROLLER_PHY`) or `received_power` (`…_MASTER` on the master node, `…_SLAVE` elsewhere) |
 | `master` | `auv_01` | master node for `received_power` |
-| `thresholds` | `[]` | `{from_interface, to_interface, power_linear}`; only for `received_power`, between adjacent interfaces in list order, both directions required; `power_linear > 0` in native linear received-power units |
+| `thresholds` | `[]` | `{from_interface, to_interface, power_linear}`; only for `received_power`, between adjacent interfaces in list order, both directions required; `power_linear > 0` |
 | `alpha` | `0.5` | 0..1, `setAlpha` on the master |
 
 Rules: interface bands must be disjoint
@@ -928,6 +953,24 @@ switch requires an idle controller and an empty MAC queue and emits
 automatically according to the thresholds. Each `phy_*` event carries
 `interface_index`; `STATS` emits `interface_state`.
 
+**Controller power units.** The master keeps an exponential average (weight
+`alpha` for the new sample) of `Pr`, the received power of unicast frames
+addressed to it on the active interface, in the acoustic PHY's linear unit:
+`Pr = 10^(received level / 10)` with the level in dB re 1 µPa, the same
+quantity shown as `pr` in the PHY events. Before each of its own
+transmissions it moves to the next interface in list order (the shorter-range
+one) when the average exceeds the threshold `from → next`, and back to the
+previous one when it falls below the threshold `from → previous`; the
+average is then reset, so a sample from the peer must arrive between two
+transmissions of the master. Slaves follow the interface on which they last
+received. At 150 dB re 1 µPa and the default channel, the average is about
+2.5·10^12 at 30 m on a 25 kHz interface and falls below 2·10^11 beyond about
+100 m on a 50 kHz one (values from the end-to-end test configuration).
+
+**Transmit power.** The `POWER` command (power events,
+`NetworkNode.set_tx_power`) changes the source level of each node's first
+interface only; the other interfaces keep their configured `tx_power_db`.
+
 ```yaml
 name: multiphy_received_power
 description: Two acoustic interfaces switched by the native received-power controller.
@@ -944,21 +987,24 @@ network:
       - {id: long, acoustic: {frequency_hz: 25000, bandwidth_hz: 5000, bitrate_bps: 4800, tx_power_db: 150}}
       - {id: short, acoustic: {frequency_hz: 50000, bandwidth_hz: 9000, bitrate_bps: 8800, tx_power_db: 150}}
     thresholds:
-      - {from_interface: long, to_interface: short, power_linear: 1}
-      - {from_interface: short, to_interface: long, power_linear: 1.0e-6}
+      - {from_interface: long, to_interface: short, power_linear: 1.0e12}
+      - {from_interface: short, to_interface: long, power_linear: 2.0e11}
 flows:
   - {source: auv_01, destination: auv_02, interval: 5, payload_bytes: 16}
 ```
 
-## Ranging (Ranging-TokenBus)
+## Ranging (Ranging-TokenBus, Ranging-TDMA)
 
-Status: operational (native, HoloOcean end-to-end and `demos/e07_ranging_tokenbus`).
+Status: operational (native, HoloOcean end-to-end, dashboard ranging view;
+`demos/e07_ranging_tokenbus` for TokenBus).
 
 `mac.protocol: ranging_tokenbus` loads `libuwranging_tokenbus.so` on top of
-TokenBus. At every `STATS` command (once per simulated second in the
-orchestrator and in `NetworkSession.step`) each observer node runs the native
-`calc_distances` and, for every node pair, `get_distance`. The native value is
-a one-way travel time in seconds; the adapter multiplies it by
+TokenBus; `mac.protocol: ranging_tdma` uses `Module/UW/RANGING_TDMA` (see
+[Ranging-TDMA](#ranging-tdma-ranging_tdma--operational)). At every `STATS`
+command (once per simulated second in the orchestrator and in
+`NetworkSession.step`) each observer node returns, for every node pair, the
+native `get_distance` (Ranging-TokenBus first runs `calc_distances`). The native
+value is a one-way travel time in seconds; the adapter multiplies it by
 `acoustic.sound_speed_mps` to report metres. Each estimate is emitted as
 
 ```json
@@ -971,8 +1017,10 @@ a one-way travel time in seconds; the adapter multiplies it by
 are DESERT addresses (1-based, file order). Unavailable measurements are
 `null` with `valid: false`. The native API does not expose the age of a
 measurement, so `measurement_time` is always `null` and a retained valid
-estimate must not be read as a fresh measurement. HoloOcean distances remain
-ground truth and are never reported as ranging. A demo scenario is provided in
+estimate must not be read as a fresh measurement (Ranging-TDMA keeps the
+last value of a pair that lost contact). HoloOcean distances remain ground
+truth and are never reported as ranging; the dashboard's **Analisi → Ranging**
+tab shows them only as a labelled reference next to the estimates. A demo scenario is provided in
 `src/holo_desert/resources/demos/e07_ranging_tokenbus/scenario.yaml`.
 
 ```yaml
@@ -990,11 +1038,11 @@ flows:
   - {source: auv_01, destination: auv_03, start: 5, stop: 120, interval: 20, payload_bytes: 16, ttl: 60}
 ```
 
-Ranging TDMA and TDOA are not integrated (see below).
+Ranging TDOA is not integrated (see below).
 
 ## Native applications (UW/CBR, UW/VBR)
 
-Status: operational (native and HoloOcean end-to-end tests), YAML/API only.
+Status: operational (native and HoloOcean end-to-end tests, Network Designer).
 
 `generator: desert_cbr` or `desert_vbr` makes DESERT's own timers generate the
 packets. The bridge creates, on every node, one project subclass
@@ -1047,9 +1095,9 @@ recompiled.
 | UFetch (`libuwufetch.so`) | Isolated load fails (undefined `hdr_uwcbr::offset_`); roles and native dependencies need a specific adapter |
 | ICRP (`libuwicrp.so`) | Load fails: `UWIP_CLMSG_SEND_ADDR` is present but not exported under `RTLD_LOCAL` loading |
 | Position-Based routing (`libuwposbasedrt.so`) | `Module/UW/PosBasedRt` loads, but no protocol-admissible distribution of position knowledge is integrated; global ground truth must not be supplied |
-| OFDM (`libuwofdmphy.so`) | Dedicated access and framing modules not verified with the bridge envelope |
-| HMM (`libuwhmmphysical.so`) | Requires states/tables and a specific PHY; not tested with this bridge |
-| Ranging TDMA / TDOA | Need dedicated messages, clocks, initialisation and measurement output; the `RANGING_TDMA` constructor without configured slots caused SIGFPE in the probe (this does not prove the protocol unusable with a valid setup) |
+| OFDM (`libuwofdmphy.so`) | Works only with an OFDM MAC: with CSMA-ALOHA the native PHY aborts (`USED BANDWIDTH = 0`, SIGFPE); `OFDM_ALOHA` delivered in a probe, but needs its own MAC adapter, carrier headers and OFDM interference model |
+| HMM (`libuwhmmphysical.so`) | `setInterference` rejects the bridge's MIV object (needs `Module/UW/INTERFERENCE`); one Markov link per directed link must be configured; channel-state errors are counted as noise |
+| Ranging TDOA (`libuwranging_tdoa.so`) | Needs a RANGE layer above the MAC and a TAP layer below it, outside the bridge's fixed module chain; pings share the data queue; the official sample showed per-node mean errors up to 198 m |
 | Real modem drivers / hardware (Ahoi, EvoLogics and other drivers/packers) | Drivers are installed; no modem is detected or mapped in the container and no hardware configuration is verified; hardware, addressing, packing and a real-time scheduler are separate prerequisites |
 
 ## Communication profiles

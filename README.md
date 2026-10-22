@@ -38,11 +38,11 @@ Status from executed tests (details and blockers: [capability matrix](docs/capab
 
 | Area | Operational | Experimental (verified) | Not integrated |
 |---|---|---|---|
-| MAC | ALOHA, CSMA-ALOHA, TDMA, TDMA Frame, CSMA/CA, DACAP, TokenBus, CS-Burst, Ranging-TokenBus | — | Polling, T-LOHI, ALOHA-Q, UFetch |
+| MAC | ALOHA, CSMA-ALOHA, TDMA, TDMA Frame, CSMA/CA, DACAP, TokenBus, CS-Burst, Ranging-TokenBus, Ranging-TDMA | — | Polling, T-LOHI, ALOHA-Q, UFetch |
 | Routing | Static (multi-hop), Flooding, SUN | — | ICRP, Position-Based |
 | PHY / channel | BPSK + analytic Underwater/Thorp + MIV; WOSS/Bellhop (synthetic SSP) | corrected BPSK, optical, electromagnetic | OFDM, HMM |
-| Interfaces | one interface per vehicle | multi-PHY with native switching (engine-level tests only) | hybrid acoustic/optical |
-| Traffic & measurement | Python generators, JSON/binary messages, native UW/CBR and UW/VBR, native ranging (TokenBus) | — | ranging TDMA/TDOA |
+| Interfaces | one interface per vehicle | multi-PHY: 2–3 acoustic interfaces, native manual or received-power switching | hybrid acoustic/optical (supported by DESERT, not by this bridge) |
+| Traffic & measurement | Python generators, JSON/binary messages, native UW/CBR and UW/VBR, native ranging (TokenBus, TDMA) | — | ranging TDOA |
 | Hardware modems | — | — | drivers present in DESERT, no hardware validation |
 
 ## Requirements
@@ -123,11 +123,15 @@ holo-desert dashboard            # http://127.0.0.1:8000
 
 Choose a scenario, start it, follow vehicles and messages on the map and
 timeline, then open *Analisi* for metrics and comparisons. *Impostazioni →
-Network Designer* selects MAC, PHY and routing with contextual help for each
-parameter; *I miei scenari* edits vehicles, waypoints, flows and routes and
-imports/exports YAML. The interface is in Italian.
+Network Designer* selects medium (acoustic, optical, EM), MAC, PHY, routing,
+WOSS with its sound-speed profile, multi-PHY interfaces and native CBR/VBR
+generators, with contextual help (meaning, unit, default, constraints) for each
+parameter and a reason for every unavailable option; *Analisi → Ranging*
+compares native distance estimates with the HoloOcean geometry; *I miei
+scenari* edits vehicles, waypoints, flows and routes and imports/exports YAML.
+The interface is in Italian.
 
-![Network Designer](docs/images/network-designer-1440.png)
+![Network Designer](docs/images/network-designer-2026-10-22.png)
 
 ## Scenarios
 

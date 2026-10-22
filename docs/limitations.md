@@ -52,9 +52,11 @@ summary of verified capabilities is in [capabilities.md](capabilities.md).
 
 ## Protocol stack
 
-- Only one network interface per node, except the native-verified multi-PHY
+- Only one network interface per node, except the experimental multi-PHY
   stack (2–3 acoustic BPSK interfaces, CSMA-ALOHA without ACK, static routing).
-  Flows cannot choose an interface.
+  Flows cannot choose an interface; `POWER` changes only the first interface.
+  Mixed acoustic/optical stacks are supported by DESERT but not by this bridge
+  (blockers in [capabilities.md](capabilities.md#mixed-acousticoptical-stacks)).
 - No per-node MAC or routing selection, no MAC priority (application priority
   is metadata), no application multicast or group API. Applications send
   unicast; Flooding uses broadcast forwarding internally.
@@ -68,16 +70,16 @@ summary of verified capabilities is in [capabilities.md](capabilities.md).
   differs from TDMA.
 - SUN supports only convergecast to one sink without replies; its cumulative
   counters are class-wide.
-- Ranging-TokenBus does not expose measurement age (`measurement_time` is
-  always `null`).
+- Ranging-TokenBus and Ranging-TDMA do not expose measurement age
+  (`measurement_time` is always `null`); Ranging-TDMA keeps the last value of a
+  pair that lost contact. Ranging-TDMA slots follow the node order.
 - Native UW/CBR/VBR packets have no JSON envelope and no Python TTL.
 - Modules installed but not integrated (Polling, T-LOHI, ALOHA-Q/Sync, UFetch,
-  ICRP, Position-Based routing, OFDM, HMM, ranging TDMA/TDOA, modem drivers)
-  are listed with their blockers in
-  [stack-configuration.md](stack-configuration.md#modules-installed-but-not-integrated).
-- The dashboard Designer offers only the MAC/PHY/routing modules marked
-  operational in the catalogue and has no controls for optical/EM media, WOSS,
-  multi-PHY or native generators; these are configured through YAML or the API.
+  ICRP, Position-Based routing, OFDM, HMM, ranging TDOA, modem drivers) are
+  listed with their blockers in [capabilities.md](capabilities.md#not-integrated).
+- The dashboard Designer has no controls for power events or for per-vehicle
+  values of individual multi-PHY interfaces; these are configured through YAML
+  or the API.
 
 ## Telemetry and interpretation
 

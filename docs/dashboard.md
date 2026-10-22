@@ -105,8 +105,8 @@ envelope, counters and the complete event list expandable.
 
 ## Analysis
 
-**Analisi** is split into delivery, acoustic channel, movement and time, and
-MAC comparison.
+**Analisi** is split into delivery, acoustic channel, movement and time,
+ranging and MAC comparison.
 
 - Goodput: payload bits delivered per second in the sampled interval.
   Envelope throughput: delivered JSON/base64 envelope bits, without PHY/MAC
@@ -121,6 +121,21 @@ MAC comparison.
 - Total airtime is the sum of transmission durations, not the union of channel
   occupancy; overlaps and forwarding can make it exceed the run duration. It is
   not energy.
+- **Ranging** shows, for the selected vehicle pair, the native DESERT distance
+  estimates (one line per observing vehicle: travel time measured by the
+  ranging MAC × configured sound speed) beside the HoloOcean geometric distance
+  (grey line, an external reference the protocol does not know), and a table
+  with the latest estimate, travel time, reference distance and difference per
+  observer and pair. Estimates are read once per simulated second; the native
+  modules expose no measurement time, so the reference is the latest fleet
+  sample at reading time and a stale estimate is shown unchanged. Pairs not yet
+  measured are labelled as such. Without Ranging-TokenBus or Ranging-TDMA the
+  tab says that no estimate exists.
+- In message details, multi-PHY transmissions show the interface used
+  (`Interfaccia: short · 2`), and transmission/reception labels name the
+  medium (acoustic, optical, EM). Applied power is shown in the medium's unit
+  (dB re 1 µPa, W or dBm). Optical and EM receptions whose PHY reports no
+  outcome are labelled "esito non esposto dal PHY" instead of a guessed one.
 
 ### MAC comparison
 
@@ -144,19 +159,47 @@ traffic. Only integrated runs (not DESERT-only) can be retained.
 **Impostazioni** (Settings) opens the Network Designer; the same sections are
 available in the personal scenario editor.
 
-1. Choose MAC, PHY and routing. The selectors list only modules marked
-   operational in the catalogue; routing choices are filtered by the selected
-   MAC (for example CSMA/CA and DACAP offer only static routing). The two BPSK
-   variants are distinct; the corrected one is labelled experimental. The
-   choice does not change movement or applications.
-2. Set bitrate and source level. The source level is acoustic SPL in dB re
-   1 µPa, not dBm.
-3. **Impostazioni avanzate** (advanced settings) shows channel and protocol
-   parameters, TDMA slots per vehicle (0..N−1; empty = node order), static
-   routes, per-vehicle acoustic overrides, application flows and the execution
-   mode. Fields change with the selected module.
-4. The `?` icons (pointer, click or keyboard) explain meaning, unit, default
-   and constraints; an allowed range is not a recommended value.
+1. Choose the **Tecnologia** (medium: acoustic, optical, electromagnetic),
+   then MAC, PHY (acoustic only) and routing. Every catalogued module is
+   listed; those that cannot be used are disabled with a short reason, either
+   because they are not integrated (for example "Polling — non disponibile:
+   richiede ruoli AUV, sink e nodo che il bridge non assegna") or because they
+   conflict with the current choices (for example TDMA with the optical
+   medium, Flooding with CSMA/CA, SUN with MAC ACK, the corrected BPSK with
+   WOSS). The `?` icon of each selector lists the unavailable options and why.
+2. Set the two primary parameters of the medium: bitrate and source level in
+   dB re 1 µPa (acoustic), optical power in W, or EM power in dBm (negative
+   values allowed).
+3. **Impostazioni avanzate** (advanced settings):
+   - *Propagazione acustica e ambiente*: analytic DESERT propagation or
+     **WOSS / Bellhop** with its origin, bearing, seabed depth, sediment and an
+     editable **sound-speed profile** table (2–256 samples from 0 m to the
+     seabed; a new sample is inserted before the seabed one). For optical and
+     EM this section lists the medium's native parameters instead (receiver
+     and transmitter areas, attenuation, photodiode noise, orientation adapter;
+     salinity, temperature, antenna gain).
+   - *Canale acustico e accesso al mezzo*: PHY and MAC parameters, TDMA slots
+     per vehicle (0..N−1; empty = node order).
+   - *Interfacce multiple (multi-PHY)*: 2–3 acoustic interfaces (name,
+     frequency, bandwidth, bitrate, source level, PHY; empty cells inherit the
+     global channel), the selection policy (manual through the Python API, or
+     the native received-power controller with master vehicle, alpha and
+     thresholds for both directions between adjacent interfaces, in the PHY's
+     linear received-power unit), the initial interface and, for manual
+     selection, the interfaces installed on each vehicle. Renaming an
+     interface updates the initial interface, thresholds and availability.
+   - *Routing e relay*, *Override acustici per drone* (acoustic medium only),
+     *Flussi applicativi* and the execution mode.
+   - Each flow chooses its **Generatore**: Python application messages, or the
+     native DESERT CBR/VBR generators with packet size and, for VBR, the second
+     interval and the two state durations. Native generators accept only data,
+     periodic or Poisson timing and no reply; the Python TTL, payload and reply
+     controls are then disabled with the reason, and the native options are
+     disabled with the reason while a flow uses replies, bursts or explicit
+     events.
+4. The `?` icons (pointer, click or keyboard) state meaning, unit, default and
+   constraints of every control, from the catalogue; an allowed range is not a
+   recommended value.
 5. **Applica alla prossima corsa** (apply to next run). The configuration is
    validated by the server and again in the engine container; errors and
    incompatible combinations block the start. Changes never affect the current
@@ -167,16 +210,17 @@ edit, **JSON → Campi**.
 
 With Flooding, do not keep static routes (forwarding is native broadcast).
 Empty per-vehicle overrides inherit the global profile; sound speed stays
-shared; per-vehicle MAC/routing and multiple interfaces are not offered by the
-Designer. **Catalogo dei moduli** (module catalogue) shows every catalogued
-module with its status, including modules installed in DESERT but not
-integrated.
+shared; per-vehicle MAC/routing is not offered. **Catalogo dei moduli** (module
+catalogue) shows every catalogued module with its status, including modules
+installed in DESERT but not integrated.
 
-The MAC, PHY and routing selectors are generated from the catalogue
-(`/api/network-catalog`) and list the entries marked `operational`. The
-Designer has no controls for the medium (optical/EM), WOSS, multi-PHY or native
-generators: configure those in YAML ([stack-configuration.md](stack-configuration.md))
-and run them with **Importa YAML**, the CLI or the Python API.
+All selectors, parameters, help texts, defaults, bounds and unavailability
+reasons come from the catalogue (`/api/network-catalog`, the document the
+engine also validates against). Settings the Designer does not cover — power
+events and per-vehicle values of individual multi-PHY interfaces
+(`interface_overrides`) — remain available in YAML
+([stack-configuration.md](stack-configuration.md)), the CLI and the Python
+API.
 
 ## Personal scenarios
 

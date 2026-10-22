@@ -32,7 +32,7 @@ next to the numeric DESERT `node` address and, when a payload is recognised,
 | `stats` | `STATS`, once per simulated second | per node: `app_sent`, `app_received`, `mac_queue`, `mac_data_tx`, `mac_data_rx`, `mac_error_rx`, `mac_discarded_tx`, `phy_noise_errors`, `phy_interference_errors` |
 | `mac_specific_stats` | `STATS` | per node `values` for the MAC's own counters (for example CSMA/CA RTS/CTS, DACAP defer times, TokenBus token counters) |
 | `routing_stats` | `STATS` with SUN | `role`, local `values`, class-wide `class_values` |
-| `ranging_estimate` | `STATS` with Ranging-TokenBus | see [stack-configuration.md](stack-configuration.md#ranging-ranging-tokenbus) |
+| `ranging_estimate` | `STATS` with Ranging-TokenBus or Ranging-TDMA | see [stack-configuration.md](stack-configuration.md#ranging-ranging-tokenbus-ranging-tdma); the collector adds `peer_a_id`/`peer_b_id` and keeps, per pair, the estimates of every observer beside the latest HoloOcean geometric distance (`snapshot()["ranging"]`: `series` per pair and `latest` per observer and pair, with `error_m` = estimate − reference) |
 | `interface_selected`, `interface_state` | multi-PHY | active interface index and controller state |
 | `native_app_tx`, `native_app_rx` | UW/CBR, UW/VBR subclasses | `native_packet_id`, `flow_index`, `packet_bytes`, `creation_time` |
 

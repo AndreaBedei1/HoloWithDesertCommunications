@@ -10,9 +10,9 @@ physics; DESERT takes every network decision.
 | [api.md](api.md) | Public Python API: `NetworkSession`, `HoloOceanLink`, `ManagedSimulation` |
 | [capabilities.md](capabilities.md) | Verified capabilities, their status and limitations |
 | [project-status.md](project-status.md) | Current status, decisions and next steps of the consolidation work |
-| [stack-configuration.md](stack-configuration.md) | Scenario YAML format and network stack: MAC, routing, PHY, WOSS, optical/EM, multi-PHY, ranging, native applications, non-integrated modules |
+| [stack-configuration.md](stack-configuration.md) | Scenario YAML format and network stack: MAC, routing, PHY, WOSS, optical/EM, multi-PHY (controller power units), ranging (TokenBus, TDMA), native applications, power events, non-integrated modules |
 | [telemetry-and-reproducibility.md](telemetry-and-reproducibility.md) | Events, metric definitions, time quantities, exports, provenance, reproducing E01–E06 |
-| [dashboard.md](dashboard.md) | Web dashboard, Network Designer, personal scenarios, communication profiles |
+| [dashboard.md](dashboard.md) | Web dashboard, Network Designer (media, WOSS, multi-PHY, native generators), ranging view, personal scenarios, communication profiles |
 | [developer-guide.md](developer-guide.md) | Architecture, bridge protocol, tests, adding a DESERT adapter |
 | [troubleshooting.md](troubleshooting.md) | Known problems on Windows and Linux and their fixes |
 | [limitations.md](limitations.md) | Modelling and verification boundaries |

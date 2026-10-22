@@ -1,73 +1,101 @@
-# Project status — 22 October 2026
+# Project status — 22 October 2026 (evening)
 
-Branch `feat/desert-laboratory` (local commits, not pushed). Scheduled
-consolidation session; continue from here.
+Branch `feat/desert-laboratory`. The seven consolidation commits up to
+`80e0e4b` are on `origin` (pushed at 19:04); the commits of this session are
+local and not pushed. Plan: `docs/superpowers/plans/2026-10-22-open-items-closure.md`.
 
 ## Decisions taken
 
-* The library is the primary product. Public API in `src/holo_desert/api.py`,
-  exported from `holo_desert`: `NetworkSession` (standalone DESERT, caller
-  drives poses/time), `HoloOceanLink` (attach to a caller-owned HoloOcean
-  env), `ManagedSimulation` (the dashboard orchestrator as a library call).
-  The dashboard keeps using `SimulationOrchestrator`; no second engine.
-* fastapi/uvicorn moved to the optional `[dashboard]` extra; core deps are
-  PyYAML + pydantic. Version 0.2.0.
-* The engine image now carries a content fingerprint of bridge, Tcl adapters
-  and Stack Builder (`engine_fingerprint`). Client and `doctor` reject a
-  mismatching (stale) service. `CATALOG_VERSION` alone had let an image built
-  before the multi-PHY/WOSS/optical work pass silently.
-* Catalog statuses follow executed evidence only (see `docs/capabilities.md`).
-  TokenBus, CS-Burst, Ranging-TokenBus and SUN are now in the Network
-  Designer; WOSS, optical, EM, native CBR/VBR are verified end-to-end but
-  configurable from YAML/API only; multi-PHY is native-verified only.
-* CI frontend: unused Microsoft/Azure apt sources are removed before
-  `playwright install-deps` (HTTP 403 root cause) with apt retries; tests are
-  not skipped. New `package` job builds the wheel and runs the external check.
-* README rewritten in English; technical docs consolidated in English
-  (`docs/index.md`); Italian validation reports moved to `docs/evidence/`.
+* **Engine identity.** The fingerprint now also covers the `Dockerfile` (copied
+  into the image), `probe-sockets.py` and the DESERT base image reference
+  (`DESERT_IMAGE` build argument, default = Dockerfile pin = lock file). The
+  image records the reference; `HEALTH` and `engine_info` report
+  `desert_base_image`; `doctor` checks the expected base locally and names both
+  bases on a mismatch. A unit test keeps `ENGINE_FILES` and the `COPY` line
+  aligned.
+* **Power events** carry exactly one value in the medium's unit:
+  `tx_power_db` (acoustic), `tx_power_w` (optical) or `tx_power_dbm` (EM,
+  negative values allowed); a field of another medium is rejected. Unset
+  fields are not serialised, so E01–E06 are unchanged.
+* **Dashboard on the public API only.** The server and `holo-desert run` use
+  `ManagedSimulation`, `network_catalog()`, `network_inventory()`,
+  `ScenarioManager`, `ScenarioLibrary`, `ProfileLibrary`; a unit test rejects
+  any other import. `ManagedSimulation` gained `run_id`, `holoocean`,
+  `versions`, `trajectory_fingerprint()`, `annotate()`, `export_bytes()`; the
+  dashboard export now includes `summary.json`.
+* **Network Designer** (catalogue-driven): medium selector with optical/EM
+  parameter blocks, WOSS parameters with an editable SSP table, a multi-PHY
+  editor (interfaces, policy, initial interface, master/alpha/thresholds,
+  per-vehicle availability, renames), a generator selector per flow (Python or
+  native CBR/VBR with their timers). Every control's help states meaning, unit,
+  default and constraints; unusable options are listed disabled with a short
+  reason; media, WOSS, native generators and multi-PHY are enabled only while
+  the catalogue marks them verified.
+* **Ranging view** (*Analisi → Ranging*): native estimates per observer beside
+  the HoloOcean geometric distance, labelled as estimate and reference. Message
+  details show the multi-PHY interface, medium-specific labels and power units;
+  optical/EM receptions without a native outcome are no longer labelled
+  "non sincronizzata".
+* **Multi-PHY** is experimental and operational: HoloOcean end-to-end tests
+  (received-power controller following the real distance; manual switching in
+  a caller-owned environment), controller power units documented (linear
+  `Pr`), `POWER` acts on the first interface only (native and E2E evidence).
+* **Mixed acoustic/optical stacks**: supported by DESERT (official ROV sample,
+  prototype through the bridge) but not by this bridge; six concrete blockers
+  are documented in `docs/capabilities.md`.
+* **Ranging-TDMA integrated** (`Module/UW/RANGING_TDMA`): Tcl adapter, builder
+  rules (no ACK, static routing, ≥ 2 packets per slot, slot fit including the
+  ranging frame), catalogue entry. Ranging TDOA, HMM, OFDM, T-LOHI, ALOHA-Q,
+  Polling, UFetch, ICRP and Position-Based routing stay not integrated, each
+  with a source-level blocker (audit notes kept outside the repository).
 
 ## Tests executed in this session (Windows 11, Python 3.10.20)
 
+Isolated engines `holo-desert-engine:followup-dev` on 127.0.0.1:5561/5562;
+dashboard tests on port 8011. The user's service on 5555 and dashboard on 8000
+were not used.
+
 | Suite | Result |
 |---|---|
-| Unit (`-m "not desert and not holoocean"`), Windows Python 3.10 | 126 passed, 1 skipped |
-| Unit, clean Ubuntu 24.04 container, Python 3.12 (`scripts/check_linux_package.sh`) | 123 passed; `pip check` clean; wheel-only external check OK |
-| Native DESERT, freshly built isolated engine | 90/90 full suite; after the review fixes the API, demo, media, WOSS and additional-protocol files were re-run (all passed) |
-| HoloOcean E2E (`tests/end_to_end`) | 17/19 first run; both failures were wrong test assumptions (optical/EM), fixed; 19/19 after the fix; the 2 new API E2E tests pass |
-| Playwright frontend (Edge, Windows) | 24/24 |
-| Clean wheel install in a fresh Windows venv | core deps only; real DESERT round trip with matching engine fingerprint |
-| Dashboard over HTTP and in the browser | new MACs and SUN selectable with help icons; e07/e09 runs finish with services stopped; results equal to the library path |
+| Unit (`-m "not desert and not holoocean"`) | 157 passed, 1 skipped |
+| Native DESERT (`-m "desert and not holoocean"`, fresh engine) | 96/96 on the final image (engine fingerprint `9f7640bc58f4c468`) |
+| HoloOcean end-to-end (`-m holoocean`) | 25/25 on the final image (13 min); new: EM negative-dBm power events, multi-PHY received-power and manual switching, Ranging-TDMA, ranging estimates through the dashboard API |
+| Playwright frontend (Edge) | 31/31 (7 new: media, WOSS/SSP, multi-PHY, native generators, help completeness, ranging view, interface labels and power units) |
 
 GitHub Actions was not run (no push).
 
+## Review findings resolved in this session
+
+* `ENGINE_FILES` now includes the `Dockerfile`, and the base image reference is
+  part of the fingerprint and of `engine_info` (`desert_base_image`).
+* EM power events accept negative dBm (`tx_power_dbm`, −100…100).
+* The `t_lohi` catalogue entry now says `loadable: true` (only the optional
+  tracer library fails) and states the tone-PHY blocker.
+* `test_real_physics_completed_laboratory_paths[desert_cbr|desert_vbr]` asserted
+  a Python `rx` observation that native generators never produce (their
+  receptions are `native_app_rx`); the check introduced in `18a2b07` could not
+  pass for these two cases. The test now checks the received native packet rows
+  for them and keeps the `rx` check for the other stacks.
+
 ## Open items / next steps
 
-1. Push the branch and check the GitHub Actions run (frontend fix and new
-   `package` job are unverified on GitHub). Requires the owner's approval.
-2. Rebuild the user's default engine: the service on port 5555 predates the
-   last commits (`holo-desert doctor` reports "Engine image is outdated").
-   Run `holo-desert engine up` (rebuilds `holo-desert-engine:4.0.0-v2`).
-3. Dashboard: expose `network.medium`, `acoustic.propagation`/WOSS SSP,
-   multi-PHY and native generators in the Designer (catalog `selectors`
-   already describe medium/propagation/SSP; `configuration.js` ignores them).
-   Add a ranging view and per-interface labels in the message timeline.
-4. Multi-PHY: add a HoloOcean E2E test; document controller power units.
-5. Not integrated (documented blockers): Polling, T-LOHI, ALOHA-Q, UFetch,
-   ICRP, Position-Based, OFDM, HMM, ranging TDMA/TDOA, hardware modems.
+1. Push the branch and check GitHub Actions (owner's approval).
+2. Rebuild the user's default engine on port 5555 (`holo-desert engine up`):
+   the fingerprint changed again (Dockerfile, catalogue, adapters).
+3. Mixed acoustic/optical multi-PHY: implement the six blockers listed in
+   `docs/capabilities.md` (per-medium channel registry, medium-aware interface
+   factory, schema with per-interface medium and units, optical observer
+   `interface_index_` and outcome, per-interface POWER/POSITION/STATS, master
+   signalling period).
+4. HMM PHY (Markov links per directed link, `Module/UW/INTERFERENCE`) and OFDM
+   (needs an OFDM MAC adapter) are the next feasible module integrations.
+5. The Playwright scenario-editor test "duplicate E03 …" waits 5 s for a save;
+   it failed once while another simulator saturated the CPU and passed in the
+   two later full runs.
 6. Linux GPU host for HoloOcean rendering validation is still unavailable.
 
 ## Local resources created by this session
 
-Docker image `holo-desert-engine:consolidation-dev` (built from this branch,
-used by the isolated test containers, which were removed at the end). Remove it with
-`docker image rm holo-desert-engine:consolidation-dev` when no longer needed.
-
-## Review findings still open
-
-* `ENGINE_FILES` does not include the Dockerfile, so changing the base image
-  digest does not change the fingerprint; the base digest is not recorded per
-  run in `engine_info`.
-* Power events (`PowerEvent.tx_power_db`, bounded 0–200) cannot express the
-  negative dBm values that are valid for the EM medium.
-* The `t_lohi` catalog entry says `loadable: false`, but the inventory probe
-  loads `libuwtlohi.so` (only `libuwtlohiTracer.so` fails). It stays not integrated either way.
+Docker image `holo-desert-engine:followup-dev` (built from this branch). Remove
+it with `docker image rm holo-desert-engine:followup-dev` when no longer
+needed; its test containers were removed at the end of the session.
