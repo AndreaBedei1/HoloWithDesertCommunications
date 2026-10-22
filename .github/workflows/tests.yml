@@ -13,6 +13,21 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: python -m pip install -e '.[test]'
       - run: python -m pytest -q -m 'not desert and not holoocean'
+  package:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # Build a wheel, install it in a fresh venv and run the external example
+      # application against the installed package (no editable source tree).
+      - run: python -m pip install build==1.2.2.post1
+      - run: python -m build --wheel --outdir dist
+      - run: |
+          python -m venv /tmp/clean
+          /tmp/clean/bin/pip install dist/*.whl
+          cd /tmp && /tmp/clean/bin/python -I "$GITHUB_WORKSPACE/examples/external_app/check_install.py"
   frontend:
     runs-on: ubuntu-24.04
     steps:
@@ -28,7 +43,26 @@ jobs:
       - run: python -m pip install -e '.[test]'
       - run: npm ci
         working-directory: tests/frontend
-      - run: npx playwright install --with-deps chromium
+      # The hosted image preconfigures packages.microsoft.com/Azure apt sources.
+      # When they answer 403, `apt-get update` (run by `--with-deps`) fails
+      # before Chromium is installed. Those sources are not used by this job,
+      # so remove them and retry transient mirror errors instead of skipping
+      # the browser suite.
+      - name: Drop unused third-party apt sources
+        run: |
+          echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
+          for f in $(grep -rlE 'packages\.microsoft\.com|azure' /etc/apt/sources.list.d 2>/dev/null); do
+            echo "Disabling $f"; sudo rm -f "$f"
+          done
+      - name: Install Chromium system dependencies
+        run: |
+          for attempt in 1 2 3; do
+            npx playwright install-deps chromium && exit 0
+            echo "install-deps attempt $attempt failed"; sleep 15
+          done
+          exit 1
+        working-directory: tests/frontend
+      - run: npx playwright install chromium
         working-directory: tests/frontend
       - run: npm test -- --config playwright.config.cjs
         working-directory: tests/frontend
