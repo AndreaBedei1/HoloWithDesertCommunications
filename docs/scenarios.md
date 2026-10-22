@@ -1,40 +1,56 @@
-# Dimostrazioni
+# Bundled scenarios
 
-Comando comune: `holo-desert run <id>`. La dashboard apre il servizio locale
-su http://127.0.0.1:8000; il mondo 3D è quello ufficiale HoloOcean.
-I file YAML sono sotto `src/holo_desert/resources/examples/<id>/scenario.yaml`.
+Common command: `holo-desert run <id>`. The dashboard serves the local
+laboratory at http://127.0.0.1:8000; the 3D world is the official HoloOcean
+one. The YAML files are in `src/holo_desert/resources/examples/<id>/scenario.yaml`
+(E01–E06) and `src/holo_desert/resources/demos/<id>/scenario.yaml` (demos).
 
-| ID | Cosa esegue | Evidenza da controllare |
+## Reference experiments (E01–E06)
+
+| ID | What it runs | Evidence to check |
 |---|---|---|
-| `e01_chat` | Richiesta e risposta, due veicoli fermi | `app_tx`, `rx`, `delivered` con stesso ID; timestamp e payload |
-| `e02_multi_node` | Quattro sorgenti simultanee | Offerta, ricezioni, code MAC; nessuna collisione dedotta da timeout |
-| `e03_mobility` | Due controller PD seguono target che si allontanano e tornano | Posizioni misurate, `position_applied`, distanza e PDR |
-| `e04_congestion` | Tre flussi verso un sink, intervalli decrescenti | Code reali MAC, throughput e timeout distinti dagli errori bridge |
-| `e05_multihop` | Route statiche A-B-C | Inoltro osservato su B e ricezione su C; controllo diretto a 1000 m verificato separatamente |
-| `e06_coordination` | Heartbeat e follower con stati HOLD/PROCEED | Potenza PHY ridotta a 0 dB da 8 a 18 s; stati e ripresa dopo RX |
+| `e01_chat` | Request and reply between two stationary vehicles | `app_tx`, `rx` and `delivered` with the same message ID; timestamps and payload |
+| `e02_multi_node` | Four simultaneous sources | Offered load, receptions, MAC queues; no collision inferred from timeouts |
+| `e03_mobility` | Two PD controllers follow targets that move apart and come back | Measured positions, `position_applied`, distance and delivery ratio |
+| `e04_congestion` | Three flows to one sink with decreasing intervals | Real MAC queues, throughput, and timeouts kept apart from bridge errors |
+| `e05_multihop` | Static routes A → B → C | Forwarding observed at B and reception at C |
+| `e06_coordination` | Heartbeat leader and follower with HOLD/PROCEED states | PHY power lowered to 0 dB from 8 to 18 s; states and recovery after reception |
 
-`e01`, `e02`, `e04`, `e05` possono usare `--standalone`: fixture spaziali fisse,
-motore DESERT reale, nessun veicolo simulato da Python. Le demo mobili e la
-coordinazione rifiutano questa modalità.
+E01–E06 are kept unchanged as reference experiments; their expected message
+counts are listed in
+[telemetry-and-reproducibility.md](telemetry-and-reproducibility.md#recorded-results).
+`e01`, `e02`, `e04` and `e05` also run with `--standalone`: fixed positions,
+the real DESERT engine and no vehicle simulation. The mobile demos and the
+coordination example refuse that mode.
 
-Per il confronto MAC:
+MAC comparison on the same experiment:
 
 ```bash
 holo-desert run e04_congestion
 holo-desert run e04_congestion --mac aloha
 ```
 
-I parametri di `e03` e `e05` sono specifici del modello e del seed:
-un relay configurato non dimostra da solo l'impossibilità della ricezione diretta.
-Per E05 il controllo è stato eseguito: a 132 dB SPL, due tratte da 500 m
-consegnano tramite B, mentre la tratta diretta da 1000 m non consegna il payload.
-La dashboard chiama gli archi “ricezioni applicative end-to-end” e non li
-presenta come hop fisici. Il dettaglio del pacchetto elenca le osservazioni
-di inoltro realmente prodotte nello stack.
+## Demos
 
-La coordinazione non è un sistema di safety: è un esempio didattico di reazione
-alla freschezza dei messaggi. L'interruzione avviene nel modello di potenza DESERT,
-mai eliminando messaggi arbitrariamente nell'applicazione.
+| ID | What it shows |
+|---|---|
+| `e07_ranging_tokenbus` | Native Ranging-TokenBus distance estimates between three vehicles, beside the HoloOcean geometry |
+| `e08_woss` | A moving receiver in a WOSS/Bellhop channel with a synthetic sound-speed profile |
+| `e09_sun_convergecast` | Native SUN route discovery through relays to a sink |
 
-Consultare [evidence/validation.md](evidence/validation.md) per distinguere configurazioni
-implementate da dimostrazioni effettivamente eseguite e verificate.
+## Reading the results
+
+The parameters of `e03` and `e05` are specific to the model and the seed: a
+configured relay does not by itself prove that direct reception is impossible.
+For E05 this was checked: at 132 dB SPL two 500 m hops deliver through B,
+while the direct 1000 m link does not deliver the payload. The dashboard
+labels the arcs as end-to-end application receptions, not physical hops; the
+message details list the forwarding observations actually produced in the
+stack.
+
+The coordination example is not a safety system: it is a didactic example of
+reacting to message freshness. The outage happens in DESERT's power model,
+never by dropping messages in the application.
+
+The dated records in [evidence/](evidence/README.md) separate configurations
+that were implemented from demonstrations that were executed and verified.
