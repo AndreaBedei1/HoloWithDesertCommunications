@@ -4,13 +4,20 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "holoocean-desert"
-version = "0.1.0"
-description = "HoloOcean 2.3 and DESERT 4.0 acoustic co-simulation without ROS"
+version = "0.2.0"
+description = "Python library coupling HoloOcean 2.3 vehicles with the DESERT 4.0 underwater network simulator"
+readme = "README.md"
+license = {text = "MIT"}
 requires-python = ">=3.10,<3.13"
-dependencies = ["PyYAML==6.0.2", "fastapi==0.115.12", "uvicorn==0.34.2", "pydantic==2.14.1"]
+# The library core needs only these; the web laboratory is an optional extra.
+dependencies = ["PyYAML==6.0.2", "pydantic==2.14.1"]
 
 [project.optional-dependencies]
-test = ["pytest==8.3.5", "httpx==0.28.1"]
+dashboard = ["fastapi==0.115.12", "uvicorn==0.34.2"]
+test = ["pytest==8.3.5", "httpx==0.28.1", "fastapi==0.115.12", "uvicorn==0.34.2"]
+
+[project.urls]
+Repository = "https://github.com/AndreaBedei1/HoloWithDesertCommunications"
 
 [project.scripts]
 holo-desert = "holo_desert.cli:main"

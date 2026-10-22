@@ -27,7 +27,7 @@ class DroneCommunication:
 
 
 class CommunicationManager:
-    def __init__(self, backend, clock, telemetry, nodes, queue_limit=1000, max_message_bytes=4096):
+    def __init__(self, backend, clock, telemetry, nodes, queue_limit=1000, max_message_bytes=4096, listeners=None):
         self.backend, self.clock, self.telemetry = backend, clock, telemetry
         self.nodes = set(nodes)
         self.inbox = {n: deque() for n in nodes}
@@ -37,6 +37,9 @@ class CommunicationManager:
         self.counter = itertools.count()
         self.queue_limit = queue_limit
         self.max_message_bytes = max_message_bytes
+        # node -> callbacks. A node with callbacks receives deliveries through
+        # them instead of its inbox, so an unread inbox cannot overflow.
+        self.listeners = listeners if listeners is not None else {}
 
     def drone(self, node):
         if node not in self.nodes:
@@ -87,11 +90,16 @@ class CommunicationManager:
             if delivery.network_time > message.creation_time + message.ttl:
                 self.telemetry.emit("late_receive", delivery.network_time, packet_id=message.id)
                 continue
-            if len(self.inbox[delivery.receiver]) >= self.queue_limit:
+            callbacks = self.listeners.get(delivery.receiver)
+            if not callbacks and len(self.inbox[delivery.receiver]) >= self.queue_limit:
                 self.telemetry.emit("bridge_receive_overflow", delivery.network_time, packet_id=message.id)
                 continue
-            self.inbox[delivery.receiver].append(delivery)
             self.telemetry.received(delivery)
+            if callbacks:
+                for callback in list(callbacks):
+                    callback(delivery)
+            else:
+                self.inbox[delivery.receiver].append(delivery)
 
     def receive(self, node):
         queue = self.inbox[node]

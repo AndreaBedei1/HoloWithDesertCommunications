@@ -7,11 +7,19 @@ import subprocess
 import sys
 import socket
 from .core.orchestrator import SimulationOrchestrator
-from .dashboard.server import DashboardServer
 from .desert_adapter.backend import docker_command, COMPOSE, BASE_IMAGE, BackendError
 from .doctor import doctor
 from .scenarios.config import ScenarioManager, RESOURCE_ROOT, Network
 from .resources.docker.stack_builder import MACS
+
+
+def dashboard_server(**options):
+    try:
+        from .dashboard.server import DashboardServer
+    except ImportError as exc:
+        raise RuntimeError("The web laboratory needs the dashboard extra: "
+                           "pip install 'holoocean-desert[dashboard]'") from exc
+    return DashboardServer(**options)
 
 
 def serve_dashboard(application, port, before_start=None):
@@ -29,7 +37,10 @@ def serve_dashboard(application, port, before_start=None):
 def parser():
     p = argparse.ArgumentParser(prog="holo-desert", description="HoloOcean 2.3 + real DESERT 4.0, without ROS")
     sub = p.add_subparsers(dest="command", required=True)
-    sub.add_parser("doctor")
+    doctor_parser = sub.add_parser("doctor", help="Check prerequisites, engine image and ports")
+    doctor_parser.add_argument("--library-only", action="store_true",
+                               help="Skip HoloOcean/GPU/dashboard checks (standalone DESERT use)")
+    doctor_parser.add_argument("--json", action="store_true")
     sub.add_parser("examples")
     run = sub.add_parser("run")
     run.add_argument("scenario", nargs="?", default="e01_chat")
@@ -66,9 +77,12 @@ def main(argv=None):
             for name in manager.list():
                 print(f"{name:20} {manager.load(name).description}")
         elif args.command == "doctor":
-            results = doctor()
-            for r in results:
-                print(f"{'OK' if r['ok'] else 'FAIL':4} {r['name']:20} {r['detail']}")
+            results = doctor(library_only=args.library_only)
+            if args.json:
+                print(json.dumps(results, indent=2))
+            for r in results if not args.json else []:
+                status = "SKIP" if r.get("skipped") else "OK" if r["ok"] else "FAIL"
+                print(f"{status:4} {r['name']:20} {r['detail']}")
             return 0 if all(r["ok"] for r in results) else 1
         elif args.command in ("engine", "logs"):
             if args.command == "logs":
@@ -102,7 +116,7 @@ def main(argv=None):
                 adapter.stop()
         elif args.command == "dashboard":
             print(f"Dashboard: http://127.0.0.1:{args.port}")
-            serve_dashboard(DashboardServer(manage_docker=not args.no_manage_docker).application(), args.port)
+            serve_dashboard(dashboard_server(manage_docker=not args.no_manage_docker).application(), args.port)
         elif args.command == "run":
             scenario = manager.load(args.scenario)
             overrides = {}
@@ -128,7 +142,7 @@ def main(argv=None):
                     print(json.dumps({"state": run.state, "error": run.error, "counts": run.telemetry.snapshot()["counts"]}, indent=2))
                     return 1 if run.error else 0
                 print(f"Dashboard: http://127.0.0.1:{args.port} (Ctrl+C to close and clean up)")
-                serve_dashboard(DashboardServer(initial_run=run, manage_docker=not args.no_manage_docker).application(),
+                serve_dashboard(dashboard_server(initial_run=run, manage_docker=not args.no_manage_docker).application(),
                                 args.port, run.start_background)
                 return 1 if run.error else 0
             finally:
