@@ -25,4 +25,4 @@ dialog{border:1px solid var(--line);border-radius:14px;color:var(--ink);padding:
 .unavailable-note{display:block;font-size:11px;line-height:1.5;color:var(--amber)}
 .ranging-panel{grid-column:1/-1}
 .ranging-panel table{width:100%;margin-top:12px;font-size:12px}
-.line-key.gray{background:#8795a8}
+.line-key.gray{background:#8795a8}.line-key.amber{background:var(--amber)}.line-key.red{background:var(--red)}.dot-key{width:8px;height:8px;border-radius:50%;display:inline-block;margin-left:8px}.interfaces-panel{grid-column:1/-1}td .path{font-size:11px;color:#53647d}

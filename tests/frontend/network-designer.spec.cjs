@@ -215,6 +215,21 @@ test('observed-state fixture: multi-PHY interface names and EM power units in ti
   await page.locator('[data-packet="received-001"]').first().click();await expect(page.locator('#context-content')).toContainText('Interfaccia: short · 2');
   await page.locator('.app-header [data-view="analysis"]').click();await page.locator('#advanced-analysis>summary').click();await expect(page.locator('#application-events')).toContainText('-20,0 dBm');
 });
+test('observed-state fixture: multi-PHY runs show interface usage, switching and the interface of each message',async({page,request})=>{
+  const {fixturePage}=require('./fixtures.cjs'),fixture=await fixturePage(page,request),state=fixture.state();
+  state.configuration.network.multiphy={interfaces:[{id:'acoustic',acoustic:{}},{id:'optical',medium:'optical',optical:{}}],policy:'received_power',initial_interface:'acoustic',master:'auv_01',thresholds:[],alpha:.5};
+  const tx=(time,index,medium)=>({event:'phy_tx_start',time,node:1,node_id:'auv_01',interface_index:index,...(medium?{medium}:{})});
+  const rx=(time,index)=>({event:'phy_rx_end',time,node:3,node_id:'auv_03',interface_index:index,outcome:'decoded'});
+  state.packets[0].events=[tx(1,1),rx(1.2,1),tx(5,2,'optical'),rx(5.1,2),tx(9,1)];
+  fixture.setState(state);
+  await page.locator('.app-header [data-view="analysis"]').click();await page.locator('#interfaces-tab').click();
+  await expect(page.locator('#interface-key')).toContainText('optical · 2');
+  const master=page.locator('#interface-table tbody tr',{hasText:'Drone 01'}),receiver=page.locator('#interface-table tbody tr',{hasText:'Drone 03'});
+  await expect(master.locator('td')).toHaveText(['Drone 01','2 / 0','1 / 0','2']);
+  await expect(receiver.locator('td')).toHaveText(['Drone 03','0 / 1','0 / 1','0']);
+  await page.locator('.app-header [data-view="messages"]').click();
+  await expect(page.locator('#packet-rows tr[data-id="received-001"]')).toContainText('acoustic · 1');
+});
 test('observed-state fixture: values read back from native DESERT objects are listed per drone',async({page,request})=>{
   const {fixturePage}=require('./fixtures.cjs'),fixture=await fixturePage(page,request);
   fixture.setState({...fixture.state(),applied_configuration:{shared:[{module:'channel',class:'Module/UnderwaterChannel',values:{propSpeed_:1500}}],auv_02:[{module:'phy',class:'Module/MPhy/BPSK/Underwater/HOLO',interface_index:2,values:{MaxTxSPL_dB_:145,BitRate_:null}}]}});

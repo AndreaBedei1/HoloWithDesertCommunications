@@ -1,9 +1,9 @@
-import {$,esc,number,api,choices,fields} from './ui.js';
-import {chart} from './charts.js';
+import {$,esc,number,api,choices,fields,preserve} from './ui.js';
+import {chart,strips} from './charts.js';
 import {drawMap,bindMap,resetMaps} from './maps.js';
 import {bindConfiguration,setNetworkCatalog,moduleName} from './configuration.js';
 import {renderPackets,packetDetails,packetTone,stateHTML,eventTimeline} from './packets.js';
-import {SCENARIOS,scenarioInfo,drone,typeName,help,bindHelp,setInterfaceNames} from './presentation.js';
+import {SCENARIOS,scenarioInfo,drone,typeName,help,bindHelp,setInterfaceNames,interfaceLabel} from './presentation.js';
 import {bindScenarioEditor} from './scenario-editor.js';
 
 const activeStates=['starting','running','paused','stopping'];
@@ -26,11 +26,6 @@ function showError(error){
   else if(/valid|route|node|Flow|Waypoint|loop|scenario|Scenario|nome|cambiato|riferiment|occupied|busy|Unknown/i.test(raw)){title='Controlla la configurazione';message=raw.length<240?raw:'Alcuni parametri non sono validi. Apri i dettagli per individuare i campi da correggere.'}
   else if(/fetch|unavailable|network/i.test(raw)){title='Collegamento al laboratorio interrotto';message='Il server locale non risponde. Verifica che il comando holo-desert dashboard sia ancora in esecuzione.'}
   $('#error-title').textContent=title;$('#error-message').textContent=message;$('#error-detail').textContent=raw;
-}
-function preserve(root,html){
-  if(root.innerHTML===html)return;
-  const opened=new Set([...root.querySelectorAll('details[open]')].map(d=>d.querySelector('summary')?.textContent)),scroll=root.scrollTop;
-  root.innerHTML=html;root.querySelectorAll('details').forEach(d=>{if(opened.has(d.querySelector('summary')?.textContent))d.open=true});root.scrollTop=scroll;
 }
 function confirm(title,text,accept='Conferma'){
   const dialog=$('#confirm-dialog');$('#confirm-title').textContent=title;$('#confirm-text').textContent=text;$('#confirm-accept').textContent=accept;dialog.showModal();
@@ -73,7 +68,10 @@ function renderHome(){
 }
 function renderServices(){
   const config=latest.configuration,base=config?.network?.acoustic?.phy||'bpsk_upstream',models=(config?.nodes||[]).map(n=>({node:n.id,phy:n.communication?.acoustic?.phy||base})),mixed=new Set(models.map(n=>n.phy)).size>1,patch=latest.engine_info?.phy_patch;
-  const phy=config?' · '+(mixed?'PHY misto: '+models.map(n=>drone(n.node)+' = '+n.phy).join('; '):'PHY: '+moduleName('phy',models[0]?.phy||base)+' ('+(models[0]?.phy||base)+')')+(patch?' · Patch motore: '+patch:''):'';
+  // The physical layer as configured: multi-PHY interfaces, a nonacoustic medium, or the acoustic PHY per drone.
+  const multi=config?.network?.multiphy,medium=config?.network?.medium||'acoustic';
+  const layer=multi?'Interfacce: '+multi.interfaces.map(i=>i.id+' ('+((i.medium||'acoustic')==='optical'?'ottica':'acustica')+')').join(', '):medium!=='acoustic'?'PHY: '+moduleName('phy',medium):mixed?'PHY misto: '+models.map(n=>drone(n.node)+' = '+n.phy).join('; '):'PHY: '+moduleName('phy',models[0]?.phy||base)+' ('+(models[0]?.phy||base)+')';
+  const phy=config?' · '+layer+(patch?' · Patch motore: '+patch:''):'';
   for(const [name,prefix]of [['holoocean','holo'],['desert','desert']]){const state=latest.services?.[name]||'not_started';$('#'+prefix+'-status').textContent=serviceNames[state]||state;$('#'+prefix+'-dot').className='status-dot '+(state==='running'?'success':state==='starting'?'info':state==='cleanup_failed'?'error':'')}
   $('#run-services').textContent='HoloOcean: '+(serviceNames[latest.services?.holoocean]||'non avviato')+' · DESERT: '+(serviceNames[latest.services?.desert]||'non avviato')+(latest.standalone?' · Modalità solo rete, posizioni fisse':'')+phy;
 }
@@ -109,6 +107,8 @@ function metrics(){
   const accounting=latest.network_metrics;preserve($('#network-accounting'),accounting?'<h3>Contabilità della rete osservata</h3>'+fields(Object.fromEntries([['data_tx_frames','Frame dati TX',0],['control_tx_frames','Frame controllo TX',0],['data_tx_bits','Bit dati TX',0],['control_tx_bits','Bit controllo TX',0],['data_airtime_s','Tempo dati sul mezzo [s]',6],['control_airtime_s','Tempo controllo sul mezzo [s]',6],['late_received','Ricevuti dopo TTL',0]].map(([key,label,digits])=>[label,number(accounting[key],digits)])))+'<p class="micro">Totali dagli eventi PHY osservati, incluse le ritrasmissioni. I messaggi ricevuti dopo TTL restano separati dalle consegne valide.</p>':'');
   const s=latest,series=s.series||[],node=$('#metric-node').value,pair=$('#metric-pair').value,opts={window:Number($('#metric-window').value)};
   $('#analysis-empty').hidden=series.length>0||analysisGroup==='compare';$('#analysis-charts').hidden=!series.length||analysisGroup==='compare';$('#compare-panel').hidden=analysisGroup!=='compare';
+  const multiphy=!!s.configuration?.network?.multiphy;$('#interfaces-tab').hidden=!multiphy;
+  if(!multiphy&&analysisGroup==='interfaces'){analysisGroup='delivery';$('#analysis-tabs').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.group==='delivery'))}
   $('#metric-window').disabled=analysisGroup==='compare';$('#node-filter-label').hidden=analysisGroup!=='channel';$('#pair-filter-label').hidden=!['geometry','ranging'].includes(analysisGroup);
   document.querySelectorAll('.metric-panel').forEach(p=>p.hidden=p.dataset.group!==analysisGroup);
   if(analysisGroup==='compare'){const allowed=s.state==='finished'&&!s.standalone&&!!s.configuration;$('#retain').disabled=!allowed||busy;$('#retain').title=allowed?'':'Completa una corsa integrata per conservarne il riepilogo.';$('#compare-note').textContent=allowed?'Puoi conservare il riepilogo di questa corsa.':'Il riepilogo si può conservare dopo una corsa integrata e completata. Nessun confronto parte automaticamente.';return}
@@ -123,6 +123,7 @@ function metrics(){
     chart('#queue-chart',series,[{value:p=>p.nodes?.[node]?.mac_queue,color:palette.blue}],{...opts,step:true});
     chart('#phy-chart',series,['noise_error','interference_error','not_synchronized'].map((key,i)=>({value:p=>p.nodes?.[node]?.phy?.[key]??(p.nodes?.[node]?0:null),color:[palette.amber,palette.red,palette.gray][i]})),opts);
   }else if(analysisGroup==='ranging')ranging(s,pair,opts);
+  else if(analysisGroup==='interfaces')interfaces(s,opts);
   else{chart('#distance-chart',series,[{value:p=>p.distances_m?.[pair],color:palette.blue}],opts);chart('#drift-chart',series,[line('wall_drift_s',palette.gray)],opts)}
   const keys=Object.keys(nodeStatsLabels);$('#mac-stats').innerHTML='<table><thead><tr><th>Drone</th>'+keys.map(k=>'<th>'+esc(nodeStatsLabels[k])+'</th>').join('')+'</tr></thead><tbody>'+Object.entries(s.stats||{}).map(([n,values])=>'<tr><td>'+esc(drone(n))+'</td>'+keys.map(k=>'<td>'+number(values[k],0)+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
   $('#mac-stats').insertAdjacentHTML('beforeend',Object.entries(s.mac_specific_stats||{}).filter(([node,values])=>Object.keys(values).length).map(([node,values])=>'<details><summary>Contatori nativi '+esc(drone(node))+'</summary>'+fields(values)+'</details>').join(''));
@@ -133,6 +134,18 @@ function metrics(){
   preserve($('#applied-configuration'),applied.length?'<table><thead><tr><th>Drone</th><th>Modulo</th><th>Classe DESERT</th><th>Valori</th></tr></thead><tbody>'+applied.flatMap(([node,records])=>records.map(r=>'<tr><td>'+esc(node==='shared'?'Condiviso':drone(node))+'</td><td>'+esc(r.module+(r.interface_index!=null?' · interfaccia '+r.interface_index:'')+(r.flow_index!=null?' · flusso '+r.flow_index:''))+'</td><td>'+esc(r.class)+'</td><td>'+esc(Object.entries(r.values).map(([k,v])=>k+' = '+(v==null?'N/D':v)).join(', '))+'</td></tr>')).join('')+'</tbody></table>':'<p class="micro">Disponibile dopo l’avvio di una corsa.</p>');
   $('#configured-route-details').innerHTML=(s.configured_routes||[]).map(r=>'<div class="distance-row"><span>'+esc(drone(r.source)+' → '+drone(r.destination))+'</span><b>via '+esc(drone(r.next_hop))+'</b></div>').join('');
   preserve($('#channel-events'),eventTimeline((s.observations||[]).slice(-25).reverse()).replace(/^<ol[^>]*>|<\/ol>$/g,''));
+}
+// Observed multi-PHY usage: interface of every application transmission and decoded receptions.
+function interfaces(s,opts){
+  const names=(s.configuration?.network?.multiphy?.interfaces||[]).map(i=>i.id),colors=[palette.blue,palette.green,palette.amber];
+  const events=(s.packets||[]).flatMap(p=>p.events).filter(e=>e.interface_index>0&&e.node_id);
+  const end=(s.series||[]).at(-1)?.time||s.time||1,start=opts.window?Math.max(0,end-opts.window):0;
+  const tx=events.filter(e=>e.event==='phy_tx_start'&&e.time>=start),nodes=(s.configuration?.nodes||[]).map(n=>n.id);
+  strips('#interface-chart',nodes.map(id=>({id,label:drone(id)})),tx.map(e=>({row:e.node_id,time:e.time,key:e.interface_index})),Object.fromEntries(names.map((n,i)=>[i+1,colors[i%colors.length]])),{start,end});
+  $('#interface-key').innerHTML=names.map((n,i)=>'<i class="dot-key" style="background:'+colors[i%colors.length]+'"></i>'+esc(interfaceLabel(i+1))).join(' ');
+  const count=(node,index,event,outcome)=>events.filter(e=>e.node_id===node&&e.interface_index===index&&e.event===event&&(!outcome||e.outcome===outcome)).length;
+  const switches=node=>{const seq=tx.filter(e=>e.node_id===node).map(e=>e.interface_index);return seq.filter((v,i)=>i&&v!==seq[i-1]).length};
+  $('#interface-table').innerHTML='<table><thead><tr><th>Drone</th>'+names.map((n,i)=>'<th>'+esc(interfaceLabel(i+1))+' · TX / RX decodificati</th>').join('')+'<th>Cambi di interfaccia in TX</th></tr></thead><tbody>'+nodes.map(node=>'<tr><td>'+esc(drone(node))+'</td>'+names.map((n,i)=>'<td>'+count(node,i+1,'phy_tx_start')+' / '+count(node,i+1,'phy_rx_end','decoded')+'</td>').join('')+'<td>'+switches(node)+'</td></tr>').join('')+'</tbody></table>';
 }
 // Native ranging estimates against the HoloOcean geometry; never mixed into one value.
 function ranging(s,pair,opts){

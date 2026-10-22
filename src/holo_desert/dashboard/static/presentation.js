@@ -17,7 +17,8 @@ export const HELP = {
   Scadenza:'Il messaggio non è stato consegnato entro il proprio TTL. La causa è ignota; non significa necessariamente collisione o perdita fisica.',
   Goodput:'Bit di payload applicativo consegnati per secondo nell’intervallo campionato.',
   Throughput:'Bit dell’envelope applicativo consegnato al secondo, inclusi JSON e base64. Esclude header PHY/MAC, ACK e ritrasmissioni.',
-  PHY:'Livello fisico del canale acustico. Una ricezione PHY non conferma da sola la consegna all’applicazione.',
+  PHY:'Livello fisico del canale (acustico, ottico o elettromagnetico). Una ricezione PHY non conferma da sola la consegna all’applicazione.',
+  'Multi-PHY':'Ogni drone ha più interfacce (acustiche o ottiche) sotto lo stesso MAC; il controller nativo DESERT sceglie quella attiva, a mano tramite l’API o in base alla potenza ricevuta. Il grafico mostra l’interfaccia di ogni trasmissione osservata.',
   TTL:'Tempo massimo di validità applicativa del messaggio. Non cancella un pacchetto già nella coda del MAC.',
   Ranging:'Stima nativa DESERT: tempo di volo misurato dal MAC di ranging moltiplicato per la velocità del suono configurata. La distanza geometrica HoloOcean è un riferimento esterno che il protocollo non conosce; la differenza mostra l’errore della stima.',
 };

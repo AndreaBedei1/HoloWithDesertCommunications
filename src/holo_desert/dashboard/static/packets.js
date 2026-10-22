@@ -1,6 +1,12 @@
-import {$,esc,number,fields,statusName} from './ui.js';
+import {$,esc,number,fields,statusName,preserve} from './ui.js';
 import {drone,typeName,eventLabel,eventTone,help,interfaceLabel,powerLabel} from './presentation.js';
 
+// Hops seen by the network probes (forward events) and the interface of the first transmission.
+export function observedPath(p){
+  const hops=[p.source];for(const e of p.events)if(e.event==='forward'&&e.next_hop_id&&hops.at(-1)!==e.next_hop_id)hops.push(e.next_hop_id);
+  const tx=p.events.find(e=>e.event==='phy_tx_start'&&e.interface_index>0);
+  return {hops:hops.length>1?hops:[],interface:tx?interfaceLabel(tx.interface_index)+(tx.medium?' · '+(tx.medium==='optical'?'ottico':tx.medium):''):null};
+}
 export const packetTone=p=>p.status==='received'?'success':p.status==='timeout_unknown_cause'?'warning':p.status==='phy_tx_observed'?'info':'neutral';
 export const stateHTML=p=>'<span class="state-text '+packetTone(p)+'"><span aria-hidden="true">'+({success:'✓',warning:'◷',info:'↗',neutral:'·'}[packetTone(p)])+'</span>'+esc(statusName(p.status))+'</span>';
 export function eventTimeline(events){
@@ -25,7 +31,7 @@ export function renderPackets(s,selected,onSelect){
   const filter=$('#filter').value.toLowerCase(),node=$('#packet-node').value,status=$('#packet-status').value,event=$('#packet-event').value,destination=$('#packet-destination').value,type=$('#packet-type').value;
   const packets=(s.packets||[]).filter(p=>(!filter||[p.id,p.source,p.destination,p.type,p.payload_hex].join(' ').toLowerCase().includes(filter))&&(!node||p.source===node||p.destination===node||p.events.some(e=>e.node_id===node))&&(!status||p.status===status)&&(!event||p.events.some(e=>e.event===event))&&(!destination||p.destination===destination)&&(!type||p.type===type));
   $('#packet-count').textContent=packets.length+' messaggi';
-  $('#packet-rows').innerHTML=packets.slice().reverse().map(p=>'<tr tabindex="0" data-id="'+esc(p.id)+'" class="'+(selected===p.id?'selected':'')+'" aria-selected="'+(selected===p.id)+'"><td>'+esc(drone(p.source)+' → '+drone(p.destination))+'<span class="message-id">'+esc(p.id.slice(0,8))+' · '+number(p.creation_time,2)+' s</span></td><td>'+esc(typeName(p.type))+'</td><td>'+stateHTML(p)+'</td><td>'+(p.delay==null?'—':number(p.delay,3)+' s')+'</td></tr>').join('')||'<tr><td colspan="4"><div class="empty-inline">'+((s.packets||[]).length?'Nessun messaggio corrisponde ai filtri.':'I messaggi compariranno dopo l’avvio della simulazione.')+'</div></td></tr>';
+  $('#packet-rows').innerHTML=packets.slice().reverse().map(p=>'<tr tabindex="0" data-id="'+esc(p.id)+'" class="'+(selected===p.id?'selected':'')+'" aria-selected="'+(selected===p.id)+'"><td>'+esc(drone(p.source)+' → '+drone(p.destination))+'<span class="message-id">'+esc(p.id.slice(0,8))+' · '+number(p.creation_time,2)+' s</span></td><td>'+(path=>'<span class="path">'+(path.hops.length?esc(path.hops.map(drone).join(' → ')):'—')+'</span>'+(path.interface?'<span class="message-id">'+esc(path.interface)+'</span>':''))(observedPath(p))+'</td><td>'+esc(typeName(p.type))+'</td><td>'+stateHTML(p)+'</td><td>'+(p.delay==null?'—':number(p.delay,3)+' s')+'</td></tr>').join('')||'<tr><td colspan="5"><div class="empty-inline">'+((s.packets||[]).length?'Nessun messaggio corrisponde ai filtri.':'I messaggi compariranno dopo l’avvio della simulazione.')+'</div></td></tr>';
   $('#packet-rows').querySelectorAll('[data-id]').forEach(row=>{row.onclick=()=>onSelect(row.dataset.id);row.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onSelect(row.dataset.id)}}});
-  $('#packet-details').innerHTML=packetDetails((s.packets||[]).find(p=>p.id===selected));
+  preserve($('#packet-details'),packetDetails((s.packets||[]).find(p=>p.id===selected)));
 }

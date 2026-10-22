@@ -15,6 +15,12 @@ export function choices(selector, values, placeholder, label=value=>value.replac
   if ([...el.options].some(o=>o.value===old)) el.value = old;
   el.dataset.choices = signature;
 }
+// Replace only changed markup, keeping open <details> and the scroll position across refreshes.
+export function preserve(root,html){
+  if(root.innerHTML===html)return;
+  const opened=new Set([...root.querySelectorAll('details[open]')].map(d=>d.querySelector('summary')?.textContent)),scroll=root.scrollTop;
+  root.innerHTML=html;root.querySelectorAll('details').forEach(d=>{if(opened.has(d.querySelector('summary')?.textContent))d.open=true});root.scrollTop=scroll;
+}
 export function canvas(selector) {
   const c=$(selector), {width:w,height:h}=c.getBoundingClientRect(), d=devicePixelRatio||1;
   c.width=Math.round(w*d); c.height=Math.round(h*d);
