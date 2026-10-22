@@ -1,5 +1,8 @@
 """Typed selections of actual DESERT modules; no network model lives here."""
 from typing import Literal
+from .protocols import CsBurst, TokenBus, Sun
+from .environment import Woss
+from .media import Optical, Electromagnetic
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
@@ -12,7 +15,7 @@ class Acoustic(Strict):
     tx_power_db: float = Field(default=135, ge=0, le=200)
     frequency_hz: float = Field(default=25000, gt=0)
     bandwidth_hz: float = Field(default=5000, gt=0)
-    propagation: Literal['underwater'] = 'underwater'
+    propagation: Literal['underwater','woss'] = 'underwater'
     interference: Literal['miv'] = 'miv'
     phy: Literal['bpsk_upstream','bpsk_corrected'] = 'bpsk_upstream'
     spreading: float = Field(default=1.75, gt=0, le=3)
@@ -43,6 +46,28 @@ class AcousticOverride(Strict):
 
 class NodeCommunication(Strict):
     acoustic: AcousticOverride = Field(default_factory=AcousticOverride)
+    interfaces: list[str] | None = None
+    interface_overrides: dict[str,AcousticOverride] = Field(default_factory=dict)
+
+
+class PhyInterface(Strict):
+    id: str = Field(pattern=r'^[a-z][a-z0-9_]{0,15}$')
+    acoustic: AcousticOverride = Field(default_factory=AcousticOverride)
+
+
+class InterfaceThreshold(Strict):
+    from_interface: str
+    to_interface: str
+    power_linear: float = Field(gt=0)
+
+
+class MultiPhy(Strict):
+    interfaces: list[PhyInterface] = Field(min_length=2,max_length=3)
+    policy: Literal['manual','received_power'] = 'manual'
+    initial_interface: str
+    master: str = 'auv_01'
+    thresholds: list[InterfaceThreshold] = Field(default_factory=list)
+    alpha: float = Field(default=.5,ge=0,le=1)
 
 
 class Tdma(Strict):
@@ -77,13 +102,17 @@ class Dacap(Strict):
 
 
 class Mac(Strict):
-    protocol: Literal['csma_aloha','aloha','tdma','tdma_frame','csma_ca','dacap'] = 'csma_aloha'
+    protocol: Literal['csma_aloha','aloha','tdma','tdma_frame','csma_ca','dacap','csburst','tokenbus','ranging_tokenbus'] = 'csma_aloha'
     ack: bool = False
     max_tx_tries: int = Field(default=3,ge=1,le=20)
     buffer_packets: int = Field(default=100,ge=1,le=10000)
+    queue_mode: Literal['legacy','bounded'] = 'legacy'
     tdma: Tdma = Field(default_factory=Tdma)
     csma_ca: CsmaCa = Field(default_factory=CsmaCa)
     dacap: Dacap = Field(default_factory=Dacap)
+    csburst: CsBurst = Field(default_factory=CsBurst)
+    tokenbus: TokenBus = Field(default_factory=TokenBus)
+    ranging_tokenbus: TokenBus = Field(default_factory=TokenBus)
 
 
 class Flooding(Strict):
@@ -95,9 +124,15 @@ class Flooding(Strict):
 class Network(Strict):
     profile_id: str | None = Field(default=None,pattern=r'^(builtin_[a-z_]+|profile_[0-9a-f]{32})$')
     backend: Literal['desert'] = 'desert'
+    medium: Literal['acoustic','optical','em'] = 'acoustic'
+    multiphy: MultiPhy | None = None
+    optical: Optical = Field(default_factory=Optical)
+    em: Electromagnetic = Field(default_factory=Electromagnetic)
     acoustic: Acoustic = Field(default_factory=Acoustic)
+    woss: Woss = Field(default_factory=Woss)
     mac: Mac = Field(default_factory=Mac)
-    routing: Literal['static','flooding'] = 'static'
+    routing: Literal['static','flooding','sun'] = 'static'
+    sun: Sun = Field(default_factory=Sun)
     flooding: Flooding = Field(default_factory=Flooding)
     max_wire_bytes: int = Field(default=4096,ge=256,le=4096)
     seed: int = Field(default=1,ge=1,le=100000)
@@ -105,6 +140,14 @@ class Network(Strict):
 
     @model_validator(mode='after')
     def supported_stack(self):
+        if self.medium!='acoustic':
+            if self.mac.protocol!='csma_aloha' or self.routing!='static':raise ValueError('This medium currently requires verified CSMA-ALOHA and StaticRouting')
+            if self.acoustic.propagation!='underwater':raise ValueError('Nonacoustic medium cannot use WOSS')
+        if self.routing=='sun' and (self.mac.protocol!='csma_aloha' or self.mac.ack):
+            raise ValueError('SUN requires the verified CSMA-ALOHA stack without MAC ACK')
+        if self.mac.protocol in ('csburst','tokenbus','ranging_tokenbus'):
+            if self.mac.ack:raise ValueError('This native MAC has no ALOHA ACK option')
+            if self.routing!='static':raise ValueError('Additional MACs currently require verified StaticRouting')
         if self.routing=='flooding' and self.mac.protocol in ('csma_ca','dacap'):
             raise ValueError('Flooding broadcast is not supported by the verified CSMA/CA or DACAP handshake stack')
         if self.mac.protocol in ('tdma','tdma_frame') and self.mac.ack:

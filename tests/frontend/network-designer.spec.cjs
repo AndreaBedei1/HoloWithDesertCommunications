@@ -49,3 +49,13 @@ test('observed-state fixture: mixed PHY header and real-event accounting have ex
   const {fixturePage}=require('./fixtures.cjs'),fixture=await fixturePage(page,request),state=fixture.state();state.configuration.network.acoustic.phy='bpsk_upstream';state.configuration.nodes[1].communication={acoustic:{phy:'bpsk_corrected'}};fixture.setState({...state,engine_info:{phy_patch:'conditional-bpsk-v1'},network_metrics:{data_tx_frames:4,control_tx_frames:2,data_tx_bits:3200,control_tx_bits:128,data_airtime_s:1.2,control_airtime_s:.1,late_received:1}});
   await expect(page.locator('#run-services')).toContainText('PHY misto');await expect(page.locator('#run-services')).toContainText('bpsk_upstream');await expect(page.locator('#run-services')).toContainText('bpsk_corrected');await expect(page.locator('#run-services')).toContainText('Patch motore: conditional-bpsk-v1');await page.locator('.app-header [data-view="analysis"]').click();await page.locator('#advanced-analysis>summary').click();await expect(page.locator('#network-accounting')).toContainText('Frame controllo TX');await expect(page.locator('#network-accounting')).toContainText('Ricevuti dopo TTL');
 });
+
+test('real API: legacy MAC buffer appears only for an explicitly bounded queue',async({page,request})=>{
+  await page.goto('/');await page.locator('#configure').click();
+  const form=page.locator('#network-form');await form.locator('summary').filter({hasText:'Impostazioni avanzate'}).click();
+  await expect(form.locator('[data-path="network.mac.queue_mode"]')).toHaveValue('legacy');await expect(form.locator('[data-path="network.mac.buffer_packets"]')).toHaveCount(0);
+  await form.locator('[data-path="network.mac.queue_mode"]').selectOption('bounded');await form.locator('[data-path="network.mac.buffer_packets"]').fill('1');
+  const validated=page.waitForRequest(r=>r.url().endsWith('/api/validate')&&r.method()==='POST');await page.getByRole('button',{name:'Applica alla prossima corsa'}).click();
+  expect((await validated).postDataJSON().network.mac).toMatchObject({protocol:'csma_aloha',queue_mode:'bounded',buffer_packets:1});await expect(page.locator('#config-dialog')).toBeHidden();
+  await page.locator('#configure').click();await expect(form.locator('[data-path="network.mac.queue_mode"]')).toHaveValue('bounded');await expect(form.locator('[data-path="network.mac.buffer_packets"]')).toHaveValue('1');
+});

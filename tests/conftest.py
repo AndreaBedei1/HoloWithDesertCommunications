@@ -8,6 +8,8 @@ def engine(request):
     if not request.config.getoption("-m") or "desert" not in request.config.getoption("-m") and "holoocean" not in request.config.getoption("-m"):
         pytest.skip("Select -m desert or -m holoocean to run real simulator tests")
     owned = not DESERTAdapter().health()
+    if owned and os.environ.get('DESERT_PORT'):
+        pytest.fail('Explicit DESERT_PORT is unavailable; start the isolated test service. Refusing to manage the default Compose project.')
     if owned:
         docker_command(*COMPOSE, "up", "-d", "--build", timeout=1200)
         import time

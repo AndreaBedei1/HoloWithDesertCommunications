@@ -14,4 +14,4 @@ class CoordinateConverter:
 
     def to_network(self, pose: Pose) -> Pose:
         return Pose(pose.x - self.origin[0], pose.y - self.origin[1],
-                    pose.z - self.origin[2], pose.yaw)
+                    pose.z - self.origin[2], pose.yaw, pose.pitch, pose.roll)

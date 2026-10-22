@@ -174,6 +174,30 @@ def test_occupied_dashboard_port_cannot_start_simulators():
     assert calls == []
 
 
+def test_comparison_records_phy_changes_versions_and_common_experiment():
+    server=DashboardServer(manage_docker=False)
+    collectors=[]
+    try:
+        with TestClient(server.application()) as client:
+            for index,phy in enumerate(('bpsk_upstream','bpsk_corrected')):
+                scenario=ScenarioManager().load('e01_chat')
+                scenario.network.acoustic.phy=phy
+                collector=TelemetryCollector(scenario.model_dump());collectors.append(collector)
+                collector.emit('run_started',0,versions={'engine':{'desert_source_commit':'compiled-test'}})
+                collector.positions({'auv_01':Pose(index,0,-20),'auv_02':Pose(20,0,-20)},0,origin='holoocean')
+                server.run=SimpleNamespace(state='finished',standalone=False,scenario=scenario,
+                                          telemetry=collector,run_id=str(index),close=lambda:None)
+                assert client.post('/api/comparison').status_code==200
+            result=client.get('/api/comparisons').json()
+            assert result['same_experiment']
+            assert result['changed_sections']==['phy']
+            assert 'network.acoustic.phy' in result['changed_fields']
+            assert result['runs'][0]['versions']['engine']['desert_source_commit']=='compiled-test'
+            assert result['runs'][0]['observed_trajectory']!=result['runs'][1]['observed_trajectory']
+    finally:
+        for collector in collectors:collector.close()
+
+
 def test_frontend_module_mime_does_not_depend_on_windows_registry(monkeypatch):
     import starlette.responses
     monkeypatch.setattr(starlette.responses, "guess_type", lambda path: ("text/plain", None))

@@ -13,6 +13,8 @@ class Pose:
     y: float
     z: float
     yaw: float = 0.0
+    pitch: float = 0.0
+    roll: float = 0.0
 
     def __post_init__(self):
         if not all(math.isfinite(v) for v in asdict(self).values()):

@@ -19,7 +19,7 @@ holo-desert = "holo_desert.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-holo_desert = ["dashboard/static/*", "resources/examples/*/*.yaml", "resources/profiles/*.yaml", "resources/docker/*", "resources/desert/tcl/*", "resources/desert/tcl/modules/*", "resources/desert/extensions/*"]
+holo_desert = ["dashboard/static/*", "resources/examples/*/*.yaml", "resources/demos/*/*.yaml", "resources/profiles/*.yaml", "resources/docker/*", "resources/desert/tcl/*", "resources/desert/tcl/modules/*", "resources/desert/extensions/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

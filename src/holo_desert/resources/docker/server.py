@@ -45,7 +45,7 @@ class Handler(socketserver.StreamRequestHandler):
             commit = subprocess.check_output(["git", "-C", "/home/DESERT_Underwater", "rev-parse", "HEAD"], text=True).strip()
             self.wfile.write((json.dumps({"event": "engine_info", "time": 0,
                 "desert_release": "4.0.0", "desert_source_commit": commit,
-                "stack_builder": CATALOG_VERSION, "phy_patch": "conditional-bpsk-v1" if any(n["acoustic"].get("phy")=="bpsk_corrected" for n in effective_nodes(config)) else "upstream-original",
+                "stack_builder": CATALOG_VERSION, "phy_patch": {"optical":"native-optical-lambert-beer-body-frame-v1","em":"em-power-lut-v1"}.get(config['network'].get('medium'), "conditional-bpsk-v1" if any(n["acoustic"].get("phy")=="bpsk_corrected" for n in effective_nodes(config)) else "upstream-original"),
                 "effective_network": config["network"], "effective_nodes": effective_nodes(config)}) + "\n").encode())
             self.wfile.flush()
             with tempfile.TemporaryDirectory(prefix="holo-desert-") as temp:

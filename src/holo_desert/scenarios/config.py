@@ -37,7 +37,12 @@ class Flow(Strict):
     start: float = Field(default=1, ge=0)
     stop: float | None = Field(default=None, gt=0)
     pattern: Literal['periodic','poisson','burst','events'] = 'periodic'
-    interface: Literal['acoustic'] = 'acoustic'
+    generator: Literal['python','desert_cbr','desert_vbr'] = 'python'
+    native_packet_bytes: int = Field(default=125,ge=16,le=2048)
+    native_period2_s: float = Field(default=2,gt=0)
+    native_duration1_s: float = Field(default=5,gt=0)
+    native_duration2_s: float = Field(default=5,gt=0)
+    interface: str = Field(default='inherit',pattern=r'^[a-z][a-z0-9_]{0,31}$')
     burst_count: int = Field(default=3,ge=1,le=100)
     burst_interval_s: float = Field(default=.25,gt=0)
     burst_period_s: float = Field(default=5,gt=0)
@@ -53,6 +58,8 @@ class Flow(Strict):
     def variable_interval_window(self):
         if self.final_interval is not None and self.stop is None:
             raise ValueError('Variable interval requires flow stop')
+        if self.generator!='python' and (self.reply or self.message_type!='data' or self.pattern not in ('periodic','poisson') or self.final_interval is not None):
+            raise ValueError('Native generators support data without Python replies, periodic/Poisson timing and native VBR switching')
         return self
 
 

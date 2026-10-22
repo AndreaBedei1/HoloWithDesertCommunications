@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import asdict
 import copy
+import hashlib
 import csv
 import io
 import json
@@ -32,6 +33,9 @@ class TelemetryCollector:
         self.packet_order = deque()
         self.fleet = {}
         self.trails = {}
+        self.versions = {}
+        self.trajectory_hashes = {}
+        self.trajectory_samples = {}
         self.edges = {}
         self.stats = {}
         self.mac_specific_stats = {}
@@ -44,6 +48,7 @@ class TelemetryCollector:
         self.series = deque(maxlen=1000)
         self.generated_count = self.received_count = self.expired_count = 0
         self.generated_bytes = self.received_bytes = self.wire_received_bytes = 0
+        self.native_generated_count = self.native_received_count = self.native_received_bytes = 0
         self.delay_sum = 0.0
         self.last_sample = 0.0
         self.last_bytes = self.last_wire_bytes = 0
@@ -54,6 +59,7 @@ class TelemetryCollector:
     def emit(self, event, timestamp, **fields):
         data = {"event": event, "time": timestamp, "wall_time": time.time(), **fields}
         with self.lock:
+            if event=='run_started':self.versions=copy.deepcopy(fields.get('versions',{}))
             if event == 'late_receive':
                 self.network_metrics['late_received'] += 1
                 row=self.packets.get(fields.get('packet_id'))
@@ -89,6 +95,8 @@ class TelemetryCollector:
 
     def engine_event(self, event, inverse):
         with self.lock:
+            if event['event']=='native_app_tx':self.native_generated(event,inverse)
+            if event['event']=='native_app_rx':self.native_received(event,inverse)
             if event['event'] in ('phy_tx_start','phy_control_tx_start'):
                 prefix='control' if event['event']=='phy_control_tx_start' else 'data'
                 self.network_metrics[prefix+'_tx_frames'] += 1
@@ -106,10 +114,10 @@ class TelemetryCollector:
                 data["transmitter_id"] = self.mac_nodes.get(data["transmitter_mac"])
             if "next_hop_address" in data:
                 data["next_hop_id"] = inverse.get(data["next_hop_address"])
-            if "wire_hex" in event:
-                message = Message.decode(bytes.fromhex(event["wire_hex"]))
-                data["packet_id"] = message.id
-                row = self.packets.get(message.id)
+            if "wire_hex" in event or 'native_packet_id' in event:
+                packet_id=event.get('native_packet_id') or Message.decode(bytes.fromhex(event['wire_hex'])).id
+                data["packet_id"] = packet_id
+                row = self.packets.get(packet_id)
                 if row:
                     self._packet_event(row, data)
                     if event["event"] == "app_tx":
@@ -125,7 +133,7 @@ class TelemetryCollector:
                     self.observations.append(data)
                 if event["event"] == "phy_rx_end":
                     counters = self.node_phy.setdefault(data["node_id"], {})
-                    outcome = event["outcome"]
+                    outcome = event.get("outcome",'unobserved')
                     counters[outcome] = counters.get(outcome, 0) + 1
             if event['event']=='mac_specific_stats':
                 self.mac_specific_stats[data['node_id']]=data['values']
@@ -135,6 +143,32 @@ class TelemetryCollector:
                     self.queue_peak = max(self.queue_peak or 0, data["mac_queue"])
             self.emit(data["event"], data["time"],
                       **{k: v for k, v in data.items() if k not in ("event", "time")}, origin="desert")
+
+    def native_generated(self,event,inverse):
+        packet_id=event['native_packet_id']
+        if packet_id in self.packets:return
+        if len(self.packets)>=5000:raise BufferError('Too many native packet rows; reduce traffic')
+        self.generated_count+=1
+        self.native_generated_count+=1
+        self.packets[packet_id]={'id':packet_id,'source':inverse[event.get('source_address',event['node'])],
+            'destination':inverse[event['destination_address']],'type':event['generator'],
+            'size':event['packet_bytes'],'size_kind':'native_packet','wire_size':None,'payload_hex':None,
+            'creation_time':event['creation_time'],'deadline':None,'status':'in_flight','delay':None,
+            'protocol':self.config['network']['mac']['protocol'],'events':[],
+            'generator':event['generator'],'flow_index':event['flow_index']}
+        self.packet_order.append(packet_id)
+
+    def native_received(self,event,inverse):
+        row=self.packets.get(event['native_packet_id'])
+        if not row or row['status']=='received':return
+        delay=event['time']-row['creation_time']
+        row.update(status='received',receive_time=event['time'],delay=delay)
+        self.received_count+=1
+        self.native_received_count+=1
+        self.native_received_bytes+=event['packet_bytes']
+        self.delay_sum+=delay
+        self.edges[row['source']+'>'+inverse[event['node']]]={'source':row['source'],
+            'destination':inverse[event['node']],'time':event['time'],'delay':delay,'packet_id':row['id']}
 
     def received(self, delivery: Delivery):
         message = delivery.message
@@ -162,6 +196,8 @@ class TelemetryCollector:
             self.fleet = {node: asdict(pose) for node, pose in poses.items()}
             for node, pose in poses.items():
                 self.trails.setdefault(node, deque(maxlen=200)).append([pose.x, pose.y])
+                self.trajectory_hashes.setdefault(node,hashlib.sha256()).update(json.dumps([timestamp,asdict(pose),origin],sort_keys=True,separators=(',',':')).encode())
+                self.trajectory_samples[node]=self.trajectory_samples.get(node,0)+1
             # One event per fleet snapshot, no hidden trajectory/physics in DESERT.
             self.emit("fleet", timestamp, nodes=self.fleet, origin=origin)
 
@@ -169,7 +205,7 @@ class TelemetryCollector:
         with self.lock:
             self.time = timestamp
             for row in self.packets.values():
-                if row["status"] in ("queued", "in_flight", "phy_tx_observed") and timestamp > row["deadline"]:
+                if row["status"] in ("queued", "in_flight", "phy_tx_observed") and row['deadline'] is not None and timestamp > row["deadline"]:
                     row["status"] = "timeout_unknown_cause"
                     self._packet_event(row, {"event": "ttl_expired", "time": timestamp, "cause": "unknown"})
                     self.expired_count += 1
@@ -237,6 +273,11 @@ class TelemetryCollector:
                  "explicit": dst in routes.get(src, {})}
                 for src in ids for dst in ids if src != dst]
 
+    def trajectory(self):
+        with self.lock:
+            return {'sampling':'fleet telemetry snapshots, not every physics tick',
+                    'nodes':{node:{'sha256':value.hexdigest(),'samples':self.trajectory_samples[node]} for node,value in self.trajectory_hashes.items()}}
+
     def summary(self):
         with self.lock:
             resolved = self.received_count + self.expired_count
@@ -244,8 +285,12 @@ class TelemetryCollector:
                     "pending": self.generated_count - resolved, "timed_out": self.expired_count,
                     "pdr_resolved": self.received_count / resolved if resolved else None,
                     "pdr_generated": self.received_count / self.generated_count if self.generated_count else None,
-                    "goodput_bps": 8 * self.received_bytes / self.time if self.time else None,
-                    "application_wire_throughput_bps": 8 * self.wire_received_bytes / self.time if self.time else None,
+                    "goodput_bps": 8 * self.received_bytes / self.time if self.time and not self.native_generated_count else None,
+                    "application_wire_throughput_bps": 8 * self.wire_received_bytes / self.time if self.time and not self.native_generated_count else None,
+                    "native_application":{'generated':self.native_generated_count,'received':self.native_received_count,
+                        'received_packet_bytes':self.native_received_bytes,
+                        'packet_throughput_bps':8*self.native_received_bytes/self.time if self.time else None,
+                        'python_ttl_applies':False},
                     "mean_latency_s": self.delay_sum / self.received_count if self.received_count else None,
                     "phy_observations": dict(self.phy_errors), "mac_queue_peak": self.queue_peak, "network_metrics": dict(self.network_metrics), "mac_stats": copy.deepcopy(self.stats), "mac_specific_stats":copy.deepcopy(self.mac_specific_stats)}
 

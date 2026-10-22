@@ -16,7 +16,7 @@ class HoveringAUVProfile:
 
     def pose(self, sensors):
         data = sensors["DynamicsSensor"]
-        return Pose(float(data[6]), float(data[7]), float(data[8]), float(data[17]))
+        return Pose(float(data[6]), float(data[7]), float(data[8]), float(data[17]),float(data[16]),float(data[15]))
 
     def action(self, target):
         return list(target)

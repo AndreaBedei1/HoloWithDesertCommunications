@@ -6,6 +6,23 @@ from holo_desert.scenarios.config import ScenarioManager, Scenario
 pytestmark=pytest.mark.desert
 
 
+@pytest.mark.parametrize('protocol,mode,expected_drops',[
+    ('csma_aloha','legacy',False),('csma_aloha','bounded',True),('aloha','legacy',True)])
+def test_real_queue_capacity_and_historical_csma_mode(engine,protocol,mode,expected_drops):
+    data=ScenarioManager().load('e01_chat').model_dump()
+    data['network']['mac'].update(protocol=protocol,queue_mode=mode,buffer_packets=1)
+    backend=DESERTAdapter(manage_docker=False)
+    try:
+        backend.start(Scenario.model_validate(data))
+        for i,node in enumerate(data['nodes']):backend.update_node_position(node['id'],Pose(i*20,0,-20),0)
+        for i in range(5):backend.send(Message('auv_01','auv_02',bytes([i]),0))
+        backend.request_stats();events=backend.advance(8)
+        stats=next(e for e in events if e['event']=='stats' and e['node']==1)
+        assert (stats['mac_discarded_tx']>0)==expected_drops,stats
+        if protocol=='csma_aloha':assert stats['mac_queue']==(1 if expected_drops else 5)
+    finally:backend.stop()
+
+
 @pytest.mark.parametrize('protocol',['tdma','tdma_frame','csma_ca','dacap'])
 def test_new_mac_native_delivery_restart_and_observed_access(engine,protocol):
     data=ScenarioManager().load('e01_chat').model_dump()

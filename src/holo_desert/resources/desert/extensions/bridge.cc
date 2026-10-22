@@ -12,10 +12,13 @@
 #include <cstdlib>
 #include <cmath>
 #include <underwater-bpsk.h>
+#include <uw-woss-bpsk.h>
 #include <mac.h>
 #include <rng.h>
 #include <uw-mac-DACAP-alter.h>
 #include "corrected-bpsk.h"
+
+#include "native-applications.h"
 
 static std::string hexify(const char* p, unsigned n) {
     std::ostringstream s;
@@ -55,6 +58,7 @@ public:
             ah->payload_size() = h.size() / 2;
             // Avoid UW/APPLICATION's USHRT_MAX-sized lookup's last index.
             ah->sn() = (txsn % 65534) + 1;
+            HDR_UWCBR(p)->sn() = ah->sn(); // SUN matches data acknowledgements with this native sequence.
             ah->rftt_valid() = false;
             ah->priority() = 0;
             for (size_t i = 0; i < h.size(); i += 2)
@@ -119,10 +123,20 @@ public:
 } class_holo_probe;
 
 // Upstream decisions stay delegated; the corrected variant replaces only endRx.
-class HoloPhy : public UnderwaterMPhyBpsk {
+template<class Base> class ObservedAcousticPhy : public Base {
+protected:
+    using Base::bind;
+    using Base::RxSnrPenalty_dB_;
+    using Base::txPending;
+    using Base::PktRx;
+    using Base::modid;
+    using Base::getErrorPktsNoise;
+    using Base::getErrorPktsInterf;
+private:
+    int interface_index_ = 0;
     int node_id_ = 0;
     struct Observation {
-        std::string wire;
+        std::string wire, native_id;
         bool application, receiving;
         int uid, bits, packet_type, hop, transmitter;
         double pt, pr, pn, pi, duration, txtime, rxtime;
@@ -130,13 +144,16 @@ class HoloPhy : public UnderwaterMPhyBpsk {
             receiving = is_receiving;
             auto* ch = HDR_CMN(p);
             auto* ph = HDR_MPHY(p);
-            application = ch->ptype() == PT_DATA_APPLICATION;
+            packet_t original_type=ch->ptype();
+            application = original_type == PT_DATA_APPLICATION || nativeApplicationType(original_type);
             if (!application && ch->ptype() == PT_DACAP) {
                 const auto* dacap = HDR_DACAP(p);
                 // DATA_PKT is private to pinned uw-mac-DACAP-alter.cpp's enum.
-                application = dacap->dacap_type == 6 && dacap->orig_type == PT_DATA_APPLICATION;
+                original_type=dacap->orig_type;
+                application = dacap->dacap_type == 6 && (original_type == PT_DATA_APPLICATION || nativeApplicationType(original_type));
             }
-            if (application) {
+            if (application && nativeApplicationType(original_type))native_id=nativePacketId(p);
+            else if (application) {
                 auto* ah = HDR_DATA_APPLICATION(p);
                 if (ah->payload_size() <= MAX_LENGTH_PAYLOAD)
                     wire = hexify(ah->payload_msg, ah->payload_size());
@@ -158,6 +175,7 @@ class HoloPhy : public UnderwaterMPhyBpsk {
         std::cout << std::setprecision(15) << "{\"event\":\"phy_"
             << (o.application ? "" : "control_") << event << "\",\"time\":"
             << Scheduler::instance().clock() << ",\"node\":" << node_id_
+            << ",\"interface_index\":" << interface_index_
             << ",\"duration_s\":" << o.duration << ",\"outcome\":\"" << outcome
             << "\",\"snr_db\":";
         if (o.receiving && o.pn > 0 && o.pr > 0) number(10*std::log10(o.pr/o.pn));
@@ -172,7 +190,8 @@ class HoloPhy : public UnderwaterMPhyBpsk {
         std::cout << ",\"rx_snr_penalty_db\":" << RxSnrPenalty_dB_
             << ",\"phy_patch_id\":\"" << patchId() << "\""
             << ",\"transmitter_mac\":" << o.transmitter << ",\"next_hop_mac\":" << o.hop;
-        if (o.application) std::cout << ",\"wire_hex\":\"" << o.wire << "\"";
+        if (!o.native_id.empty())std::cout << ",\"native_packet_id\":\"" << o.native_id << "\"";
+        else if (o.application) std::cout << ",\"wire_hex\":\"" << o.wire << "\"";
         if (std::strcmp(event, "rx_end") == 0) {
             std::cout << ",\"positive_interference\":" << (o.pi > 0 ? "true" : "false");
             if (conditional_probability_ >= 0)
@@ -183,20 +202,20 @@ class HoloPhy : public UnderwaterMPhyBpsk {
 protected:
     double conditional_probability_ = -1;
     virtual const char* patchId() const { return "upstream"; }
-    virtual void receiveDecision(Packet* p) { UnderwaterMPhyBpsk::endRx(p); }
+    virtual void receiveDecision(Packet* p) { Base::endRx(p); }
     void startTx(Packet* p) override {
         report("tx_start", Observation(p, false), "transmitting");
-        UnderwaterMPhyBpsk::startTx(p);
+        Base::startTx(p);
     }
     void endTx(Packet* p) override {
         report("tx_end", Observation(p, false), "transmitted");
-        UnderwaterMPhyBpsk::endTx(p);
+        Base::endTx(p);
     }
     void startRx(Packet* p) override {
         Observation o(p);
         bool busy_tx = txPending, busy_rx = PktRx != nullptr;
         bool wrong_modulation = HDR_MPHY(p)->modulationType != modid;
-        UnderwaterMPhyBpsk::startRx(p);
+        Base::startRx(p);
         const char* outcome = PktRx == p ? "synchronized" :
             busy_tx ? "transmitter_busy" : busy_rx ? "receiver_busy_overlap" :
             wrong_modulation ? "wrong_modulation" : "below_acquisition_threshold";
@@ -213,8 +232,18 @@ protected:
             getErrorPktsInterf() > interference ? "interference_error" : "decoded");
     }
 public:
-    HoloPhy() { bind("node_id_", &node_id_); }
+    ObservedAcousticPhy() { bind("node_id_", &node_id_); bind("interface_index_", &interface_index_); }
 };
+using HoloPhy = ObservedAcousticPhy<UnderwaterMPhyBpsk>;
+class HoloWossPhy : public ObservedAcousticPhy<WossMPhyBpsk> {
+protected:
+    const char* patchId() const override { return "woss-native-bpsk"; }
+};
+static class HoloWossPhyClass : public TclClass {
+public:
+    HoloWossPhyClass() : TclClass("WOSS/Module/MPhy/BPSK/HOLO") {}
+    TclObject* create(int, const char*const*) override { return new HoloWossPhy; }
+} class_holo_woss_phy;
 static class HoloPhyClass : public TclClass {
 public:
     HoloPhyClass() : TclClass("Module/MPhy/BPSK/Underwater/HOLO") {}
@@ -268,4 +297,5 @@ public:
     TclObject* create(int, const char*const*) override { return new HoloCorrectedPhy; }
 } class_holo_corrected_phy;
 
+#include "optical-em.h"
 extern "C" int Holobridge_Init(Tcl_Interp*) { return TCL_OK; }

@@ -6,7 +6,7 @@ import random
 class TrafficApplication:
     def __init__(self, communication, flows, seed=1):
         self.communication = communication
-        self.flows = flows
+        self.flows = flows = [f for f in flows if f.generator=='python']
         self.next_send = [f.start for f in flows]
         self.emitted = [0 for _ in flows]
         self.random = [random.Random(seed * 100000 + int(f.source[-2:]) * 100 + i)

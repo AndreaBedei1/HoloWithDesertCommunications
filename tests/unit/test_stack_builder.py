@@ -29,6 +29,16 @@ def test_original_wire_config_defaults_to_upstream_without_new_fields():
     assert 'Module/MPhy/BPSK/Underwater/HOLO/Corrected' not in builder().render(data)
 
 
+def test_csma_queue_mode_is_explicit_and_legacy_defaults_remain_reproducible():
+    data=ScenarioManager().load('e01_chat').model_dump()
+    assert data['network']['mac']['queue_mode']=='legacy'
+    data['network']['mac'].update(queue_mode='bounded',buffer_packets=2)
+    scenario=Scenario.model_validate(data)
+    assert 'set bounded_queue 1' in builder().render(scenario.model_dump())
+    data['network']['mac']['queue_mode']='evil; exec calc'
+    with pytest.raises(ValueError):builder().render(data)
+
+
 def test_slot_bound_includes_fractional_timestamps_and_reply_envelope():
     data=ScenarioManager().load('e01_chat').model_dump()
     data['network']['mac']['protocol']='tdma'

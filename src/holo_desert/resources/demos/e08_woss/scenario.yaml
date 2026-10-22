@@ -1,0 +1,24 @@
+name: e08_woss
+description: Native Bellhop propagation with a synthetic nonuniform sound speed profile. The receiver changes range and depth; inspect native received power and arrival delay. Flat seabed, no geographic database, omnidirectional BPSK; links need at least 1 m horizontal separation.
+duration: 18
+physics_hz: 30
+nodes:
+  - {id: auv_01, position: [0, 0, -20]}
+  - id: auv_02
+    position: [30, 0, -40]
+    waypoints: [[4, 100, 0, -60], [12, 40, 20, -30]]
+network:
+  acoustic:
+    propagation: woss
+    tx_power_db: 150
+  woss:
+    origin_latitude_deg: 42.59
+    origin_longitude_deg: 10.125
+    x_bearing_deg: 90
+    water_depth_m: 100
+    ssp:
+      - {depth_m: 0, speed_mps: 1500}
+      - {depth_m: 50, speed_mps: 1480}
+      - {depth_m: 100, speed_mps: 1510}
+flows:
+  - {source: auv_01, destination: auv_02, start: 1, stop: 16, interval: 5, payload_bytes: 16, ttl: 10}

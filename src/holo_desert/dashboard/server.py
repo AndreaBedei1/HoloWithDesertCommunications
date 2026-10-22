@@ -16,6 +16,7 @@ from ..scenarios.library import ScenarioConflict
 from ..scenarios.profiles import ProfileLibrary, builtin_profiles
 from ..scenarios.network import CommunicationProfile
 from ..resources.docker.stack_builder import catalog
+from .comparison import experiment, differences
 
 
 class StartRequest(BaseModel):
@@ -244,7 +245,10 @@ class DashboardServer:
                 equivalent = (len(self.comparisons) >= 2 and
                               len({r["fingerprint"] for r in self.comparisons}) == 1 and
                               len({r["mac"] for r in self.comparisons}) == len(self.comparisons))
+                changed_fields,changed_sections=differences([r['configuration'] for r in self.comparisons])
+                same_experiment=len(self.comparisons)>=2 and len({r['experiment'] for r in self.comparisons})==1
                 return {"runs": self.comparisons, "equivalent": equivalent,
+                        "same_experiment":same_experiment,"changed_fields":changed_fields,"changed_sections":changed_sections,
                         "note": "Common inputs match; protocol-specific parameters remain in each configuration. Same configured seed and geometry do not imply identical measured trajectories."}
 
         @app.post("/api/comparison")
@@ -262,6 +266,9 @@ class DashboardServer:
                 fingerprint = hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()
                 self.comparisons.append({"run_id": self.run.run_id, "mac": mac, "fingerprint": fingerprint,
                                          "configuration": self.run.scenario.model_dump(),
+                                         "experiment":experiment(self.run.scenario.model_dump()),
+                                         "versions":dict(self.run.telemetry.versions),
+                                         "observed_trajectory":self.run.telemetry.trajectory(),
                                          "summary": self.run.telemetry.summary()})
                 self.comparisons = self.comparisons[-6:]
                 return {"ok": True}

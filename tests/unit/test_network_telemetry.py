@@ -26,3 +26,14 @@ def test_late_arrival_is_visible_without_counting_a_valid_delivery():
         assert any(e['event']=='late_receive' for e in row['events'])
         assert collector.snapshot()['counts']=={'generated':1,'received':0,'timed_out':1,'pending':0}
     finally:collector.close()
+
+
+def test_unobserved_medium_outcome_does_not_crash_or_invent_phy_error():
+    collector=TelemetryCollector(ScenarioManager().load('e01_chat').model_dump())
+    message=Message('auv_01','auv_02',b'optical',0)
+    try:
+        collector.generated(message)
+        collector.engine_event(dict(event='phy_rx_end',node=2,time=1,medium='optical',wire_hex=message.encode().hex()),{2:'auv_02'})
+        assert all(value==0 for value in collector.phy_errors.values())
+        assert collector.snapshot()['node_phy']['auv_02']=={'unobserved':1}
+    finally:collector.close()

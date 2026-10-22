@@ -78,12 +78,20 @@ class DESERTAdapter(CommunicationBackend):
         self._owns_service = False
         self.versions = {}
         self.initial_events = []
+        self.woss_depth = None
+        self.medium = 'acoustic'
 
     def start(self, scenario: Scenario):
         if self.socket:
             raise BackendError("Backend already started")
         self.nodes = scenario.node_map
+        from ..resources.docker.multiphy_config import effective_interfaces
+        self.multi_interfaces = {n['id']:{p['id']:p['index'] for p in n['interfaces']} for n in effective_interfaces(scenario.model_dump())}
+        self.multi_policy = scenario.network.multiphy.policy if scenario.network.multiphy else None
         self.limit = scenario.network.max_wire_bytes
+        self.medium = scenario.network.medium
+        self.woss_depth = scenario.network.woss.water_depth_m if self.medium=='acoustic' and scenario.network.acoustic.propagation=='woss' else None
+        self.positions = {n.id:n.position for n in scenario.nodes}
         try:
             if self.manage_docker:
                 # Reuse an existing healthy service; never tear down someone else's.
@@ -146,6 +154,7 @@ class DESERTAdapter(CommunicationBackend):
             raise BackendError(f"Invalid or interrupted DESERT event stream: {exc}") from exc
 
     def send(self, message: Message):
+        self._validate_environment_geometry()
         if abs(message.creation_time - self.time) > 1e-6:
             raise BackendError("Messages must be generated at the current synchronized barrier")
         wire = message.encode()
@@ -160,14 +169,32 @@ class DESERTAdapter(CommunicationBackend):
     def update_node_position(self, node: str, pose: Pose, timestamp: float):
         if not math.isfinite(timestamp) or abs(timestamp - self.time) > 1e-6:
             raise BackendError("Position timestamp must equal DESERT barrier time")
-        self._command(f"POSITION {self.nodes[node]} {pose.x:.12g} {pose.y:.12g} {pose.z:.12g} {timestamp:.12g}")
+        if self.woss_depth is not None:
+            from ..resources.docker.environment_config import validate_woss_position
+            validate_woss_position((pose.x,pose.y,pose.z),self.woss_depth)
+        if self.medium=='optical' and not -20<=pose.z<0:raise ValueError('Optical noise LUT covers underwater depths through 20 m')
+        angles=(' '+' '.join(format(math.radians(v),'.12g') for v in (pose.yaw,pose.pitch,pose.roll))) if self.medium=='optical' else ''
+        self._command(f"POSITION {self.nodes[node]} {pose.x:.12g} {pose.y:.12g} {pose.z:.12g} {timestamp:.12g}{angles}")
+        self.positions[node]=(pose.x,pose.y,pose.z)
+
+    def _validate_environment_geometry(self):
+        if self.woss_depth is not None:
+            from ..resources.docker.environment_config import validate_woss_separation
+            validate_woss_separation(self.positions.values())
 
     def set_power(self, node: str, power_db: float):
-        if not math.isfinite(power_db) or not 0 <= power_db <= 200:
-            raise ValueError("Transmit power must be within 0..200 dB")
+        low,high,unit={'acoustic':(0,200,'dB acoustic SPL'),'optical':(1e-15,10000,'W'),'em':(-100,100,'dBm')}[self.medium]
+        if not math.isfinite(power_db) or not low <= power_db <= high:
+            raise ValueError(f"Transmit power must be within {low}..{high} {unit}")
         self._command(f"POWER {self.nodes[node]} {power_db:.12g}")
 
+    def set_interface(self, node: str, interface: str):
+        if self.multi_policy!='manual' or interface not in self.multi_interfaces.get(node,{}):
+            raise ValueError('Manual multiPHY selection requires a configured interface on that node')
+        self._command(f"INTERFACE {self.nodes[node]} {self.multi_interfaces[node][interface]}")
+
     def advance(self, target: float):
+        self._validate_environment_geometry()
         if not math.isfinite(target) or target <= self.time:
             raise ValueError("Network time must increase")
         self._command(f"STEP {target:.12g}")

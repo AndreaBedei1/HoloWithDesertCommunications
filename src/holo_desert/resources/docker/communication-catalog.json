@@ -34,7 +34,7 @@
           "path": "network.mac.buffer_packets",
           "label": "Buffer MAC",
           "default": 100,
-          "help": "Numero di pacchetti. Nei MAC ALOHA storici la modalita coda deriva dal default del costruttore; il limite impostato successivamente non e attivo.",
+          "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
           "type": "integer",
           "unit": "",
           "min": 1,
@@ -63,7 +63,10 @@
           "static",
           "flooding"
         ],
-        "transport": "UDP/application envelope"
+        "transport": "UDP/application envelope",
+        "media": [
+          "acoustic"
+        ]
       },
       "node_roles": [
         "peer"
@@ -108,15 +111,39 @@
           "default_origin": "bridge historical profile"
         },
         {
+          "path": "network.mac.queue_mode",
+          "label": "Modalita coda CSMA-ALOHA",
+          "default": "legacy",
+          "type": "select",
+          "unit": "",
+          "help": "Legacy riproduce il costruttore originale con coda illimitata. Bounded applica il limite prima del costruttore e puo causare scarti MAC durante burst.",
+          "choices": [
+            {
+              "value": "legacy",
+              "label": "Legacy - esperimenti originali"
+            },
+            {
+              "value": "bounded",
+              "label": "Bounded - limite nativo attivo"
+            }
+          ]
+        },
+        {
           "path": "network.mac.buffer_packets",
           "label": "Buffer MAC",
           "default": 100,
-          "help": "Numero di pacchetti. Nei MAC ALOHA storici la modalita coda deriva dal default del costruttore; il limite impostato successivamente non e attivo.",
+          "help": "Limite della coda CSMA-ALOHA in modalita bounded. La modalita storica legacy mantiene la coda senza limite nativo.",
           "type": "integer",
           "unit": "",
           "min": 1,
           "max": 10000,
-          "default_origin": "bridge historical profile"
+          "default_origin": "bridge historical profile",
+          "visible_when": {
+            "path": "network.mac.queue_mode",
+            "values": [
+              "bounded"
+            ]
+          }
         }
       ],
       "description": "Ascolto del canale e attesa casuale prima dei dati.",
@@ -138,9 +165,15 @@
         ],
         "routing": [
           "static",
-          "flooding"
+          "flooding",
+          "sun"
         ],
-        "transport": "UDP/application envelope"
+        "transport": "UDP/application envelope",
+        "media": [
+          "acoustic",
+          "optical",
+          "em"
+        ]
       },
       "node_roles": [
         "peer"
@@ -198,7 +231,7 @@
           "path": "network.mac.buffer_packets",
           "label": "Buffer MAC",
           "default": 100,
-          "help": "Numero di pacchetti. Nei MAC ALOHA storici la modalita coda deriva dal default del costruttore; il limite impostato successivamente non e attivo.",
+          "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
           "type": "integer",
           "unit": "",
           "min": 1,
@@ -227,7 +260,10 @@
           "static",
           "flooding"
         ],
-        "transport": "UDP/application envelope"
+        "transport": "UDP/application envelope",
+        "media": [
+          "acoustic"
+        ]
       },
       "node_roles": [
         "peer"
@@ -287,7 +323,7 @@
           "path": "network.mac.buffer_packets",
           "label": "Buffer MAC",
           "default": 100,
-          "help": "Numero di pacchetti. Nei MAC ALOHA storici la modalita coda deriva dal default del costruttore; il limite impostato successivamente non e attivo.",
+          "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
           "type": "integer",
           "unit": "",
           "min": 1,
@@ -316,7 +352,10 @@
           "static",
           "flooding"
         ],
-        "transport": "UDP/application envelope"
+        "transport": "UDP/application envelope",
+        "media": [
+          "acoustic"
+        ]
       },
       "node_roles": [
         "peer"
@@ -345,7 +384,7 @@
           "path": "network.mac.csma_ca.queue_size",
           "label": "Coda CSMA/CA",
           "default": 10,
-          "help": "Capacita nativa queue_size_, impostata prima della creazione.",
+          "help": "Soglia nativa della coda. Il sorgente ammette queue_size <= soglia: puo accodare soglia + 1 pacchetti, oltre al frame in servizio. Nessun limite ALOHA viene applicato.",
           "type": "integer",
           "unit": "pacchetti",
           "min": 1,
@@ -431,7 +470,10 @@
         "routing": [
           "static"
         ],
-        "transport": "UDP/application envelope"
+        "transport": "UDP/application envelope",
+        "media": [
+          "acoustic"
+        ]
       },
       "node_roles": [
         "peer"
@@ -530,7 +572,7 @@
           "path": "network.mac.buffer_packets",
           "label": "Buffer MAC",
           "default": 100,
-          "help": "Numero di pacchetti. Nei MAC ALOHA storici la modalita coda deriva dal default del costruttore; il limite impostato successivamente non e attivo.",
+          "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
           "type": "integer",
           "unit": "",
           "min": 1,
@@ -558,7 +600,10 @@
         "routing": [
           "static"
         ],
-        "transport": "UDP/application envelope"
+        "transport": "UDP/application envelope",
+        "media": [
+          "acoustic"
+        ]
       },
       "node_roles": [
         "peer"
@@ -761,7 +806,13 @@
           "unit": "",
           "min": 0.001,
           "max": 3,
-          "default_origin": "bridge historical profile"
+          "default_origin": "bridge historical profile",
+          "visible_when": {
+            "path": "network.acoustic.propagation",
+            "values": [
+              "underwater"
+            ]
+          }
         },
         {
           "path": "network.acoustic.shipping",
@@ -909,7 +960,13 @@
           "unit": "",
           "min": 0.001,
           "max": 3,
-          "default_origin": "bridge historical profile"
+          "default_origin": "bridge historical profile",
+          "visible_when": {
+            "path": "network.acoustic.propagation",
+            "values": [
+              "underwater"
+            ]
+          }
         },
         {
           "path": "network.acoustic.shipping",
@@ -1028,7 +1085,12 @@
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/polling_ahoi/auv.tcl",
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/polling_ahoi/sink.tcl"
       ],
-      "official_example": "load sequence only; scheduler run not verified"
+      "official_example": "load sequence only; scheduler run not verified",
+      "compatibility": {
+        "media": [
+          "acoustic"
+        ]
+      }
     },
     {
       "id": "t_lohi",
@@ -1056,22 +1118,67 @@
       "official_examples": [
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwtlohi.tcl"
       ],
-      "official_example": "load sequence only; scheduler run not verified"
+      "official_example": "load sequence only; scheduler run not verified",
+      "compatibility": {
+        "media": [
+          "acoustic"
+        ]
+      }
     },
     {
       "id": "tokenbus",
       "name": "TokenBus",
       "layer": "mac",
-      "description": "Richiede topologia e gestione token dedicate; non integrato.",
-      "reason": "Richiede topologia e gestione token dedicate; non integrato.",
+      "description": "Anello nativo con token e recupero tramite timeout.",
+      "reason": "Verifica integrata conclusiva in corso.",
       "operational": false,
-      "validation": "not_integrated",
+      "validation": "native_verified; integrated/browser verification pending",
       "source_present": true,
       "compiled": true,
       "loadable": true,
       "bridge_compatible": false,
-      "parameters": [],
+      "parameters": [
+        {
+          "path": "network.mac.tokenbus.slot_time_s",
+          "label": "Timeout del token",
+          "default": 10.0,
+          "unit": "s",
+          "help": "Timeout nativo di attesa del token. Deve coprire airtime e propagazione; non è uno slot TDMA.",
+          "type": "number",
+          "min": 1e-06
+        },
+        {
+          "path": "network.mac.tokenbus.min_token_hold_s",
+          "label": "Possesso minimo del token",
+          "default": 0.1,
+          "unit": "s",
+          "help": "Tempo minimo prima del passaggio del token.",
+          "type": "number",
+          "min": 1e-06
+        },
+        {
+          "path": "network.mac.tokenbus.max_token_hold_s",
+          "label": "Possesso massimo del token",
+          "default": 10.0,
+          "unit": "s",
+          "help": "Il frame deve entrare in questo tempo; il builder rifiuta flussi che non entrano.",
+          "type": "number",
+          "min": 1e-06
+        },
+        {
+          "path": "network.mac.buffer_packets",
+          "label": "Buffer MAC",
+          "default": 100,
+          "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
+          "type": "integer",
+          "unit": "",
+          "min": 1,
+          "max": 10000,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        }
+      ],
       "libraries": [
+        "libuwcbr.so",
         "libuwtokenbus.so"
       ],
       "tcl_classes": [
@@ -1082,7 +1189,17 @@
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ranging/ranging_tdoa.tcl",
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ranging/ranging_tokenbus.tcl"
       ],
-      "official_example": "load sequence only; scheduler run not verified"
+      "official_example": "load sequence only; scheduler run not verified",
+      "experimental": true,
+      "tcl_class": "Module/UW/TOKENBUS",
+      "compatibility": {
+        "routing": [
+          "static"
+        ],
+        "media": [
+          "acoustic"
+        ]
+      }
     },
     {
       "id": "cs_burst",
@@ -1108,7 +1225,12 @@
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_csburst.tcl",
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/EvoLogics/S2C_uwcsburst.tcl"
       ],
-      "official_example": "load sequence only; scheduler run not verified"
+      "official_example": "load sequence only; scheduler run not verified",
+      "compatibility": {
+        "media": [
+          "acoustic"
+        ]
+      }
     },
     {
       "id": "aloha_q",
@@ -1134,7 +1256,12 @@
       "official_examples": [
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwalohaq.tcl"
       ],
-      "official_example": "load sequence only; scheduler run not verified"
+      "official_example": "load sequence only; scheduler run not verified",
+      "compatibility": {
+        "media": [
+          "acoustic"
+        ]
+      }
     },
     {
       "id": "aloha_q_sync",
@@ -1160,7 +1287,12 @@
       "official_examples": [
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_uwalohaq_sync.tcl"
       ],
-      "official_example": "load sequence only; scheduler run not verified"
+      "official_example": "load sequence only; scheduler run not verified",
+      "compatibility": {
+        "media": [
+          "acoustic"
+        ]
+      }
     },
     {
       "id": "ufetch",
@@ -1185,22 +1317,121 @@
       ],
       "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/data_link/uwUFetch",
       "official_examples": [],
-      "official_example": "load sequence only; scheduler run not verified"
+      "official_example": "load sequence only; scheduler run not verified",
+      "compatibility": {
+        "media": [
+          "acoustic"
+        ]
+      }
     },
     {
       "id": "sun",
-      "name": "SUN",
+      "name": "SUN convergecast",
       "layer": "routing",
-      "description": "Ruoli sink/nodo e discovery richiedono inizializzazione specifica; costruttore nodo non configurato va in SIGSEGV.",
-      "reason": "Ruoli sink/nodo e discovery richiedono inizializzazione specifica; costruttore nodo non configurato va in SIGSEGV.",
+      "description": "Discovery e inoltro nativi verso un sink; ACK di routing. I contatori class_values sono globali per classe, non per drone.",
+      "reason": "Verifica integrata conclusiva in corso.",
       "operational": false,
-      "validation": "not_integrated",
+      "validation": "native_verified; integrated/browser verification pending",
       "source_present": true,
       "compiled": true,
       "loadable": true,
       "bridge_compatible": false,
-      "parameters": [],
+      "parameters": [
+        {
+          "path": "network.sun.sink",
+          "label": "Sink SUN",
+          "default": "auv_02",
+          "unit": "",
+          "help": "Destinazione convergecast: tutti i flussi devono terminare qui.",
+          "type": "select",
+          "choices": [],
+          "node_choices": true
+        },
+        {
+          "path": "network.sun.probe_interval_s",
+          "label": "Intervallo probe",
+          "default": 2.0,
+          "unit": "s",
+          "help": "Intervallo dei probe nativi del sink.",
+          "type": "number",
+          "min": 1e-06
+        },
+        {
+          "path": "network.sun.buffer_interval_s",
+          "label": "Controllo buffer",
+          "default": 1.0,
+          "unit": "s",
+          "help": "Timer nativo della coda di routing.",
+          "type": "number",
+          "min": 1e-06
+        },
+        {
+          "path": "network.sun.data_interval_s",
+          "label": "Intervallo dati SUN",
+          "default": 1.0,
+          "unit": "s",
+          "help": "Periodo del servizio dati dopo discovery.",
+          "type": "number",
+          "min": 1e-06
+        },
+        {
+          "path": "network.sun.status_interval_s",
+          "label": "Intervallo stato SUN",
+          "default": 1.0,
+          "unit": "s",
+          "help": "Timer dello stato del protocollo.",
+          "type": "number",
+          "min": 1e-06
+        },
+        {
+          "path": "network.sun.max_ack_errors",
+          "label": "Errori ACK prima della riscoperta",
+          "default": 3,
+          "unit": "errori",
+          "help": "Soglia nativa per la gestione del percorso.",
+          "type": "integer",
+          "min": 1,
+          "max": 100
+        },
+        {
+          "path": "network.sun.max_retransmissions",
+          "label": "Ritrasmissioni SUN",
+          "default": 3,
+          "unit": "tentativi",
+          "help": "Limite del routing, distinto dai tentativi MAC.",
+          "type": "integer",
+          "min": 1,
+          "max": 100
+        },
+        {
+          "path": "network.sun.buffer_packets",
+          "label": "Buffer SUN",
+          "default": 5,
+          "unit": "pacchetti",
+          "help": "Coda nativa di routing.",
+          "type": "integer",
+          "min": 1,
+          "max": 10000
+        },
+        {
+          "path": "network.sun.probe_min_snr_db",
+          "label": "SNR minimo dei probe",
+          "default": 0.0,
+          "unit": "dB",
+          "help": "Soglia nativa per accettare un probe; non modifica il PHY.",
+          "type": "number"
+        },
+        {
+          "path": "network.sun.poisson_timing",
+          "label": "Timer SUN Poisson",
+          "default": true,
+          "unit": "",
+          "help": "Usa i timer casuali implementati nel routing SUN.",
+          "type": "checkbox"
+        }
+      ],
       "libraries": [
+        "libuwcbr.so",
         "libsun.so"
       ],
       "tcl_classes": [
@@ -1213,7 +1444,17 @@
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/mobility/test_uwgmposition.tcl",
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/mobility/test_uwdriftposition.tcl"
       ],
-      "official_example": "load sequence only; scheduler run not verified"
+      "official_example": "load sequence only; scheduler run not verified",
+      "experimental": true,
+      "tcl_class": "Module/UW/SUNNode / Module/UW/SUNSink",
+      "compatibility": {
+        "mac": [
+          "csma_aloha"
+        ],
+        "media": [
+          "acoustic"
+        ]
+      }
     },
     {
       "id": "icrp",
@@ -1269,34 +1510,268 @@
       "id": "woss",
       "name": "WOSS / Bellhop",
       "layer": "channel",
-      "description": "Librerie e Bellhop installati. SSP campione disponibile; manager, batimetria/sedimenti e transduttori devono essere configurati esplicitamente. Dataset globali esterni assenti; nessun adapter ambientale del bridge ancora verificato.",
-      "reason": "Librerie e Bellhop installati. SSP campione disponibile; manager, batimetria/sedimenti e transduttori devono essere configurati esplicitamente. Dataset globali esterni assenti; nessun adapter ambientale del bridge ancora verificato.",
+      "description": "Bellhop reale senza database globali: SSP esplicito, fondale e superficie piatti, sedimento sintetico. Cache locale alla sessione, posizioni aggiornate alle barriere. Separazione orizzontale ≥1 m; margine superficie/fondo >0,1 m.",
+      "reason": "Verifica integrata conclusiva in corso.",
       "operational": false,
-      "validation": "not_integrated",
+      "validation": "native_verified; integrated/browser verification pending",
       "source_present": true,
       "compiled": true,
       "loadable": true,
       "bridge_compatible": false,
-      "parameters": [],
+      "parameters": [
+        {
+          "path": "network.woss.origin_latitude_deg",
+          "label": "Origine: latitudine",
+          "default": 42.59,
+          "unit": "°",
+          "help": "Origine geografica del sistema locale HoloOcean.",
+          "type": "number",
+          "min": -85,
+          "max": 85
+        },
+        {
+          "path": "network.woss.origin_longitude_deg",
+          "label": "Origine: longitudine",
+          "default": 10.125,
+          "unit": "°",
+          "help": "Origine geografica del sistema locale HoloOcean.",
+          "type": "number",
+          "min": -180,
+          "max": 180
+        },
+        {
+          "path": "network.woss.x_bearing_deg",
+          "label": "Direzione geografica di +X",
+          "default": 90.0,
+          "unit": "°",
+          "help": "Azimut di +X, orario da nord. +Y resta a sinistra.",
+          "type": "number",
+          "min": 0,
+          "max": 360
+        },
+        {
+          "path": "network.woss.water_depth_m",
+          "label": "Profondità del fondale",
+          "default": 100.0,
+          "unit": "m",
+          "help": "Fondale piatto sintetico; non viene letto dalla scena Unreal. Richiede adeguare SSP.",
+          "type": "number",
+          "min": 1,
+          "max": 11000
+        },
+        {
+          "path": "network.woss.sediment_speed_mps",
+          "label": "Velocità nel sedimento",
+          "default": 1560.0,
+          "unit": "m/s",
+          "help": "Velocità compressiva nel modello nativo Bellhop.",
+          "type": "number",
+          "min": 100,
+          "max": 10000
+        },
+        {
+          "path": "network.woss.sediment_density_g_cm3",
+          "label": "Densità del sedimento",
+          "default": 1.5,
+          "unit": "g/cm³",
+          "help": "Densità nativa del sedimento.",
+          "type": "number",
+          "min": 0.1,
+          "max": 20
+        },
+        {
+          "path": "network.woss.sediment_attenuation_db_lambda",
+          "label": "Attenuazione del sedimento",
+          "default": 0.9,
+          "unit": "dB/λ",
+          "help": "Attenuazione nativa per lunghezza d’onda.",
+          "type": "number",
+          "min": 0,
+          "max": 100
+        }
+      ],
       "libraries": [
         "libWOSS.so",
         "libWOSSPhy.so"
       ],
-      "official_example": "official library sequence load verified; Bellhop environmental run not integrated"
+      "official_example": "official library sequence load verified; Bellhop environmental run not integrated",
+      "experimental": true,
+      "tcl_class": "WOSS/Module/Channel + WOSS/MPropagation + WOSS/Module/MPhy/BPSK/HOLO"
     },
     {
       "id": "optical",
-      "name": "Ottico",
+      "name": "Ottico DESERT",
       "layer": "phy",
-      "description": "Modelli e dati campione installati. Orientamento, fascio e trasformazione pose del PHY ottico richiedono adapter e prove geometriche dedicati.",
-      "reason": "Modelli e dati campione installati. Orientamento, fascio e trasformazione pose del PHY ottico richiedono adapter e prove geometriche dedicati.",
+      "description": "Catena nativa con unità proprie. Lambert-Beer e rumore solare, ricevitore omnidirezionale; adattatore orientamento sperimentale.",
+      "reason": "Verifica integrata conclusiva in corso.",
       "operational": false,
-      "validation": "not_integrated",
+      "validation": "native_verified; integrated/browser verification pending",
       "source_present": true,
       "compiled": true,
       "loadable": true,
       "bridge_compatible": false,
-      "parameters": [],
+      "parameters": [
+        {
+          "path": "network.optical.tx_power_w",
+          "label": "Potenza ottica",
+          "default": 50.0,
+          "unit": "W",
+          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
+          "type": "number"
+        },
+        {
+          "path": "network.optical.bitrate_bps",
+          "label": "Bitrate",
+          "default": 1000000.0,
+          "unit": "bit/s",
+          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
+          "type": "number"
+        },
+        {
+          "path": "network.optical.frequency_hz",
+          "label": "Frequenza del modello",
+          "default": 10000000.0,
+          "unit": "Hz",
+          "help": "Parametro della maschera spettrale nativa. La lunghezza d’onda della LUT è 532 nm: questo valore non viene convertito automaticamente in una nuova calibrazione ottica.",
+          "type": "number"
+        },
+        {
+          "path": "network.optical.bandwidth_hz",
+          "label": "Banda",
+          "default": 100000.0,
+          "unit": "Hz",
+          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
+          "type": "number"
+        },
+        {
+          "path": "network.optical.attenuation_per_m",
+          "label": "Attenuazione ottica",
+          "default": 0.043,
+          "unit": "1/m",
+          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
+          "type": "number"
+        },
+        {
+          "path": "network.optical.temperature_k",
+          "label": "Temperatura ricevitore",
+          "default": 293.15,
+          "unit": "K",
+          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
+          "type": "number"
+        },
+        {
+          "path": "network.optical.receiver_area_m2",
+          "label": "Area ricevitore",
+          "default": 1.1e-06,
+          "unit": "m²",
+          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
+          "type": "number"
+        },
+        {
+          "path": "network.optical.transmitter_area_m2",
+          "label": "Area trasmettitore",
+          "default": 1e-05,
+          "unit": "m²",
+          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
+          "type": "number"
+        },
+        {
+          "path": "network.optical.beam_angle_rad",
+          "label": "Angolo nativo del fascio",
+          "default": 1.0,
+          "unit": "rad",
+          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
+          "type": "number"
+        },
+        {
+          "path": "network.optical.dark_current_a",
+          "label": "Corrente oscura",
+          "default": 1e-09,
+          "unit": "A",
+          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
+          "type": "number"
+        },
+        {
+          "path": "network.optical.shunt_resistance_ohm",
+          "label": "Resistenza shunt",
+          "default": 1490000000.0,
+          "unit": "Ω",
+          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
+          "type": "number"
+        },
+        {
+          "path": "network.optical.responsivity_a_w",
+          "label": "Responsività",
+          "default": 0.26,
+          "unit": "A/W",
+          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
+          "type": "number"
+        },
+        {
+          "path": "network.optical.acquisition_threshold_db",
+          "label": "Soglia acquisizione",
+          "default": 10.0,
+          "unit": "dB",
+          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
+          "type": "number"
+        },
+        {
+          "path": "network.optical.directional",
+          "label": "Trasduttore direzionale",
+          "default": false,
+          "unit": "",
+          "help": "Adattatore geometrico sperimentale 3D: pose reali + montaggio del trasduttore; guadagno Lambert-Beer nativo. Ricevitore omnidirezionale. Gli offset modificano il guadagno; il ritardo usa il centro del veicolo.",
+          "type": "checkbox"
+        },
+        {
+          "path": "network.optical.mount_yaw_deg",
+          "label": "mount yaw deg",
+          "default": 0.0,
+          "unit": "°",
+          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
+          "type": "number"
+        },
+        {
+          "path": "network.optical.mount_pitch_deg",
+          "label": "mount pitch deg",
+          "default": 0.0,
+          "unit": "°",
+          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
+          "type": "number"
+        },
+        {
+          "path": "network.optical.mount_roll_deg",
+          "label": "mount roll deg",
+          "default": 0.0,
+          "unit": "°",
+          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
+          "type": "number"
+        },
+        {
+          "path": "network.optical.offset_x_m",
+          "label": "offset x m",
+          "default": 0.0,
+          "unit": "m",
+          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
+          "type": "number"
+        },
+        {
+          "path": "network.optical.offset_y_m",
+          "label": "offset y m",
+          "default": 0.0,
+          "unit": "m",
+          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
+          "type": "number"
+        },
+        {
+          "path": "network.optical.offset_z_m",
+          "label": "offset z m",
+          "default": 0.0,
+          "unit": "m",
+          "help": "Parametro del modello ottico DESERT; potenza lineare in watt, non SPL. Rumore solare LUT valido fra 0 e 20 m; ricevitore omnidirezionale.",
+          "type": "number"
+        }
+      ],
       "libraries": [
         "libuwoptical_phy.so"
       ],
@@ -1314,21 +1789,87 @@
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_with_woss_samples/test_uwmulti_traffic_mobile_tot.tcl",
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_with_woss_samples/uw_multi_traffic_waypoints/test_uwmulti_traffic_mobile_tot.tcl"
       ],
-      "official_example": "load sequence only; scheduler run not verified"
+      "official_example": "load sequence only; scheduler run not verified",
+      "experimental": true,
+      "compatibility": {
+        "mac": [
+          "csma_aloha"
+        ],
+        "routing": [
+          "static"
+        ]
+      }
     },
     {
       "id": "em",
-      "name": "Elettromagnetico",
+      "name": "EM DESERT (LUT sicura)",
       "layer": "phy",
-      "description": "Librerie installate; serve stack EM con antenna/mezzo e unita diverse da SPL, non intercambiabile con BPSK acustico.",
-      "reason": "Librerie installate; serve stack EM con antenna/mezzo e unita diverse da SPL, non intercambiabile con BPSK acustico.",
+      "description": "Catena nativa con unità proprie. LUT originale percentuale con correzione separata dei limiti/interpolazione; classe upstream conservata.",
+      "reason": "Verifica integrata conclusiva in corso.",
       "operational": false,
-      "validation": "not_integrated",
+      "validation": "native_verified; integrated/browser verification pending",
       "source_present": true,
       "compiled": true,
       "loadable": true,
       "bridge_compatible": false,
-      "parameters": [],
+      "parameters": [
+        {
+          "path": "network.em.tx_power_dbm",
+          "label": "Potenza EM",
+          "default": 14.0,
+          "unit": "dBm",
+          "help": "Parametro EM nativo. Potenza in dBm; LUT SF7 CR4/5 fissata, non una calibrazione universale.",
+          "type": "number"
+        },
+        {
+          "path": "network.em.bitrate_bps",
+          "label": "Bitrate",
+          "default": 27000.0,
+          "unit": "bit/s",
+          "help": "Parametro EM nativo. Potenza in dBm; LUT SF7 CR4/5 fissata, non una calibrazione universale.",
+          "type": "number"
+        },
+        {
+          "path": "network.em.frequency_hz",
+          "label": "Frequenza del modello",
+          "default": 868000000.0,
+          "unit": "Hz",
+          "help": "Parametro EM nativo. Potenza in dBm; LUT SF7 CR4/5 fissata, non una calibrazione universale.",
+          "type": "number"
+        },
+        {
+          "path": "network.em.bandwidth_hz",
+          "label": "Banda",
+          "default": 125000.0,
+          "unit": "Hz",
+          "help": "Parametro EM nativo. Potenza in dBm; LUT SF7 CR4/5 fissata, non una calibrazione universale.",
+          "type": "number"
+        },
+        {
+          "path": "network.em.temperature_c",
+          "label": "Temperatura acqua",
+          "default": 20.0,
+          "unit": "°C",
+          "help": "Parametro EM nativo. Potenza in dBm; LUT SF7 CR4/5 fissata, non una calibrazione universale.",
+          "type": "number"
+        },
+        {
+          "path": "network.em.salinity_ppt",
+          "label": "Salinità",
+          "default": 0.0,
+          "unit": "ppt",
+          "help": "Parametro EM nativo. Potenza in dBm; LUT SF7 CR4/5 fissata, non una calibrazione universale.",
+          "type": "number"
+        },
+        {
+          "path": "network.em.antenna_gain_db",
+          "label": "Guadagno antenna",
+          "default": 2.0,
+          "unit": "dB",
+          "help": "Parametro EM nativo. Potenza in dBm; LUT SF7 CR4/5 fissata, non una calibrazione universale.",
+          "type": "number"
+        }
+      ],
       "libraries": [
         "libuwem_phy.so"
       ],
@@ -1340,7 +1881,16 @@
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/EM/test_uwem_prop_multihop.tcl",
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/EM/test_uwem_prop.tcl"
       ],
-      "official_example": "load sequence only; scheduler run not verified"
+      "official_example": "load sequence only; scheduler run not verified",
+      "experimental": true,
+      "compatibility": {
+        "mac": [
+          "csma_aloha"
+        ],
+        "routing": [
+          "static"
+        ]
+      }
     },
     {
       "id": "ofdm",
@@ -1465,10 +2015,10 @@
       "id": "native_cbr",
       "name": "UW/CBR nativo",
       "layer": "application",
-      "description": "Generatore DESERT installato; non collegato al formato messaggi del bridge. Il generatore applicativo Python rimane distinto.",
-      "reason": "Richiede adapter degli header nativi, identita dei messaggi e metriche di consegna prima dell uso nel bridge.",
+      "description": "Timer e pacchetti generati nel DESERT reale. Nessun envelope JSON o TTL Python; statistiche native distinte.",
+      "reason": "Verifica integrata conclusiva in corso.",
       "operational": false,
-      "validation": "not_integrated",
+      "validation": "native_verified; integrated/browser verification pending",
       "source_present": true,
       "compiled": true,
       "loadable": true,
@@ -1545,16 +2095,30 @@
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_with_woss_samples/uw_multi_traffic_waypoints/test_uwmulti_traffic_mobile_tot.tcl"
       ],
       "official_example": "library load verified; scheduler scenario not executed",
-      "parameters": []
+      "parameters": [],
+      "experimental": true,
+      "generator": "desert_cbr",
+      "flow_parameters": [
+        {
+          "path": "native_packet_bytes",
+          "label": "Pacchetto nativo",
+          "default": 125,
+          "unit": "byte",
+          "help": "Dimensione packetSize_ del modello nativo; distinta da payload JSON e bit PHY.",
+          "type": "integer",
+          "min": 16,
+          "max": 2048
+        }
+      ]
     },
     {
       "id": "native_vbr",
       "name": "UW/VBR nativo",
       "layer": "application",
-      "description": "Generatore DESERT installato; non collegato al formato messaggi del bridge. Il generatore applicativo Python rimane distinto.",
-      "reason": "Richiede adapter degli header nativi, identita dei messaggi e metriche di consegna prima dell uso nel bridge.",
+      "description": "Timer e pacchetti generati nel DESERT reale. Nessun envelope JSON o TTL Python; statistiche native distinte.",
+      "reason": "Verifica integrata conclusiva in corso.",
       "operational": false,
-      "validation": "not_integrated",
+      "validation": "native_verified; integrated/browser verification pending",
       "source_present": true,
       "compiled": true,
       "loadable": true,
@@ -1573,7 +2137,201 @@
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/Application/test_uwvbr.tcl"
       ],
       "official_example": "library load verified; scheduler scenario not executed",
-      "parameters": []
+      "parameters": [],
+      "experimental": true,
+      "generator": "desert_vbr",
+      "flow_parameters": [
+        {
+          "path": "native_packet_bytes",
+          "label": "Pacchetto nativo",
+          "default": 125,
+          "unit": "byte",
+          "help": "Dimensione packetSize_ del modello nativo; distinta da payload JSON e bit PHY.",
+          "type": "integer",
+          "min": 16,
+          "max": 2048
+        },
+        {
+          "path": "native_period2_s",
+          "label": "Secondo intervallo VBR",
+          "default": 2.0,
+          "unit": "s",
+          "help": "Parametro del timer UW/VBR originale, non interpolazione Python.",
+          "type": "number",
+          "min": 1e-06
+        },
+        {
+          "path": "native_duration1_s",
+          "label": "Durata primo stato VBR",
+          "default": 5.0,
+          "unit": "s",
+          "help": "Parametro del timer UW/VBR originale, non interpolazione Python.",
+          "type": "number",
+          "min": 1e-06
+        },
+        {
+          "path": "native_duration2_s",
+          "label": "Durata secondo stato VBR",
+          "default": 5.0,
+          "unit": "s",
+          "help": "Parametro del timer UW/VBR originale, non interpolazione Python.",
+          "type": "number",
+          "min": 1e-06
+        }
+      ]
+    },
+    {
+      "id": "csburst",
+      "name": "CS-Burst",
+      "layer": "mac",
+      "description": "Ascolto del canale e invio nativo di raffiche; nessun ACK ALOHA.",
+      "reason": "Verifica integrata conclusiva in corso.",
+      "operational": false,
+      "validation": "native_verified; integrated/browser verification pending",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "bridge_compatible": false,
+      "parameters": [
+        {
+          "path": "network.mac.csburst.max_packets_per_burst",
+          "label": "Pacchetti per burst",
+          "default": 3,
+          "unit": "pacchetti",
+          "help": "Massimo numero nativo di frame inviati consecutivamente dopo il sensing.",
+          "type": "integer",
+          "min": 1,
+          "max": 10000
+        },
+        {
+          "path": "network.mac.csburst.fixed_sensing_s",
+          "label": "Sensing fisso",
+          "default": 0.1,
+          "unit": "s",
+          "help": "Parte fissa dell’ascolto prima del burst.",
+          "type": "number",
+          "min": 1e-06
+        },
+        {
+          "path": "network.mac.csburst.random_sensing_s",
+          "label": "Sensing casuale",
+          "default": 0.1,
+          "unit": "s",
+          "help": "Componente casuale del sensing nativo.",
+          "type": "number",
+          "min": 0
+        },
+        {
+          "path": "network.mac.buffer_packets",
+          "label": "Buffer MAC",
+          "default": 100,
+          "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
+          "type": "integer",
+          "unit": "",
+          "min": 1,
+          "max": 10000,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        }
+      ],
+      "libraries": [
+        "libuwcsburst.so"
+      ],
+      "tcl_classes": [
+        "Module/UW/TOKENBUS"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/data_link/uwtokenbus",
+      "official_examples": [
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ranging/ranging_tdoa.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ranging/ranging_tokenbus.tcl"
+      ],
+      "official_example": "load sequence only; scheduler run not verified",
+      "experimental": true,
+      "tcl_class": "Module/UW/CSBURST",
+      "compatibility": {
+        "routing": [
+          "static"
+        ],
+        "media": [
+          "acoustic"
+        ]
+      }
+    },
+    {
+      "id": "ranging_tokenbus",
+      "name": "Ranging TokenBus",
+      "layer": "mac",
+      "description": "Anello nativo con token e recupero tramite timeout. Produce tempi di viaggio stimati, distinti dalla ground truth HoloOcean.",
+      "reason": "Verifica integrata conclusiva in corso.",
+      "operational": false,
+      "validation": "native_verified; integrated/browser verification pending",
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "bridge_compatible": false,
+      "parameters": [
+        {
+          "path": "network.mac.ranging_tokenbus.slot_time_s",
+          "label": "Timeout del token",
+          "default": 10.0,
+          "unit": "s",
+          "help": "Timeout nativo di attesa del token. Deve coprire airtime e propagazione; non è uno slot TDMA.",
+          "type": "number",
+          "min": 1e-06
+        },
+        {
+          "path": "network.mac.ranging_tokenbus.min_token_hold_s",
+          "label": "Possesso minimo del token",
+          "default": 0.1,
+          "unit": "s",
+          "help": "Tempo minimo prima del passaggio del token.",
+          "type": "number",
+          "min": 1e-06
+        },
+        {
+          "path": "network.mac.ranging_tokenbus.max_token_hold_s",
+          "label": "Possesso massimo del token",
+          "default": 10.0,
+          "unit": "s",
+          "help": "Il frame deve entrare in questo tempo; il builder rifiuta flussi che non entrano.",
+          "type": "number",
+          "min": 1e-06
+        },
+        {
+          "path": "network.mac.buffer_packets",
+          "label": "Buffer MAC",
+          "default": 100,
+          "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
+          "type": "integer",
+          "unit": "",
+          "min": 1,
+          "max": 10000,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        }
+      ],
+      "libraries": [
+        "libuwcbr.so",
+        "libuwtokenbus.so",
+        "libuwranging_tokenbus.so"
+      ],
+      "tcl_classes": [
+        "Module/UW/TOKENBUS"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/data_link/uwtokenbus",
+      "official_examples": [
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ranging/ranging_tdoa.tcl",
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ranging/ranging_tokenbus.tcl"
+      ],
+      "official_example": "load sequence only; scheduler run not verified",
+      "experimental": true,
+      "tcl_class": "Module/UW/RANGING_TOKENBUS",
+      "compatibility": {
+        "routing": [
+          "static"
+        ],
+        "media": [
+          "acoustic"
+        ]
+      }
     }
   ],
   "inventory": {
@@ -1596,5 +2354,52 @@
     "propagation": "MPropagation/Underwater",
     "traffic_source": "Python application injector; network entirely native DESERT",
     "addressing": "unicast application destinations; native Flooding uses broadcast forwarding, no group multicast API"
+  },
+  "selectors": {
+    "medium": {
+      "path": "network.medium",
+      "label": "Tecnologia",
+      "default": "acoustic",
+      "unit": "",
+      "help": "Una catena PHY/propagazione/canale nativa. Le unità e i parametri cambiano con la tecnologia.",
+      "type": "select",
+      "choices": [
+        {
+          "value": "acoustic",
+          "label": "Acustica"
+        },
+        {
+          "value": "optical",
+          "label": "Ottica"
+        },
+        {
+          "value": "em",
+          "label": "Elettromagnetica"
+        }
+      ]
+    },
+    "propagation": {
+      "path": "network.acoustic.propagation",
+      "label": "Propagazione acustica",
+      "default": "underwater",
+      "unit": "",
+      "help": "Analitica DESERT oppure Bellhop reale con ambiente sintetico configurato.",
+      "type": "select",
+      "choices": [
+        {
+          "value": "underwater",
+          "label": "Analitica DESERT"
+        },
+        {
+          "value": "woss",
+          "label": "WOSS / Bellhop"
+        }
+      ]
+    },
+    "ssp": {
+      "label": "Profilo velocità del suono",
+      "unit": "m, m/s",
+      "help": "Campioni ordinati profondità/velocità, dalla superficie al fondale. Fra 1000 e 2000 m/s; 2–256 punti. Bellhop usa questo profilo reale."
+    }
   }
 }
