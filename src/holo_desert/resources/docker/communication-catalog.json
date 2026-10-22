@@ -1130,9 +1130,9 @@
       "name": "TokenBus",
       "layer": "mac",
       "description": "Anello nativo con token e recupero tramite timeout.",
-      "reason": "Verifica integrata conclusiva in corso.",
-      "operational": false,
-      "validation": "native_verified; integrated/browser verification pending",
+      "reason": "",
+      "operational": true,
+      "validation": "verified_end_to_end",
       "source_present": true,
       "compiled": true,
       "loadable": true,
@@ -1190,43 +1190,12 @@
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ranging/ranging_tokenbus.tcl"
       ],
       "official_example": "load sequence only; scheduler run not verified",
-      "experimental": true,
+      "experimental": false,
       "tcl_class": "Module/UW/TOKENBUS",
       "compatibility": {
         "routing": [
           "static"
         ],
-        "media": [
-          "acoustic"
-        ]
-      }
-    },
-    {
-      "id": "cs_burst",
-      "name": "CS-Burst",
-      "layer": "mac",
-      "description": "Richiede inizializzazioni e telemetria di burst specifiche; non integrato.",
-      "reason": "Richiede inizializzazioni e telemetria di burst specifiche; non integrato.",
-      "operational": false,
-      "validation": "not_integrated",
-      "source_present": true,
-      "compiled": true,
-      "loadable": true,
-      "bridge_compatible": false,
-      "parameters": [],
-      "libraries": [
-        "libuwcsburst.so"
-      ],
-      "tcl_classes": [
-        "Module/UW/CSBURST"
-      ],
-      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/data_link/uw-cs-burst",
-      "official_examples": [
-        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/MAC/test_csburst.tcl",
-        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/EvoLogics/S2C_uwcsburst.tcl"
-      ],
-      "official_example": "load sequence only; scheduler run not verified",
-      "compatibility": {
         "media": [
           "acoustic"
         ]
@@ -1329,9 +1298,9 @@
       "name": "SUN convergecast",
       "layer": "routing",
       "description": "Discovery e inoltro nativi verso un sink; ACK di routing. I contatori class_values sono globali per classe, non per drone.",
-      "reason": "Verifica integrata conclusiva in corso.",
-      "operational": false,
-      "validation": "native_verified; integrated/browser verification pending",
+      "reason": "",
+      "operational": true,
+      "validation": "verified_end_to_end",
       "source_present": true,
       "compiled": true,
       "loadable": true,
@@ -1445,7 +1414,7 @@
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/mobility/test_uwdriftposition.tcl"
       ],
       "official_example": "load sequence only; scheduler run not verified",
-      "experimental": true,
+      "experimental": false,
       "tcl_class": "Module/UW/SUNNode / Module/UW/SUNSink",
       "compatibility": {
         "mac": [
@@ -1454,7 +1423,8 @@
         "media": [
           "acoustic"
         ]
-      }
+      },
+      "compatibility_reason": "SUN richiede CSMA-ALOHA senza ACK MAC e supporta solo convergecast verso il sink configurato."
     },
     {
       "id": "icrp",
@@ -1511,9 +1481,9 @@
       "name": "WOSS / Bellhop",
       "layer": "channel",
       "description": "Bellhop reale senza database globali: SSP esplicito, fondale e superficie piatti, sedimento sintetico. Cache locale alla sessione, posizioni aggiornate alle barriere. Separazione orizzontale ≥1 m; margine superficie/fondo >0,1 m.",
-      "reason": "Verifica integrata conclusiva in corso.",
+      "reason": "Verificato con test nativi del bridge e con HoloOcean end-to-end (2026-10-22). Configurabile da YAML (Importa) e API Python; non ancora selezionabile nel Network Designer.",
       "operational": false,
-      "validation": "native_verified; integrated/browser verification pending",
+      "validation": "verified_end_to_end",
       "source_present": true,
       "compiled": true,
       "loadable": true,
@@ -1603,9 +1573,9 @@
       "name": "Ottico DESERT",
       "layer": "phy",
       "description": "Catena nativa con unità proprie. Lambert-Beer e rumore solare, ricevitore omnidirezionale; adattatore orientamento sperimentale.",
-      "reason": "Verifica integrata conclusiva in corso.",
+      "reason": "Verificato con test nativi del bridge e con HoloOcean end-to-end (2026-10-22). Configurabile da YAML (Importa) e API Python; non ancora selezionabile nel Network Designer.",
       "operational": false,
-      "validation": "native_verified; integrated/browser verification pending",
+      "validation": "verified_end_to_end",
       "source_present": true,
       "compiled": true,
       "loadable": true,
@@ -1805,9 +1775,9 @@
       "name": "EM DESERT (LUT sicura)",
       "layer": "phy",
       "description": "Catena nativa con unità proprie. LUT originale percentuale con correzione separata dei limiti/interpolazione; classe upstream conservata.",
-      "reason": "Verifica integrata conclusiva in corso.",
+      "reason": "Verificato con test nativi del bridge e con HoloOcean end-to-end (2026-10-22). Configurabile da YAML (Importa) e API Python; non ancora selezionabile nel Network Designer.",
       "operational": false,
-      "validation": "native_verified; integrated/browser verification pending",
+      "validation": "verified_end_to_end",
       "source_present": true,
       "compiled": true,
       "loadable": true,
@@ -1954,9 +1924,9 @@
       "name": "Multi-PHY",
       "layer": "interface",
       "description": "Moduli di switching upstream presenti; mapping flussi/interfacce e canali separati non ancora implementati. Nessuno switching automatico implicito.",
-      "reason": "Moduli di switching upstream presenti; mapping flussi/interfacce e canali separati non ancora implementati. Nessuno switching automatico implicito.",
+      "reason": "Test nativi del bridge: selezione manuale e controller nativo per potenza ricevuta, 2-3 interfacce acustiche, CSMA-ALOHA senza ACK e StaticRouting. Nessuna prova HoloOcean end-to-end e nessuna rete ibrida acustico/ottica. Configurabile da YAML e API Python.",
       "operational": false,
-      "validation": "not_integrated",
+      "validation": "native_verified",
       "source_present": true,
       "compiled": true,
       "loadable": true,
@@ -1978,14 +1948,15 @@
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_with_woss_samples/test_uwmulti_traffic_mobile_tot.tcl",
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_with_woss_samples/uw_multi_traffic_waypoints/test_uwmulti_traffic_mobile_tot.tcl"
       ],
-      "official_example": "library load only; full scheduler example not executed"
+      "official_example": "library load only; full scheduler example not executed",
+      "experimental": true
     },
     {
       "id": "ranging",
       "name": "Ranging / TDOA",
       "layer": "application",
       "description": "Librerie presenti, ma richiedono messaggi, clock e inizializzazioni dedicate. Distanza geometrica non e una misura acustica.",
-      "reason": "Librerie presenti, ma richiedono messaggi, clock e inizializzazioni dedicate. Distanza geometrica non e una misura acustica.",
+      "reason": "Ranging-TokenBus è integrato (voce dedicata). RANGING_TDMA e TDOA non sono integrati: il costruttore senza slot configurati causa SIGFPE nel probe; header e output di misura non adattati.",
       "operational": false,
       "validation": "not_integrated",
       "source_present": true,
@@ -2016,9 +1987,9 @@
       "name": "UW/CBR nativo",
       "layer": "application",
       "description": "Timer e pacchetti generati nel DESERT reale. Nessun envelope JSON o TTL Python; statistiche native distinte.",
-      "reason": "Verifica integrata conclusiva in corso.",
+      "reason": "Verificato con test nativi del bridge e con HoloOcean end-to-end (2026-10-22). Configurabile da YAML (Importa) e API Python; non ancora selezionabile nel Network Designer.",
       "operational": false,
-      "validation": "native_verified; integrated/browser verification pending",
+      "validation": "verified_end_to_end",
       "source_present": true,
       "compiled": true,
       "loadable": true,
@@ -2116,9 +2087,9 @@
       "name": "UW/VBR nativo",
       "layer": "application",
       "description": "Timer e pacchetti generati nel DESERT reale. Nessun envelope JSON o TTL Python; statistiche native distinte.",
-      "reason": "Verifica integrata conclusiva in corso.",
+      "reason": "Verificato con test nativi del bridge e con HoloOcean end-to-end (2026-10-22). Configurabile da YAML (Importa) e API Python; non ancora selezionabile nel Network Designer.",
       "operational": false,
-      "validation": "native_verified; integrated/browser verification pending",
+      "validation": "verified_end_to_end",
       "source_present": true,
       "compiled": true,
       "loadable": true,
@@ -2185,9 +2156,9 @@
       "name": "CS-Burst",
       "layer": "mac",
       "description": "Ascolto del canale e invio nativo di raffiche; nessun ACK ALOHA.",
-      "reason": "Verifica integrata conclusiva in corso.",
-      "operational": false,
-      "validation": "native_verified; integrated/browser verification pending",
+      "reason": "",
+      "operational": true,
+      "validation": "verified_end_to_end",
       "source_present": true,
       "compiled": true,
       "loadable": true,
@@ -2245,7 +2216,7 @@
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ranging/ranging_tokenbus.tcl"
       ],
       "official_example": "load sequence only; scheduler run not verified",
-      "experimental": true,
+      "experimental": false,
       "tcl_class": "Module/UW/CSBURST",
       "compatibility": {
         "routing": [
@@ -2261,9 +2232,9 @@
       "name": "Ranging TokenBus",
       "layer": "mac",
       "description": "Anello nativo con token e recupero tramite timeout. Produce tempi di viaggio stimati, distinti dalla ground truth HoloOcean.",
-      "reason": "Verifica integrata conclusiva in corso.",
-      "operational": false,
-      "validation": "native_verified; integrated/browser verification pending",
+      "reason": "",
+      "operational": true,
+      "validation": "verified_end_to_end",
       "source_present": true,
       "compiled": true,
       "loadable": true,
@@ -2322,7 +2293,7 @@
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ranging/ranging_tokenbus.tcl"
       ],
       "official_example": "load sequence only; scheduler run not verified",
-      "experimental": true,
+      "experimental": false,
       "tcl_class": "Module/UW/RANGING_TOKENBUS",
       "compatibility": {
         "routing": [

@@ -1,0 +1,14 @@
+name: e07_ranging_tokenbus
+description: Three static vehicles share the native DESERT Ranging-TokenBus MAC. Data travels on the token ring while the MAC measures one-way travel times; ranging_estimate events report native distance estimates (travel time x sound speed), not HoloOcean ground truth.
+duration: 150
+physics_hz: 10
+nodes:
+  - {id: auv_01, position: [0, 0, -30]}
+  - {id: auv_02, position: [40, 0, -30]}
+  - {id: auv_03, position: [0, 60, -30]}
+network:
+  mac:
+    protocol: ranging_tokenbus
+flows:
+  - {source: auv_01, destination: auv_03, start: 5, stop: 120, interval: 20, payload_bytes: 16, ttl: 60}
+  - {source: auv_02, destination: auv_01, start: 10, stop: 120, interval: 20, payload_bytes: 16, ttl: 60}

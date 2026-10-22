@@ -205,3 +205,15 @@ def test_message_creation_time_equals_barrier():
         sends = [e for e in backend.log if e[0] == "SEND"]
         assert sends == [("SEND", "auv_01", "auv_02", pytest.approx(0.5))]
     assert isinstance(Message.decode(Message("auv_01", "auv_02", b"", 0).encode()), Message)
+
+
+def test_failed_start_releases_resources():
+    class Refusing(ScriptedBackend):
+        def start(self, scenario):
+            from holo_desert.desert_adapter.backend import BackendError
+            raise BackendError("busy")
+    net = NetworkSession(load_scenario("e01_chat"), backend=Refusing())
+    with pytest.raises(SessionError, match="busy"):
+        with net:
+            pass
+    assert net.state == "failed" and net._telemetry.log.closed

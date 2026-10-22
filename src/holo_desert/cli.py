@@ -115,8 +115,9 @@ def main(argv=None):
             finally:
                 adapter.stop()
         elif args.command == "dashboard":
+            application = dashboard_server(manage_docker=not args.no_manage_docker).application()
             print(f"Dashboard: http://127.0.0.1:{args.port}")
-            serve_dashboard(dashboard_server(manage_docker=not args.no_manage_docker).application(), args.port)
+            serve_dashboard(application, args.port)
         elif args.command == "run":
             scenario = manager.load(args.scenario)
             overrides = {}

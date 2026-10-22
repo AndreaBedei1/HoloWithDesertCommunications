@@ -185,7 +185,7 @@ class NetworkSession:
             for event in getattr(self._backend, "initial_events", []):
                 self._telemetry.engine_event(event, self._inverse)
         except Exception as exc:
-            self._fail(exc)
+            self._fail(exc, release=True)
         self._telemetry.emit("run_started", 0, mode=self._mode, seed=self.scenario.network.seed,
                              rng_substream=self.scenario.network.seed, scenario_name=self.scenario.name,
                              node_map=self.scenario.node_map,
@@ -320,7 +320,8 @@ class NetworkSession:
                                (f" (last error: {self.error})" if self.error else ""))
         return self._backend
 
-    def _fail(self, exc):
+    def _fail(self, exc, release=False):
+        """Record the failure, stop DESERT and raise; results stay exportable unless released."""
         self.error = f"{type(exc).__name__}: {exc}"
         self.state = "failed"
         if self._telemetry:
@@ -329,6 +330,8 @@ class NetworkSession:
             self._backend.stop()
         except Exception:
             pass
+        if release and self._telemetry is not None and not self._telemetry.log.closed:
+            self._telemetry.close()
         raise SessionError(self.error) from exc
 
     def _release(self):

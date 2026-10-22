@@ -150,6 +150,9 @@ class DESERTAdapter(CommunicationBackend):
                 if not line:
                     raise BackendError("DESERT process/socket closed unexpectedly; run holo-desert logs")
                 event = json.loads(line)
+                if event["event"] == "error" and event.get("reason") == "DESERT is busy":
+                    raise BackendError(f"The DESERT service on port {self.port} is running another session "
+                                       "(one session per service); wait for it or use another engine port")
                 if event["event"] in ("error", "engine_exit"):
                     raise BackendError(f"DESERT: {event}")
                 event["observed_wall_time"] = time.time()

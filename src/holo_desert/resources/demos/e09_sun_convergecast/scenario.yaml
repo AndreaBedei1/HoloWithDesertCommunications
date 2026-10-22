@@ -1,0 +1,17 @@
+name: e09_sun_convergecast
+description: SUN dynamic routing towards sink auv_04 with four static vehicles. With a 30 dB probe SNR threshold native SUN probes select relays (auv_02 or auv_03) for auv_01 instead of the 800 m direct link; routes can change during the run. Python only injects data; DESERT discovers and uses the paths. Some late messages remain pending at the end of the 90 s run.
+duration: 90
+physics_hz: 10
+nodes:
+  - {id: auv_01, position: [0, 0, -40]}
+  - {id: auv_02, position: [400, 0, -40]}
+  - {id: auv_03, position: [400, 300, -40]}
+  - {id: auv_04, position: [800, 0, -40]}
+network:
+  mac: {protocol: csma_aloha}
+  routing: sun
+  sun: {sink: auv_04, probe_min_snr_db: 30}
+  acoustic: {tx_power_db: 140}
+flows:
+  - {source: auv_01, destination: auv_04, start: 20, stop: 80, interval: 10, payload_bytes: 16, ttl: 40}
+  - {source: auv_03, destination: auv_04, start: 25, stop: 80, interval: 10, payload_bytes: 16, ttl: 40}
