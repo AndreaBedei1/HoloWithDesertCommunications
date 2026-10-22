@@ -1,120 +1,191 @@
-# HoloOcean DESERT
+# HoloOcean–DESERT
 
-Simula e analizza le comunicazioni tra droni subacquei.
-HoloOcean gestisce movimento, fisica e sensori; DESERT gestisce il canale
-acustico e la rete. La dashboard permette di scegliere un esempio, creare
-un proprio scenario e osservare messaggi e risultati.
+A Python library and web laboratory for simulating communication between
+underwater vehicles. [HoloOcean](https://byu-holoocean.github.io/holoocean-docs/)
+2.3 provides the environment, vehicle dynamics and sensors;
+[DESERT Underwater](https://desert-underwater.dei.unipd.it/) 4.0 on NS-MIRACLE
+executes the network: PHY, propagation, interference, MAC, routing and native
+traffic generators. The two simulators share one synchronised timeline. No
+network behaviour is re-implemented in Python.
 
-## Apri il laboratorio
+The library can be used on its own, attached to an existing HoloOcean
+program, or through the browser-based laboratory, which is a client of the
+same API.
 
-Con il progetto già installato, da questa directory:
+## Architecture
 
-```powershell
-.venv\Scripts\holo-desert.exe dashboard
+```
+ your Python code / dashboard (FastAPI + JS)
+            │  holo_desert public API: NetworkSession · HoloOceanLink · ManagedSimulation
+            ▼
+ orchestration: one logical clock (tick = 1/physics_hz), message queues, telemetry
+     │                                         │  TCP, newline-framed commands/events
+     ▼                                         ▼
+ HoloOcean 2.3 (host, GPU)              Docker: DESERT 4.0 / NS-MIRACLE
+ vehicles, physics, own-pose sensors    Stack Builder (whitelist) → Tcl adapters
+                                        → native PHY/MAC/routing/apps + C++ bridge
 ```
 
-Apri **http://127.0.0.1:8000**. Su Linux il comando è
-`.venv/bin/holo-desert dashboard`.
+At every tick the measured vehicle poses are applied in DESERT, pending
+messages are injected, the NS scheduler runs to the same simulated time and
+its receptions are delivered back with their native timestamps. HoloOcean
+supplies geometry only; applications never receive other vehicles' poses from
+the library.
 
-1. **Scegli uno scenario.** La scheda spiega cosa succede e cosa osservare.
-2. **Avvia simulazione.** HoloOcean e DESERT si inizializzano automaticamente.
-3. **Esplora la mappa.** Seleziona un drone; usa rotella e trascinamento per
-   cambiare inquadratura. Le posizioni sono quelle misurate da HoloOcean.
-4. **Segui i messaggi.** Seleziona una comunicazione per vedere il percorso e
-   la timeline. Una trasmissione osservata non è ancora una consegna.
-5. **Approfondisci in Analisi.** Le icone informative spiegano le metriche.
-6. **Apri Impostazioni** per regolare MAC, bitrate, potenza e parametri avanzati
-   prima della prossima corsa.
-7. **Esporta risultati** per scaricare configurazione, eventi e pacchetti in ZIP.
+## What is supported
 
-I risultati delle corse ordinarie sono temporanei: esportali prima del reset
-o della chiusura. Gli scenari personali, invece, vengono conservati.
+Status from executed tests (details and blockers: [capability matrix](docs/capabilities.md)).
 
-## Crea il tuo scenario
+| Area | Operational | Experimental (verified) | Not integrated |
+|---|---|---|---|
+| MAC | ALOHA, CSMA-ALOHA, TDMA, TDMA Frame, CSMA/CA, DACAP, TokenBus, CS-Burst, Ranging-TokenBus | — | Polling, T-LOHI, ALOHA-Q, UFetch |
+| Routing | Static (multi-hop), Flooding, SUN | — | ICRP, Position-Based |
+| PHY / channel | BPSK + analytic Underwater/Thorp + MIV; WOSS/Bellhop (synthetic SSP) | corrected BPSK, optical, electromagnetic | OFDM, HMM |
+| Interfaces | one interface per vehicle | multi-PHY with native switching (engine-level tests only) | hybrid acoustic/optical |
+| Traffic & measurement | Python generators, JSON/binary messages, native UW/CBR and UW/VBR, native ranging (TokenBus) | — | ranging TDMA/TDOA |
+| Hardware modems | — | — | drivers present in DESERT, no hardware validation |
 
-In **I miei scenari**, premi **Nuovo scenario**, oppure **Duplica** su un esempio.
-L'editor guida attraverso cinque passaggi: generale, droni e movimento,
-comunicazioni, rete acustica, riepilogo e avvio.
+## Requirements
 
-Puoi aggiungere droni, trascinare le posizioni iniziali nella mappa, impostare
-waypoint, flussi di messaggi e route statiche con relay. Dopo **Salva scenario**
-lo ritrovi nella libreria e puoi avviarlo subito. Importazione ed esportazione
-YAML restano disponibili. I sei esempi sono protetti da modifica e cancellazione.
+* Python 3.10–3.12, Docker (Desktop on Windows, Engine + Compose on Linux).
+* For vehicle simulation: HoloOcean 2.3.0 with the Ocean package and a GPU
+  able to run it. Co-simulation verified on Windows 11; on Ubuntu 24.04 installation, unit and
+  browser tests are verified, HoloOcean rendering is not.
+* The DESERT engine image is built locally from the official
+  `uwsignet/desert:4.0.0` image pinned by digest (first build downloads ~1.4 GB).
 
-Gli scenari vengono salvati nella directory dati dell'utente, separata dal
-pacchetto. `HOLO_DESERT_SCENARIOS_DIR` permette di scegliere una directory
-portabile. [Dettagli di utilizzo e salvataggio](docs/dashboard.md).
+## Quick start
 
-## Installazione
-
-Dopo l'aggiornamento al laboratorio modulare, ricostruisci una volta il motore:
-`.venv\Scripts\holo-desert.exe engine up`. Il client segnala immagini precedenti
-invece di ignorare nuove opzioni.
-
-Servono Python 3.10–3.12, HoloOcean/Ocean **2.3.0**, GPU adatta al rendering e
-Docker con container Linux. HoloOcean rimane sull'host, DESERT gira in Docker;
-non serve gestire una distribuzione WSL personale.
-
-Su Windows, con il client HoloOcean già scaricato:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup.ps1 -HoloOceanClient "<HoloOcean-2.3.0>\client"
-.venv\Scripts\holo-desert.exe doctor
+```bash
+git clone https://github.com/AndreaBedei1/HoloWithDesertCommunications.git
+cd HoloWithDesertCommunications
+python -m venv .venv
+.venv/bin/pip install -e ".[dashboard]"      # Windows: .venv\Scripts\pip ...
+.venv/bin/holo-desert engine up              # build and start the DESERT engine
+.venv/bin/holo-desert doctor                 # or: doctor --library-only
 ```
 
-Installazione Ubuntu 24.04, Ocean e prerequisiti: [guida installazione](docs/installation.md).
-Il primo avvio può scaricare l'immagine DESERT e compilare l'estensione.
+Windows scripted setup including HoloOcean: `scripts/setup.ps1`; Ubuntu:
+`scripts/setup.sh`. As a dependency of another project:
+`pip install "holoocean-desert @ git+https://github.com/AndreaBedei1/HoloWithDesertCommunications.git"`.
+The library core needs only PyYAML and pydantic; `[dashboard]` adds FastAPI and
+uvicorn. See [installation](docs/installation.md).
 
-## Gli esempi
+## Using the library
 
-| ID | Scenario | Cosa osservare |
+Send and receive through DESERT without HoloOcean:
+
+```python
+from holo_desert import NetworkSession, Scenario, NodeConfig, Network
+
+scenario = Scenario(
+    name="hello", description="two nodes, TDMA",
+    nodes=[NodeConfig(id="auv_01", position=(0, 0, -20)),
+           NodeConfig(id="auv_02", position=(40, 0, -20))],
+    network=Network.model_validate({"mac": {"protocol": "tdma"}}))
+
+with NetworkSession(scenario) as net:
+    net.node("auv_02").on_receive(lambda d: print(d.network_time, d.message.json()))
+    net.node("auv_01").send_json("auv_02", {"cmd": "surface"})
+    net.run_until(10)                       # seconds of simulated time
+    print(net.summary()["received"])
+```
+
+Attach to a HoloOcean environment your program already controls:
+
+```python
+link = HoloOceanLink(net, {"leader": "auv_01", "follower": "auv_02"}, ticks_per_sec=30)
+link.attach(env.reset())
+while mission_running:
+    env.act("leader", command)              # you keep control of the vehicles
+    link.sync(env.tick())                   # DESERT advances over the same tick
+```
+
+Run a complete scenario the way the dashboard does:
+
+```python
+from holo_desert import ManagedSimulation
+with ManagedSimulation("e03_mobility", realtime=False) as sim:
+    print(sim.run())
+    sim.export("e03.zip")
+```
+
+Runnable programs: [`examples/`](examples) (standalone, attached, managed,
+multi-PHY and an install check that imports only the public API). The
+[API reference](docs/api.md) documents the clock model, operation order,
+callbacks, session life cycle and error handling.
+
+## Web laboratory
+
+```bash
+holo-desert dashboard            # http://127.0.0.1:8000
+```
+
+Choose a scenario, start it, follow vehicles and messages on the map and
+timeline, then open *Analisi* for metrics and comparisons. *Impostazioni →
+Network Designer* selects MAC, PHY and routing with contextual help for each
+parameter; *I miei scenari* edits vehicles, waypoints, flows and routes and
+imports/exports YAML. The interface is in Italian.
+
+![Network Designer](docs/images/network-designer-1440.png)
+
+## Scenarios
+
+| ID | Scenario | What it shows |
 |---|---|---|
-| E01 | Scambio di messaggi | Richiesta e risposta tra due droni |
-| E02 | Comunicazione tra più droni | Quattro droni sullo stesso canale |
-| E03 | Droni in movimento | Allontanamento, ritorno, distanza e consegna |
-| E04 | Congestione della rete | Code, interferenza e confronto MAC |
-| E05 | Comunicazione tramite relay | Due tratte osservate A → B → C |
-| E06 | Coordinamento tra droni | Heartbeat, attesa e ripresa del follower |
+| E01 | Message exchange | request/reply between two vehicles |
+| E02 | Multi-node | four vehicles on one channel |
+| E03 | Mobility | delivery while range grows and shrinks |
+| E04 | Congestion | queues, interference, MAC comparison |
+| E05 | Multi-hop | static relay A → B → C where the direct link fails |
+| E06 | Coordination | heartbeat-driven HOLD/PROCEED, outage by PHY power |
+| e07 | Ranging-TokenBus | native distance estimates between three vehicles |
+| e08 | WOSS/Bellhop | moving receiver in a synthetic sound-speed profile |
+| e09 | SUN convergecast | native route discovery through relays to a sink |
 
-In **Impostazioni → Network Designer**, scegli fra sei MAC reali, routing
-statico/Flooding e BPSK originale/corretto sperimentale. I parametri avanzati
-comprendono canale, slot, traffico e override acustici per drone; le icone `?`
-spiegano significato e vincoli. **Profili di comunicazione** permette di salvare,
-duplicare, importare ed esportare la rete separatamente dallo scenario.
+E01–E06 are the original reference experiments and are kept unchanged; the
+demos live in `src/holo_desert/resources/demos`. `holo-desert run e03_mobility
+--fast --no-dashboard` runs one from the command line.
 
-In **Analisi → Confronto MAC**, conserva fino a sei riepiloghi integrati
-cambiando il MAC sullo stesso esperimento. Il controllo segnala differenze
-nei parametri comuni e mantiene anche i risultati negativi.
+## Results and metrics
 
-[Guida al Designer](docs/network-designer.md) ·
-[Catalogo e limiti dei moduli](docs/desert-capabilities.md) ·
-[Implementazione e prove reali](docs/desert-laboratory.md).
-WOSS, ottico/EM, multi-PHY e ranging sono censiti ma non operativi nel bridge.
+Each run records the effective configuration, every engine event
+(`events.jsonl`) and one row per message (`packets.csv`), exportable as a ZIP.
+Metrics distinguish delivery over resolved vs generated messages, goodput,
+end-to-end latency, transmission airtime and propagation, PHY reception
+outcomes and MAC queue/statistics. Provenance includes the DESERT base digest
+and source commit, the engine fingerprint, applied patches and RNG substream.
+See [telemetry and reproducibility](docs/telemetry-and-reproducibility.md).
 
-## CLI, test e sviluppo
+## Documentation
 
-La CLI continua ad accettare `holo-desert run e03_mobility` e file YAML
-personali: `holo-desert run percorso/scenario.yaml`. `--no-dashboard` esegue
-senza interfaccia; `--persist directory` salva esplicitamente i risultati.
+[Index](docs/index.md) · [API](docs/api.md) · [Capabilities](docs/capabilities.md) ·
+[Stack configuration and YAML](docs/stack-configuration.md) ·
+[Dashboard](docs/dashboard.md) · [Developer guide](docs/developer-guide.md) ·
+[Troubleshooting](docs/troubleshooting.md) · [Limitations](docs/limitations.md) ·
+[Validation records](docs/evidence/README.md)
 
-```powershell
-.venv\Scripts\holo-desert.exe test
-.venv\Scripts\holo-desert.exe test --integration
-.venv\Scripts\holo-desert.exe test --end-to-end
-npm.cmd --prefix tests/frontend ci
-npm.cmd --prefix tests/frontend test -- --config playwright.config.cjs
+## Tests
+
+```bash
+pytest -m "not desert and not holoocean"     # unit tests, no engines
+DESERT_PORT=5555 pytest -m "desert and not holoocean"   # real DESERT engine
+pytest -m holoocean                          # HoloOcean co-simulation (GPU)
+npm --prefix tests/frontend ci && npm --prefix tests/frontend test -- --config playwright.config.cjs
 ```
 
-I test browser richiedono Node e usano Edge installato su Windows. Su Linux:
-`cd tests/frontend && npx playwright install --with-deps chromium && npm test`.
-I test di presentazione utilizzano fixture dichiarate, separate dai simulatori.
+## Limitations
 
-- [Dashboard, metriche e scenari personali](docs/dashboard.md)
-- [Guida sviluppatori e applicazioni](docs/developer-guide.md)
-- [Architettura](docs/architecture.md) · [API comunicazione](docs/communication-api.md)
-- [Protocolli](docs/protocols.md) · [Installazione](docs/installation.md)
-- [Revisione visiva e verifiche UI](docs/ui-review.md)
-- [Validazione originale](docs/validation.md) · [Consolidamento](docs/consolidation-validation.md)
+The analytic channel holds geometry constant for one physics tick and has no
+Doppler; HoloOcean obstacles and seabed are not converted into acoustic
+bathymetry; application messages are unicast; one MAC per network. The BPSK
+correction, optical and EM chains are experimental and none of the models is
+calibrated against a specific modem or sea trial. Full list:
+[limitations](docs/limitations.md).
 
-HoloOcean e DESERT mantengono le rispettive licenze. Binary Ocean, immagini,
-venv e risultati delle simulazioni non sono inclusi nel repository.
+## License and attribution
+
+Project code: MIT ([LICENSE](LICENSE)). HoloOcean (BYU FRoSt Lab), DESERT
+Underwater (University of Padova SIGNET), NS-2/NS-MIRACLE and WOSS keep their
+own licenses; their binaries, Docker images, the Ocean package, virtual
+environments and simulation results are not distributed with this repository.

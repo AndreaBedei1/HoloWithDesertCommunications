@@ -36,5 +36,5 @@ La coordinazione non è un sistema di safety: è un esempio didattico di reazion
 alla freschezza dei messaggi. L'interruzione avviene nel modello di potenza DESERT,
 mai eliminando messaggi arbitrariamente nell'applicazione.
 
-Consultare [validation.md](validation.md) per distinguere configurazioni
+Consultare [evidence/validation.md](evidence/validation.md) per distinguere configurazioni
 implementate da dimostrazioni effettivamente eseguite e verificate.

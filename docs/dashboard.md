@@ -1,147 +1,284 @@
-# Usare il laboratorio
+# Web dashboard
 
-Avviare `holo-desert dashboard`, aprire http://127.0.0.1:8000 e scegliere uno
-scenario. I sei esempi presentano una descrizione in italiano, cosa osservare,
-numero di droni e durata. Nessuna simulazione parte aprendo la pagina.
-**Come funziona** e le icone `?` spiegano le operazioni e i termini meno comuni.
+The dashboard is an optional web laboratory for running scenarios, inspecting
+messages and configuring the network. It requires the `[dashboard]` extra (see
+[installation.md](installation.md)).
 
-## Simulazione, messaggi e analisi
+```bash
+holo-desert dashboard                 # idle server; choose a scenario in the browser
+holo-desert run e03_mobility          # start a scenario and serve the dashboard while it runs
+holo-desert dashboard --port 8010 --no-manage-docker
+```
 
-La vista **Simulazione** unisce mappa, comunicazioni, dettagli contestuali e
-ultimi messaggi. La mappa XY mantiene la stessa scala sui due assi. Posizioni,
-orientamento, profondità e distanze 3D provengono dai sensori HoloOcean.
-Rotella per zoom, trascinamento per pan, **Adatta mappa** per ripristinare
-l'inquadratura. Le traiettorie percorse sono distinte dai waypoint desiderati
-dell'editor. Il browser non sostituisce il mondo 3D HoloOcean.
+Open `http://127.0.0.1:8000` (or the chosen `--port`). Opening the page does not
+start a simulation. `Ctrl+C` closes the server and cleans up the current run.
 
-Selezionare un drone per le sue informazioni, oppure un messaggio per isolare
-il percorso e leggere la timeline. Le frecce blu seguono TX/RX PHY osservate;
-la consegna applicativa finale è verde e tratteggiata, con il relativo tempo.
-Una consegna passata non certifica che il collegamento sia ancora disponibile.
-**Livelli** permette di mostrare le route configurate, grigie e tratteggiate.
-Queste route non garantiscono raggiungibilità. Gli ascolti PHY di pacchetti
-destinati ad altri droni restano nei dettagli, senza creare consegne grafiche.
+**It is not a second communication engine.** Every run started from the
+dashboard is a `SimulationOrchestrator` (`src/holo_desert/core/orchestrator.py`),
+the same class used by the library's `ManagedSimulation` and by
+`holo-desert run`. The browser polls `GET /api/state` every 500 ms and renders
+the orchestrator's telemetry snapshot; there is no separate frontend server and
+no Python network fallback. All delivery, loss and timing come from DESERT.
 
-**Messaggi** filtra per drone, destinatario, tipo, stato e, facoltativamente,
-evento tecnico. I dettagli mostrano solo le fasi effettivamente osservate,
-distinguendo applicazione, inoltro di rete e PHY. Il JSON originale, payload
-ed envelope, contatori e dettagli completi rimangono espandibili.
+The user interface is in Italian. Labels are quoted below in Italian with an
+English gloss.
 
-Un messaggio generato non è necessariamente trasmesso. “Trasmissione osservata”
-descrive la storia, non una radio tuttora in trasmissione. La coda MAC e gli
-scarti sono aggregati per nodo: non sono disponibili per singolo UUID.
-Un errore PHY non prova la perdita applicativa finale; una scadenza TTL indica
-mancata consegna entro il tempo di validità, causa ignota. Il TTL applicativo
-non annulla un frame già accodato nel MAC.
+## Running a scenario
 
-Nella vista principale:
+The home page lists the six bundled examples with a description, what to
+observe, number of vehicles and duration, plus the personal library ("I miei
+scenari"). **Come funziona** (How it works) and the `?` icons explain
+operations and terms.
 
-- **Generati:** messaggi creati dalle applicazioni.
-- **Ricevuti:** consegne applicative entro TTL.
-- **Consegna riuscita:** ricevuti / (ricevuti + scaduti), in percentuale;
-  i messaggi pendenti sono esclusi.
-- **Latenza:** media cumulativa dalla generazione alla consegna, usando il
-  tempo simulato NS; ultimo campione disponibile.
+Execution modes ("Motori dell'esperimento"):
 
-**Analisi** divide consegna, canale acustico, movimento/tempo e confronto MAC.
-Goodput: bit di payload consegnato al secondo nell'intervallo campionato.
-Throughput: bit dell'envelope JSON/base64 consegnato, senza header PHY/MAC,
-ACK o ritrasmissioni. La coda MAC è campionata a 1 Hz: picchi intermedi non
-osservati. N/D e vuoti nei grafici non vengono trasformati in zeri fittizi.
-Le metriche di consegna sono globali; si seleziona il drone per PHY/code e
-la coppia per la distanza. La deriva è tempo reale meno simulato, esclusa pausa.
+- **HoloOcean e DESERT** (integrated): native HoloOcean on the host and DESERT
+  in Docker.
+- **Solo DESERT** (DESERT only): fixed configured positions, no physics; not
+  available for scenarios with movement or coordination.
 
-Nelle statistiche avanzate restano contatori per nodo, route effettive, eventi
-del canale, transizioni HOLD/PROCEED e cambi di potenza E06. `app_received`
-DESERT precede il controllo TTL Python e può includere ricezioni tardive.
+Controls: start, **Pausa** (pause both simulators at a barrier; resume continues
+from the same clocks), **Arresta** (stop), reset, **Riesegui** (re-run with the
+configuration applied to the previous run). During start-up the state of both
+services is shown; `stopping` includes teardown and reset/new start wait for
+it. Errors show a short explanation, expandable details and a diagnostic
+command (`holo-desert logs`). One run is active at a time; a second start is
+refused with HTTP 409.
 
-## Impostazioni e controlli
+## Simulation view
 
-**Impostazioni** mostra MAC, bitrate e potenza. Dettagli avanzati: frequenza,
-banda, buffer, tentativi, ACK, route statiche, flussi e modalità solo DESERT.
-L'editor JSON rimane un'opzione avanzata: **Campi → JSON**, modifica, **JSON →
-Campi**. Il backend valida prima dell'applicazione e nuovamente all'avvio.
-Le modifiche valgono per una nuova corsa, senza cambiare quella corrente.
+The **Simulazione** view combines the map, communications, contextual details
+and the latest messages.
 
-La modalità completa avvia HoloOcean nativo e DESERT Docker. Solo DESERT usa
-posizioni fisse dichiarate, senza fisica: non è disponibile per movimento o
-coordinamento. Non esistono fallback di rete Python.
+- The XY map uses equal scales on both axes. Positions, orientation, depth and
+  3D distances come from HoloOcean sensors (or the fixed fixture in DESERT-only
+  mode). Mouse wheel zooms, drag pans, **Adatta mappa** fits the view. Travelled
+  trajectories are distinct from the editor's desired waypoints. The browser
+  does not replace HoloOcean's 3D world.
+- Selecting a vehicle shows its information; selecting a message isolates its
+  path and timeline. Blue arrows follow the observed PHY TX/RX of that message;
+  the final application delivery is a dashed green arc with its timestamp. Past
+  PHY arrows reappear only when the message is selected.
+- **Livelli** (layers) can show the configured static routes (grey, dashed,
+  off by default; default next hop = destination). Configured routes do not
+  guarantee reachability.
 
-Pausa ferma entrambi i motori alla barriera; ripresa prosegue dagli stessi
-orologi. Durante l'avvio sono mostrati stato e inizializzazione dei servizi.
-`stopping` include il teardown: reset e nuovo avvio attendono il suo termine.
-Gli errori hanno spiegazione breve, dettagli espandibili e comando diagnostico.
+**Topology semantics.** Edges drawn from the run data are **application
+end-to-end receptions** (`source → receiver`, evidence `application_receive`),
+not physical links inferred from proximity and not one-hop claims. A relay is
+verified in the message details through the observed `forward` and PHY events.
+A past delivery does not certify that a link is still available. PHY
+receptions of packets addressed to other vehicles stay in the details and do
+not create graphical deliveries.
 
-Per confrontare E04, completare una corsa, **Conserva riepilogo corrente**,
-cambiare soltanto MAC e ripetere. L'intera configurazione escluso il protocollo
-deve coincidere. Due riepiloghi in memoria, conservati anche dopo reset fino
-alla chiusura del server; esportazione JSON manuale, nessuna campagna automatica.
+Headline indicators:
 
-## I miei scenari
+- **Generati** (generated): messages created by the applications.
+- **Ricevuti** (received): application deliveries within TTL.
+- **Consegna riuscita** (delivery success): `received / (received + timed out)`;
+  pending messages are excluded.
+- **Latenza media** (mean latency): cumulative mean from generation to
+  delivery in NS simulated time.
 
-**Nuovo scenario** parte da impostazioni predefinite; **Duplica** conserva la
-configurazione dell'esempio o dello scenario personale, senza alterare l'originale.
-Cinque passaggi:
+Map times are absolute simulated times; latency is reception minus generation.
+See [telemetry-and-reproducibility.md](telemetry-and-reproducibility.md) for the
+definitions.
 
-1. Nome, descrizione, durata, ambiente; frequenza fisica nelle opzioni avanzate.
-2. Da 2 a 32 droni, ID univoci `auv_NN`, X/Y/Z in metri, yaw in gradi e waypoint
-   ordinati per tempo. Profondità = −Z. La mappa di anteprima permette di
-   trascinare le posizioni iniziali; non rappresenta osservazioni di una corsa.
-3. Mittente/destinatario, intervallo e payload; tempi, TTL e risposta nei dettagli.
-4. MAC, acustica e route statiche; senza override il next hop è la destinazione.
-5. Riepilogo, validazione e salvataggio; possibilità di avviare subito dopo.
+## Messages (Packet Inspector)
 
-OpenWater e HoveringAUV sono le scelte verificate dell'editor. Gli YAML
-importati conservano eventuali altri ambienti: richiedono un'installazione
-HoloOcean compatibile. Non sono stati aggiunti modelli di veicolo o algoritmi.
-Gli scenari heartbeat duplicati mantengono l'applicazione esistente a due nodi;
-non accettano flussi ordinari aggiuntivi. Eventi di potenza importati sono
-conservati nel formato completo, senza un nuovo editor di autonomia.
+**Messaggi** filters by vehicle, destination, type, status and, optionally,
+technical event. Details show only the phases actually observed, separating
+application, network forwarding and PHY, with the original JSON, payload and
+envelope, counters and the complete event list expandable.
 
-Rinominare un ID aggiorna i riferimenti; rimuovere un drone rimuove, dopo
-conferma, flussi, route e power event che lo usano. Un salvataggio inconsistente
-è rifiutato. Durante una corsa le modifiche sono disabilitate. L'eliminazione
-di uno scenario personale richiede conferma; esempi protetti anche negli endpoint.
+- A generated message is not necessarily transmitted; "transmission observed"
+  describes history, not an active radio.
+- MAC queue and discards are aggregated per node, not per message.
+- A PHY error does not prove the final application loss; a TTL expiry means no
+  delivery within the validity window, cause unknown.
+- The upstream second noise test with zero interference is labelled
+  explicitly; `N/D` means not observable, never zero.
+- MAC acknowledgements are not correlated with individual message IDs; the
+  per-message trace describes the application DATA frames.
 
-**Importa YAML** apre una bozza da controllare e salvare. **Esporta YAML**
-scarica lo stesso schema Pydantic `Scenario` usato dalla CLI. Nessun secondo
-formato di configurazione è stato introdotto.
+## Analysis
 
-Directory predefinite:
+**Analisi** is split into delivery, acoustic channel, movement and time, and
+MAC comparison.
 
-- Windows: `%LOCALAPPDATA%/HoloOceanDESERT/scenarios`.
-- Linux: `$XDG_DATA_HOME/holo-desert/scenarios`, oppure
-  `~/.local/share/holo-desert/scenarios`.
-- Override: variabile `HOLO_DESERT_SCENARIOS_DIR`, anche verso un disco portabile.
+- Goodput: payload bits delivered per second in the sampled interval.
+  Envelope throughput: delivered JSON/base64 envelope bits, without PHY/MAC
+  headers, ACKs or retransmissions.
+- The MAC queue is sampled once per simulated second; intermediate peaks are
+  not observed. Gaps and `N/D` are not turned into zeros.
+- Delivery metrics are global; select a vehicle for PHY/queue series and a
+  vehicle pair for the distance series. Drift is wall time minus simulated time,
+  excluding pauses.
+- Advanced statistics show per-node counters, effective routes, channel
+  events, HOLD/PROCEED transitions and E06 power changes.
+- Total airtime is the sum of transmission durations, not the union of channel
+  occupancy; overlaps and forwarding can make it exceed the run duration. It is
+  not energy.
 
-Per tenere anche la libreria sul disco del progetto, prima dell'avvio:
+### MAC comparison
+
+In **Analisi → Confronto MAC**: complete an integrated run, press **Conserva
+riepilogo corrente** (keep current summary), change only the MAC and repeat. Up
+to six summaries are kept in server memory (they survive reset until the server
+closes); export the comparison as JSON to inspect the full configurations.
+
+Each retained run stores a configuration fingerprint computed with the
+protocol-specific MAC sections removed (common `ack`, `buffer_packets` and
+`max_tx_tries` kept, `profile_id` removed), the full configuration, the
+versions, the summary and a SHA-256 digest of the observed trajectory. The
+comparison is reported as controlled only when all fingerprints match and the
+MACs differ; otherwise the differing fields are listed. The same configured
+seed and geometry do not imply identical measured trajectories. The comparison
+does not start automatic campaigns and does not rewrite applications or
+traffic. Only integrated runs (not DESERT-only) can be retained.
+
+## Network Designer
+
+**Impostazioni** (Settings) opens the Network Designer; the same sections are
+available in the personal scenario editor.
+
+1. Choose MAC, PHY and routing. The selectors list only modules marked
+   operational in the catalogue; routing choices are filtered by the selected
+   MAC (for example CSMA/CA and DACAP offer only static routing). The two BPSK
+   variants are distinct; the corrected one is labelled experimental. The
+   choice does not change movement or applications.
+2. Set bitrate and source level. The source level is acoustic SPL in dB re
+   1 µPa, not dBm.
+3. **Impostazioni avanzate** (advanced settings) shows channel and protocol
+   parameters, TDMA slots per vehicle (0..N−1; empty = node order), static
+   routes, per-vehicle acoustic overrides, application flows and the execution
+   mode. Fields change with the selected module.
+4. The `?` icons (pointer, click or keyboard) explain meaning, unit, default
+   and constraints; an allowed range is not a recommended value.
+5. **Applica alla prossima corsa** (apply to next run). The configuration is
+   validated by the server and again in the engine container; errors and
+   incompatible combinations block the start. Changes never affect the current
+   run.
+
+The JSON editor remains available as an advanced option: **Campi → JSON**,
+edit, **JSON → Campi**.
+
+With Flooding, do not keep static routes (forwarding is native broadcast).
+Empty per-vehicle overrides inherit the global profile; sound speed stays
+shared; per-vehicle MAC/routing and multiple interfaces are not offered by the
+Designer. **Catalogo dei moduli** (module catalogue) shows every catalogued
+module with its status, including modules installed in DESERT but not
+integrated.
+
+The MAC, PHY and routing selectors are generated from the catalogue
+(`/api/network-catalog`) and list the entries marked `operational`. The
+Designer has no controls for the medium (optical/EM), WOSS, multi-PHY or native
+generators: configure those in YAML ([stack-configuration.md](stack-configuration.md))
+and run them with **Importa YAML**, the CLI or the Python API.
+
+## Personal scenarios
+
+**Nuovo scenario** starts from defaults; **Duplica** copies an example or a
+personal scenario without altering the original. The editor has five steps:
+
+1. Name, description, duration, environment; physics rate in the advanced
+   options.
+2. 2–32 vehicles with unique `auv_NN` IDs, X/Y/Z in metres, yaw in degrees and
+   time-ordered waypoints. Depth is −Z. The preview map allows dragging the
+   initial positions; it does not show observations of a run.
+3. Flows: sender, destination, generator pattern (periodic, Poisson, burst,
+   explicit events), interval and payload; start, stop, final interval, TTL,
+   message type and reply in the details.
+4. MAC, acoustic settings and static routes.
+5. Summary, validation and save, optionally followed by an immediate start.
+
+Renaming an ID updates its references; removing a vehicle removes, after
+confirmation, the flows, routes and power events that use it. Inconsistent
+saves are rejected. Editing is disabled while a run is starting, running,
+paused or stopping. Deleting a personal scenario requires confirmation; the
+bundled examples are protected, also at the API level.
+
+`OpenWater` and `HoveringAUV` are the only choices offered and verified in the
+editor. Imported YAML keeps other worlds (they need a compatible HoloOcean
+installation). Duplicated heartbeat scenarios keep the two-node coordination
+application and accept no additional flows. Imported power events are kept in
+full; there is no dedicated editor for them.
+
+**Importa YAML** opens a draft to check and save; **Esporta YAML** downloads the
+same pydantic `Scenario` schema used by the CLI. There is no second
+configuration format.
+
+Storage: the library directory is described in
+[installation.md](installation.md#ports-and-directories) and can be moved with
+`HOLO_DESERT_SCENARIOS_DIR`, for example to keep it inside the project:
 
 ```powershell
 $env:HOLO_DESERT_SCENARIOS_DIR = Join-Path (Get-Location) 'user_scenarios'
 .venv\Scripts\holo-desert.exe dashboard
 ```
 
-Usare la stessa directory negli avvii successivi; le configurazioni sono
-normali file YAML e possono essere copiate insieme al progetto.
+Files are ordinary YAML with server-generated IDs (no browser-supplied paths),
+unique names, a 256 KiB limit, safe YAML parsing, an inter-process OS lock
+(`.library.lock`), write-to-temporary + `fsync` + `os.replace`, and SHA-256
+revisions: a concurrent modification returns HTTP 409 and requires reloading.
+The CLI also accepts personal IDs (`user_…`) and arbitrary YAML paths.
 
-Gli scenari sopravvivono a riavvii e aggiornamenti. I file usano ID generati
-dal server, senza percorsi forniti dal browser. Nomi personali univoci, limite
-256 KiB, YAML sicuro, lock tra processi, salvataggio temporaneo + `fsync` +
-`os.replace`, revisioni SHA256: una modifica concorrente produce HTTP 409 e
-richiede ricaricamento. Il file `.library.lock` resta nella directory, ma il
-lock OS viene rilasciato anche se il processo termina. La CLI continua ad
-accettare YAML arbitrari; accetta anche gli ID personali `user_…` della libreria.
+## Communication profiles
 
-## Esportazione e memoria
+A **scenario** contains vehicles, movement, traffic and network; a
+**communication profile** contains only the network, reusable across
+scenarios. In **Profili di comunicazione** choose a built-in example (one per
+operational MAC, Flooding with TDMA, corrected BPSK) or **Nuovo dalla rete
+corrente** (new from the current network), name it and save. Examples can be
+duplicated; personal profiles can be edited, duplicated, deleted, imported and
+exported as YAML (`{name, description, network}`). Writes are atomic and
+revisioned like scenarios.
 
-I risultati ordinari sono temporanei. **Esporta risultati** salva manualmente
-configurazione, eventi JSONL e pacchetti CSV. Esportare prima del reset o della
-chiusura; `--persist` rimane l'opzione CLI per la persistenza esplicita.
-I salvataggi personali riguardano configurazioni, non risultati automatici.
+**Applica rete al progetto** (apply network to project) keeps vehicles,
+waypoints and flows; routes and slots must reference the vehicles of the
+current scenario, which is checked. The profile is resolved into the run
+configuration (its `profile_id` is kept only as provenance), so later edits of
+the profile do not change earlier results. Profiles are stored in the
+`profiles` subdirectory of the scenario library.
 
-Limiti conservati: 500 pacchetti esposti, 5.000 conservati, 256 eventi per
-pacchetto con troncamento dichiarato, 300 osservazioni topologiche, 200 punti
-di traiettoria per nodo, 1.000 campioni, 100 transizioni e due confronti.
-Il JSONL temporaneo mantiene la storia completa fino al reset.
+## Results and memory
 
-Verifiche visive e limiti: [revisione UI](ui-review.md).
+Ordinary results are temporary. **Esporta risultati** saves the ZIP
+(`config.json`, `events.jsonl`, `packets.csv`); export before reset or closing.
+`holo-desert run --persist DIR` is the CLI option for explicit persistence.
+Personal saves concern configurations, not results.
+
+Retained in memory: 500 messages exposed (5000 rows kept), 256 events per
+message with declared truncation, 300 topology observations, 200 trajectory
+points per node, 1000 series samples, 100 state transitions, 100 recent events
+and six comparison summaries. The temporary `events.jsonl` keeps the full
+history until reset.
+
+## HTTP API (used by the browser)
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/state` | current snapshot (idle state when no run) |
+| `POST /api/start` | `{scenario, standalone, configuration?}`; 409 if a run is active |
+| `POST /api/stop`, `/api/pause`, `/api/resume`, `/api/reset` | controls |
+| `GET /api/export` | results ZIP |
+| `POST /api/validate` | validate a scenario without saving |
+| `GET /api/comparisons`, `POST /api/comparison` | MAC comparison |
+| `GET /api/scenarios`, `GET /api/scenarios/{id}`, `GET /api/scenarios/{id}/yaml` | bundled and personal scenarios |
+| `/api/user-scenarios` (`GET`, `POST`, `PUT /{id}`, `DELETE /{id}?revision=`, `POST /import`) | personal library |
+| `/api/network-profiles` (same pattern, plus `GET /{id}/yaml`) | communication profiles |
+| `GET /api/network-catalog`, `GET /api/network-inventory`, `GET /api/capabilities` | catalogue, image audit, editor capabilities |
+
+The HTTP API never accepts arbitrary file paths. Static ES modules are served
+with an explicit `text/javascript` content type (see
+[troubleshooting.md](troubleshooting.md)).
+
+## Verification status
+
+Browser tests (Playwright, `tests/frontend`) cover the dashboard, the Network
+Designer and the scenario editor; presentation fixtures intercept requests only
+in the browser and are marked by a visible banner, so they do not prove physics
+or networking. The dated visual review and real-backend checks are recorded in
+[evidence/ui-review.md](evidence/ui-review.md) and
+[evidence/desert-laboratory.md](evidence/desert-laboratory.md); screenshots are
+in [images/](images/).

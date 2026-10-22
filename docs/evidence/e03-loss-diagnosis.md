@@ -195,7 +195,7 @@ non un modello Python e non la fixture cinematica HoloOcean.
 | 50 | 135 | 8 | 45.6661 | 8/8 | 0.000 | 0 | 0 | 0 |
 | 60 | 105 | 30 | 14.2193 | 0/8 | 1.000 | 8 | 0 | 0 |
 
-![Distanza e frequenza di consegna misurata](assets/e03-delivery-probability.svg)
+![Distanza e frequenza di consegna misurata](../assets/e03-delivery-probability.svg)
 
 Le distanze critiche 40 e 50 m passano entrambe a **8/8 con 135 dB**, con
 SNR esattamente +30 dB. È una verifica causale della dipendenza dal livello

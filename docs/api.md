@@ -86,7 +86,7 @@ from holo_desert import NetworkSession, HoloOceanLink
 with holoocean.make(scenario_cfg=my_config, ticks_per_sec=30) as env, \
         NetworkSession(scenario) as net:
     link = HoloOceanLink(net, {"leader": "auv_01", "follower": "auv_02"}, ticks_per_sec=30)
-    link.attach(env.tick())                 # align initial poses
+    link.attach(env.reset())                # t=0 poses on both simulators
     while running:
         env.act("leader", my_controller())  # you keep full control
         state = env.tick()

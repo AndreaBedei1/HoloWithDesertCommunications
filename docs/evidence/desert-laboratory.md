@@ -49,11 +49,11 @@ sette librerie di supporto sono escluse dal test di plugin Tcl. Non è stata
 eseguita integralmente ogni simulazione ufficiale: per i moduli integrati
 sono state eseguite prove equivalenti sul bridge effettivo.
 
-L'[inventario completo](../src/holo_desert/resources/docker/desert-inventory.json)
+L'[inventario completo](../../src/holo_desert/resources/docker/desert-inventory.json)
 contiene tutti i nomi, percorsi, librerie, classi, default, campioni e risultati
 dei probe. È una fotografia dell'immagine iniziale v1, identificata nel campo
-`runtime`; il [catalogo corrente](../src/holo_desert/resources/docker/communication-catalog.json)
-aggiunge lo stato di integrazione v2. La [matrice delle capacità](desert-capabilities.md)
+`runtime`; il [catalogo corrente](../../src/holo_desert/resources/docker/communication-catalog.json)
+aggiunge lo stato di integrazione v2. La [matrice delle capacità](../stack-configuration.md#protocol-catalogue)
 spiega i moduli non abilitati. Le API sono `/api/network-inventory` e
 `/api/network-catalog`.
 
@@ -204,11 +204,11 @@ patch effettiva e metriche renderizzate. Le prove UI di fixture sono distinte
 da questa prova reale. Screenshot del Designer e dei risultati sono stati
 ispezionati a desktop e finestra ridotta; pannelli avanzati restano richiudibili.
 Cinque screenshot compatti sono conservati con la documentazione:
-[1920×1080](images/network-designer-1920.png),
-[1440×900](images/network-designer-1440.png),
-[900×900](images/network-designer-900.png),
-[parametri avanzati](images/network-designer-advanced-1440.png),
-[confronto di sei corse reali](images/network-comparison-1440.png).
+[1920×1080](../images/network-designer-1920.png),
+[1440×900](../images/network-designer-1440.png),
+[900×900](../images/network-designer-900.png),
+[parametri avanzati](../images/network-designer-advanced-1440.png),
+[confronto di sei corse reali](../images/network-comparison-1440.png).
 Gli altri log e artefatti di lavoro sono in `.local/`, esclusi da Git.
 
 Verifica conclusiva: **63 test unitari**, **47 test nativi DESERT**,
@@ -278,7 +278,7 @@ mostra anche l'identificativo dell'ultimo commit di documentazione.
 .venv\Scripts\holo-desert.exe run e01_chat --mac tdma --headless
 ```
 
-Aprire http://127.0.0.1:8000 e seguire la [guida al Designer](network-designer.md).
+Aprire http://127.0.0.1:8000 e seguire la [guida al Designer](../dashboard.md#network-designer).
 Docker continua a ospitare DESERT; HoloOcean rimane sull'host. Nessuna nuova
 distribuzione WSL, middleware o dipendenza Python/JS runtime è richiesta.
 
