@@ -3,7 +3,8 @@ load libuwdacap.so
 
 proc prepare_mac {} {
     global mac_parameters max_tries buffer_packets
-    global mac_stat_commands
+    global mac_stat_commands mac_bindings
+    set mac_bindings {max_tx_tries buffer_pkts max_payload wait_costant delta_D t_min T_W_min max_prop_delay}
     set mac_stat_commands {mean_defer_time_s getMeanDeferTime defer_count getTotalDeferTimes warning_tx getWrnPktsTx warning_rx getWrnPktsRx rts_tx getRtsPktsTx rts_rx getRtsPktsRx cts_tx getCtsPktsTx cts_rx getCtsPktsRx upper_data_rx getUpLayersDataRx}
     Module/UW/DACAP set debug_ 0
     Module/UW/DACAP set max_tx_tries $max_tries

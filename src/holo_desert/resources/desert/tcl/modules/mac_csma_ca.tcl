@@ -3,7 +3,8 @@ load libuwcsmaca.so
 
 proc prepare_mac {} {
     global mac_parameters bitrate buffer_packets
-    global mac_stat_commands
+    global mac_stat_commands mac_bindings
+    set mac_bindings {queue_size_ bitrate_ backoff_delta_ backoff_max cts_wait_val_ data_wait_val_ ack_wait_val_}
     set mac_stat_commands {rts_rx getRTSRx cts_rx getCTSRx rts_dropped getRTSDropped cts_dropped getCTSDropped data_dropped getDataDropped upper_data_rx getUpDataRx}
     Module/UW/CSMA_CA set debug_ 0
     Module/UW/CSMA_CA set queue_size_ $buffer_packets

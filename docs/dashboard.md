@@ -117,7 +117,10 @@ ranging and MAC comparison.
   vehicle pair for the distance series. Drift is wall time minus simulated time,
   excluding pauses.
 - Advanced statistics show per-node counters, effective routes, channel
-  events, HOLD/PROCEED transitions and E06 power changes.
+  events, HOLD/PROCEED transitions and E06 power changes, and **Configurazione
+  applicata negli oggetti DESERT**: the classes and bound values read back from
+  the native objects at the start of the run (`N/D` when a module does not
+  expose a value), to check that the configuration reached DESERT.
 - Total airtime is the sum of transmission durations, not the union of channel
   occupancy; overlaps and forwarding can make it exceed the run duration. It is
   not energy.

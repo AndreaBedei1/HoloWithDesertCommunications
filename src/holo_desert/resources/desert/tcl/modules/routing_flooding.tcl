@@ -1,5 +1,6 @@
 proc prepare_routing {} {
-    global flooding_parameters
+    global flooding_parameters routing_bindings
+    set routing_bindings {ttl_ maximum_cache_time_ optimize_}
     Module/UW/FLOODING set ttl_ [dict get $flooding_parameters ttl]
     Module/UW/FLOODING set maximum_cache_time_ [dict get $flooding_parameters maximum_cache_time_s]
     Module/UW/FLOODING set optimize_ [dict get $flooding_parameters optimize]

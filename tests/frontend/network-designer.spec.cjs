@@ -148,3 +148,11 @@ test('observed-state fixture: multi-PHY interface names and EM power units in ti
   await page.locator('[data-packet="received-001"]').first().click();await expect(page.locator('#context-content')).toContainText('Interfaccia: short · 2');
   await page.locator('.app-header [data-view="analysis"]').click();await page.locator('#advanced-analysis>summary').click();await expect(page.locator('#application-events')).toContainText('-20,0 dBm');
 });
+test('observed-state fixture: values read back from native DESERT objects are listed per drone',async({page,request})=>{
+  const {fixturePage}=require('./fixtures.cjs'),fixture=await fixturePage(page,request);
+  fixture.setState({...fixture.state(),applied_configuration:{shared:[{module:'channel',class:'Module/UnderwaterChannel',values:{propSpeed_:1500}}],auv_02:[{module:'phy',class:'Module/MPhy/BPSK/Underwater/HOLO',interface_index:2,values:{MaxTxSPL_dB_:145,BitRate_:null}}]}});
+  await page.locator('.app-header [data-view="analysis"]').click();await page.locator('#advanced-analysis>summary').click();await page.locator('summary').filter({hasText:'Configurazione applicata negli oggetti DESERT'}).click();
+  const rows=page.locator('#applied-configuration tbody tr');await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toContainText('Condiviso');await expect(rows.nth(0)).toContainText('propSpeed_ = 1500');
+  await expect(rows.nth(1)).toContainText('phy · interfaccia 2');await expect(rows.nth(1)).toContainText('MaxTxSPL_dB_ = 145, BitRate_ = N/D');
+});

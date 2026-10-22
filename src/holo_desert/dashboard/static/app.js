@@ -129,6 +129,8 @@ function metrics(){
   $('#application-history').hidden=!(s.transitions||[]).length;
   preserve($('#application-events'),eventTimeline(s.transitions||[]));
   $('#configured-route-details').previousElementSibling.textContent=s.configuration?.network?.routing==='flooding'?'Flooding nativo: nessuna tabella statica':'Route configurate (default diretto)';
+  const applied=Object.entries(s.applied_configuration||{});
+  preserve($('#applied-configuration'),applied.length?'<table><thead><tr><th>Drone</th><th>Modulo</th><th>Classe DESERT</th><th>Valori</th></tr></thead><tbody>'+applied.flatMap(([node,records])=>records.map(r=>'<tr><td>'+esc(node==='shared'?'Condiviso':drone(node))+'</td><td>'+esc(r.module+(r.interface_index!=null?' · interfaccia '+r.interface_index:'')+(r.flow_index!=null?' · flusso '+r.flow_index:''))+'</td><td>'+esc(r.class)+'</td><td>'+esc(Object.entries(r.values).map(([k,v])=>k+' = '+(v==null?'N/D':v)).join(', '))+'</td></tr>')).join('')+'</tbody></table>':'<p class="micro">Disponibile dopo l’avvio di una corsa.</p>');
   $('#configured-route-details').innerHTML=(s.configured_routes||[]).map(r=>'<div class="distance-row"><span>'+esc(drone(r.source)+' → '+drone(r.destination))+'</span><b>via '+esc(drone(r.next_hop))+'</b></div>').join('');
   preserve($('#channel-events'),eventTimeline((s.observations||[]).slice(-25).reverse()).replace(/^<ol[^>]*>|<\/ol>$/g,''));
 }

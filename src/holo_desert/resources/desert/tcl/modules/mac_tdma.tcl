@@ -5,7 +5,8 @@ load libuwtdma.so
 
 proc prepare_tdma_class {class} {
     global mac_parameters count buffer_packets
-    global mac_queue_command mac_stat_commands
+    global mac_queue_command mac_stat_commands mac_bindings
+    set mac_bindings {frame_duration guard_time tot_slots max_packet_per_slot queue_size_ fair_mode}
     set mac_queue_command get_buffer_size
     set mac_stat_commands {upper_data_rx get_upper_data_pkts_rx sent_packets get_sent_pkts received_packets get_recv_pkts}
     foreach {key value} {debug_ 0 HDR_size_ 0 wait_constant_ 0.1 MAC_addr_ 0 sea_trial_ 0 fair_mode 1 drop_old_ 0 checkPriority_ 0 mac2phy_delay_ 1e-9} {

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 proc prepare_mac {} {
-    global mac_class buffer_packets bounded_queue
+    global mac_class buffer_packets bounded_queue mac_bindings
+    set mac_bindings {max_tx_tries_ buffer_pkts_ max_payload_}
     # CSMA freezes has_buffer_queue in its constructor; ALOHA always enables it.
     if {$mac_class eq "Module/UW/CSMA_ALOHA"} {
         $mac_class set buffer_pkts_ [expr {$bounded_queue ? $buffer_packets : -1}]

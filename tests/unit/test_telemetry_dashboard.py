@@ -76,3 +76,18 @@ def test_ranging_estimates_are_kept_beside_the_geometric_reference():
         assert latest["auv_02"]["valid"] is False and latest["auv_02"]["error_m"] is None
     finally:
         collector.close()
+
+
+def test_native_bindings_are_kept_per_node_and_shared():
+    collector = TelemetryCollector(ScenarioManager().load("e01_chat").model_dump())
+    try:
+        collector.engine_event({"event": "native_bindings", "time": 0, "module": "channel", "class": "Module/UnderwaterChannel",
+                                "values": {"propSpeed_": 1500}}, {1: "auv_01", 2: "auv_02"})
+        collector.engine_event({"event": "native_bindings", "time": 0, "node": 2, "module": "phy", "interface_index": 2,
+                                "class": "Module/MPhy/BPSK/Underwater/HOLO", "values": {"MaxTxSPL_dB_": 145}}, {1: "auv_01", 2: "auv_02"})
+        applied = collector.snapshot()["applied_configuration"]
+        assert applied["shared"] == [{"module": "channel", "class": "Module/UnderwaterChannel", "values": {"propSpeed_": 1500}}]
+        assert applied["auv_02"] == [{"module": "phy", "class": "Module/MPhy/BPSK/Underwater/HOLO", "interface_index": 2,
+                                      "values": {"MaxTxSPL_dB_": 145}}]
+    finally:
+        collector.close()

@@ -268,3 +268,12 @@ def test_persisted_runs_never_overwrite_other_sessions(tmp_path):
         net = NetworkSession(load_scenario("e01_chat"), backend=ScriptedBackend(), persist=tmp_path)
         net.start(); net.step(); net.close()
     assert sorted(p.name for p in tmp_path.iterdir()) == ["run-001", "run-002"]
+
+
+def test_applied_configuration_exposes_native_read_back():
+    net, backend = session()
+    backend.initial_events = [{"event": "native_bindings", "time": 0, "node": 1, "module": "mac",
+                               "class": "Module/UW/CSMA_ALOHA", "values": {"max_tx_tries_": 3}}]
+    with net:
+        assert net.applied_configuration == {"auv_01": [{"module": "mac", "class": "Module/UW/CSMA_ALOHA",
+                                                         "values": {"max_tx_tries_": 3}}]}

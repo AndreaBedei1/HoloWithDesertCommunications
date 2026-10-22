@@ -15,6 +15,9 @@ source /opt/holo/desert/tcl/modules/mac_${mac_adapter}.tcl
 source /opt/holo/desert/tcl/modules/routing_${routing_adapter}.tcl
 set mac_queue_command getQueueSize
 set mac_stat_commands {}
+# Bound variables each adapter reads back at t=0 (native_bindings events).
+set mac_bindings {}
+set routing_bindings {}
 prepare_mac
 prepare_routing
 set ns [new Simulator]
@@ -137,6 +140,55 @@ for {set i 1} {$i <= $count} {incr i} {
 
 source /opt/holo/desert/tcl/modules/native_applications.tcl
 configure_native_applications
+
+proc json_number {value} {
+    if {[string is double -strict $value] && ![string match -nocase *nan* $value] && ![string match -nocase *inf* $value]} { return $value }
+    return null
+}
+# Emit the values a native object actually holds: bound variables and getter commands.
+proc report_bindings {node module object bindings {getters {}} {extra {}}} {
+    set values {}
+    foreach name $bindings {
+        if {[catch {$object set $name} value]} { set value null } else { set value [json_number $value] }
+        lappend values "\"$name\":$value"
+    }
+    foreach {name getter} $getters {
+        if {[catch {$object $getter} value]} { set value null } else { set value [json_number $value] }
+        lappend values "\"$name\":$value"
+    }
+    set scope [expr {$node ? ",\"node\":$node" : ""}]
+    puts "{\"event\":\"native_bindings\",\"time\":0$scope,\"module\":\"$module\",\"class\":\"[$object info class]\"$extra,\"values\":{[join $values ,]}}"
+}
+proc report_native_bindings {} {
+    global count phy propagation mask mac routing channel environment_adapter multiphy_enabled mac_bindings routing_bindings
+    global multi_indices interface_phy interface_prop interface_mask multi_controller native_flows native_app
+    set acoustic {MaxTxSPL_dB_ MinTxSPL_dB_ BitRate_ RxSnrPenalty_dB_ AcquisitionThreshold_dB_}
+    set phy_bindings [dict get [dict create optical {TxPower_ BitRate_ Ar_ T_ Id_ R_ S_ AcquisitionThreshold_dB_} em {TxPower_ BitRate_} woss $acoustic underwater $acoustic] $environment_adapter]
+    set propagation_bindings [dict get [dict create optical {Ar_ At_ c_ theta_} em {T_ S_} woss {shipping_ windspeed_} underwater {practicalSpreading_ shipping_ windspeed_}] $environment_adapter]
+    set mask_getters {frequency_hz getFreq bandwidth_hz getBandwidth}
+    report_bindings 0 channel $channel {propSpeed_}
+    for {set i 1} {$i <= $count} {incr i} {
+        if {$multiphy_enabled} {
+            foreach index $multi_indices($i) {
+                report_bindings $i phy $interface_phy($i,$index) $acoustic {} ",\"interface_index\":$index"
+                report_bindings $i mask $interface_mask($i,$index) {} $mask_getters ",\"interface_index\":$index"
+                report_bindings $i propagation $interface_prop($i,$index) {practicalSpreading_ shipping_ windspeed_} {} ",\"interface_index\":$index"
+            }
+            report_bindings $i controller $multi_controller($i) {alpha_}
+        } else {
+            report_bindings $i phy $phy($i) $phy_bindings
+            report_bindings $i mask $mask($i) {} $mask_getters
+            report_bindings $i propagation $propagation($i) $propagation_bindings
+        }
+        report_bindings $i mac $mac($i) $mac_bindings
+        report_bindings $i routing $routing($i) $routing_bindings
+    }
+    foreach flow $native_flows {
+        lassign $flow index class source
+        report_bindings $source application $native_app($index,$source) {period_ period1_ period2_ timer_switch_1_ timer_switch_2_ packetSize_ PoissonTraffic_} {} ",\"flow_index\":$index"
+    }
+}
+report_native_bindings
 
 proc number {s} {
     if {![string is double -strict $s] || [string match -nocase *nan* $s] || [string match -nocase *inf* $s]} { error "Non-finite numeric argument" }

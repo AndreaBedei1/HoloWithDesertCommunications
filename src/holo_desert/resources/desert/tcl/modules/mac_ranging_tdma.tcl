@@ -6,7 +6,8 @@ load libuwtdma.so
 load libuwranging_tdma.so
 
 proc prepare_mac {} {
-    global mac_parameters count buffer_packets mac_queue_command mac_stat_commands
+    global mac_parameters count buffer_packets mac_queue_command mac_stat_commands mac_bindings
+    set mac_bindings {frame_duration guard_time tot_slots max_packet_per_slot queue_size_ fair_mode}
     set class Module/UW/RANGING_TDMA
     set mac_queue_command get_buffer_size
     # getCtrlPktsRx is not listed: the native counter also counts received data frames.

@@ -178,7 +178,10 @@ start: its content fingerprint must match the installed package
 * `start()`, `close()` (alias `stop()`), `restart()`; context manager.
 * `node(node_id) -> NetworkNode`; `node_ids`; `time`; `dt`; `engine_info`
   (DESERT release and source commit, engine fingerprint, patches, effective
-  network and per-node stack as applied by the engine).
+  network and per-node stack as applied by the engine);
+  `applied_configuration` (classes and bound values read back from the native
+  DESERT objects at t = 0, per node, `"shared"` for the channel; also on
+  `ManagedSimulation`).
 * `update_pose(node_id, pose)`, `update_poses({node_id: pose})`: `Pose` or
   `(x, y, z[, yaw[, pitch, roll]])`, measured at the current time.
 * `send(source, destination, payload, **options) -> message_id`.

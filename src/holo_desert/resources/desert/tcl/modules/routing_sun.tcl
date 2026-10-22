@@ -3,7 +3,9 @@ load libuwcbr.so
 load libsun.so
 
 proc prepare_routing {} {
-    global sun_parameters
+    global sun_parameters routing_bindings
+    # Node and sink bind different variables; the absent ones read back as null.
+    set routing_bindings {PoissonTraffic_ timer_buffer_ period_data_ period_status_ max_ack_error_ max_retx_ buffer_max_size_ probe_min_snr_ t_probe}
     Module/UW/SUNNode set PoissonTraffic_ [dict get $sun_parameters poisson_timing]
     Module/UW/SUNSink set PoissonTraffic_ 0
     foreach {parameter binding} {buffer_interval_s timer_buffer_ data_interval_s period_data_ status_interval_s period_status_ max_ack_errors max_ack_error_ max_retransmissions max_retx_ buffer_packets buffer_max_size_ probe_min_snr_db probe_min_snr_} {

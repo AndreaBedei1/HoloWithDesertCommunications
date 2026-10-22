@@ -2,7 +2,8 @@
 load libuwcsburst.so
 
 proc prepare_mac {} {
-    global mac_parameters buffer_packets mac_queue_command mac_stat_commands
+    global mac_parameters buffer_packets mac_queue_command mac_stat_commands mac_bindings
+    set mac_bindings {queue_size max_packet_per_burst fix_sens_time rv_sens_time}
     set mac_queue_command get_buffer_size
     set mac_stat_commands {upper_data_rx get_upper_data_pkts_rx sent_packets get_sent_pkts received_packets get_recv_pkts}
     Module/UW/CSBURST set queue_size $buffer_packets

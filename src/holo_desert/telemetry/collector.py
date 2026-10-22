@@ -49,6 +49,8 @@ class TelemetryCollector:
         # Native ranging estimates per node pair, beside the HoloOcean geometric reference.
         self.ranging_series = {}
         self.ranging_latest = {}
+        # Values read back from the native DESERT objects at t=0, per node ('shared' for the channel).
+        self.applied_configuration = {}
         self.generated_count = self.received_count = self.expired_count = 0
         self.generated_bytes = self.received_bytes = self.wire_received_bytes = 0
         self.native_generated_count = self.native_received_count = self.native_received_bytes = 0
@@ -142,6 +144,9 @@ class TelemetryCollector:
                 self.mac_specific_stats[data['node_id']]=data['values']
             if event['event']=='ranging_estimate':
                 self._ranging(data,inverse)
+            if event['event']=='native_bindings':
+                self.applied_configuration.setdefault(data.get('node_id','shared'),[]).append(
+                    {k:v for k,v in event.items() if k not in ('event','time','node','observed_wall_time')})
             if event["event"] == "stats":
                 self.stats[inverse[event["node"]]] = data
                 if data.get("mac_queue") is not None:
@@ -268,6 +273,7 @@ class TelemetryCollector:
                     "distances_m": self._distances(), "node_phy": self.node_phy, "network_metrics": self.network_metrics,
                     "packets": [dict(self.packets[k]) for k in list(self.packet_order)[-500:]],
                     "events": list(self.events)[-100:], "series": list(self.series),
+                    "applied_configuration": self.applied_configuration,
                     "ranging": {"series": {pair: list(points) for pair, points in self.ranging_series.items()},
                                 "latest": sorted(self.ranging_latest.values(), key=lambda r: (r['pair'], r['observer']))},
                     "counts": {"generated": self.generated_count, "received": self.received_count,

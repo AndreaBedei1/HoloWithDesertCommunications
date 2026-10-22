@@ -260,6 +260,11 @@ class NetworkSession:
         """Engine identity and the effective configuration reported by DESERT."""
         return dict(self._backend.versions) if self._backend else {}
 
+    @property
+    def applied_configuration(self) -> dict:
+        """Values read back from the native DESERT objects at t=0, per node ("shared": channel)."""
+        return json.loads(json.dumps(self._telemetry.applied_configuration)) if self._telemetry else {}
+
     def node(self, node_id: str) -> NetworkNode:
         if node_id not in self._poses:
             raise ValueError(f"Unknown node {node_id!r}; configured: {', '.join(self._poses)}")
@@ -478,6 +483,11 @@ class ManagedSimulation:
     def versions(self) -> dict:
         """Platform, HoloOcean and engine identity recorded when the run started."""
         return json.loads(json.dumps(self._run.telemetry.versions, default=str))
+
+    @property
+    def applied_configuration(self) -> dict:
+        """Values read back from the native DESERT objects at t=0, per node ("shared": channel)."""
+        return json.loads(json.dumps(self._run.telemetry.applied_configuration))
 
     def annotate(self, event: str, **fields) -> None:
         """Add a caller-defined event to this run's log; it is exported with the results."""
