@@ -3,7 +3,9 @@
 Two acoustic interfaces per node ("long": 25 kHz/4800 bit/s, "short":
 50 kHz/8800 bit/s). The native master/slave controller picks the interface;
 this script only moves auv_02 and prints which interface DESERT used.
-Thresholds are in the controller's native linear power units.
+Thresholds are in the master's linear received-power unit, Pr = 10^(level/10)
+with the received level in dB re 1 uPa: above 1e12 (about 45 m here) the master
+moves to "short", below 2e11 (about 100 m at 50 kHz) it returns to "long".
 
     python examples/multiphy_switching.py [--port 5555]
 """
@@ -16,8 +18,8 @@ NETWORK = {"multiphy": {
         {"id": "long", "acoustic": {"frequency_hz": 25000, "bandwidth_hz": 5000, "bitrate_bps": 4800, "tx_power_db": 150}},
         {"id": "short", "acoustic": {"frequency_hz": 50000, "bandwidth_hz": 9000, "bitrate_bps": 8800, "tx_power_db": 150}}],
     "initial_interface": "long", "policy": "received_power",
-    "thresholds": [{"from_interface": "long", "to_interface": "short", "power_linear": 1},
-                   {"from_interface": "short", "to_interface": "long", "power_linear": 1e-6}]}}
+    "thresholds": [{"from_interface": "long", "to_interface": "short", "power_linear": 1e12},
+                   {"from_interface": "short", "to_interface": "long", "power_linear": 2e11}]}}
 
 
 def main():
