@@ -84,6 +84,13 @@ class Tdma(Strict):
         return self
 
 
+class RangingTdma(Strict):
+    frame_duration_s: float = Field(default=3,gt=0)
+    guard_time_s: float = Field(default=.1,ge=0)
+    # The native ranging frame is the first transmission of every own slot.
+    max_packets_per_slot: int = Field(default=2,ge=2)
+
+
 class CsmaCa(Strict):
     queue_size: int = Field(default=10,ge=1)
     backoff_delta_s: int = Field(default=1,ge=1)
@@ -102,7 +109,7 @@ class Dacap(Strict):
 
 
 class Mac(Strict):
-    protocol: Literal['csma_aloha','aloha','tdma','tdma_frame','csma_ca','dacap','csburst','tokenbus','ranging_tokenbus'] = 'csma_aloha'
+    protocol: Literal['csma_aloha','aloha','tdma','tdma_frame','csma_ca','dacap','csburst','tokenbus','ranging_tokenbus','ranging_tdma'] = 'csma_aloha'
     ack: bool = False
     max_tx_tries: int = Field(default=3,ge=1,le=20)
     buffer_packets: int = Field(default=100,ge=1,le=10000)
@@ -113,6 +120,7 @@ class Mac(Strict):
     csburst: CsBurst = Field(default_factory=CsBurst)
     tokenbus: TokenBus = Field(default_factory=TokenBus)
     ranging_tokenbus: TokenBus = Field(default_factory=TokenBus)
+    ranging_tdma: RangingTdma = Field(default_factory=RangingTdma)
 
 
 class Flooding(Strict):
@@ -145,7 +153,7 @@ class Network(Strict):
             if self.acoustic.propagation!='underwater':raise ValueError('Nonacoustic medium cannot use WOSS')
         if self.routing=='sun' and (self.mac.protocol!='csma_aloha' or self.mac.ack):
             raise ValueError('SUN requires the verified CSMA-ALOHA stack without MAC ACK')
-        if self.mac.protocol in ('csburst','tokenbus','ranging_tokenbus'):
+        if self.mac.protocol in ('csburst','tokenbus','ranging_tokenbus','ranging_tdma'):
             if self.mac.ack:raise ValueError('This native MAC has no ALOHA ACK option')
             if self.routing!='static':raise ValueError('Additional MACs currently require verified StaticRouting')
         if self.routing=='flooding' and self.mac.protocol in ('csma_ca','dacap'):

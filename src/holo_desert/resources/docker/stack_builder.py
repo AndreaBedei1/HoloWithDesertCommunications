@@ -53,7 +53,8 @@ MACS={'aloha':('aloha','Module/UW/ALOHA',['libuwaloha.so']),
       'dacap':('dacap','Module/UW/DACAP',['libuwdacap.so']),
       'csburst':('csburst','Module/UW/CSBURST',['libuwcsburst.so']),
       'tokenbus':('tokenbus','Module/UW/TOKENBUS',['libuwcbr.so','libuwtokenbus.so']),
-      'ranging_tokenbus':('ranging_tokenbus','Module/UW/RANGING_TOKENBUS',['libuwcbr.so','libuwtokenbus.so','libuwranging_tokenbus.so'])}
+      'ranging_tokenbus':('ranging_tokenbus','Module/UW/RANGING_TOKENBUS',['libuwcbr.so','libuwtokenbus.so','libuwranging_tokenbus.so']),
+      'ranging_tdma':('ranging_tdma','Module/UW/RANGING_TDMA',['libuwtdma.so','libuwranging_tdma.so'])}
 PHYS={'bpsk_upstream':'Module/MPhy/BPSK/Underwater/HOLO',
       'bpsk_corrected':'Module/MPhy/BPSK/Underwater/HOLO/Corrected'}
 ROUTING={'static':('Module/UW/StaticRouting','libuwstaticrouting.so'),
@@ -176,9 +177,16 @@ def validate(config):
                     number(value,field.get('min'),field.get('max'),field['type']=='integer')
                 elif field['type']=='checkbox':
                     if not isinstance(value,bool):raise ValueError('Expected boolean parameter')
-        if net['mac']['protocol'] in ('csburst','tokenbus','ranging_tokenbus'):
+        if net['mac']['protocol'] in ('csburst','tokenbus','ranging_tokenbus','ranging_tdma'):
             if net['mac']['ack']:raise ValueError('This native MAC has no ALOHA ACK option')
             if net['routing']!='static':raise ValueError('Additional MACs currently require verified StaticRouting')
+        if net['mac']['protocol']=='ranging_tdma':
+            slots=net['mac']['ranging_tdma']
+            if set(slots)-{'frame_duration_s','guard_time_s','max_packets_per_slot'}:raise ValueError('Unsupported module parameter')
+            number(slots['frame_duration_s'],1e-12);number(slots['guard_time_s'],0)
+            # The native ranging frame always uses one transmission of the slot.
+            number(slots['max_packets_per_slot'],2,10000,True)
+        if net['mac']['protocol'] in ('csburst','tokenbus','ranging_tokenbus'):
             protocol=net['mac']['protocol'];parameters=net['mac'][protocol]
             allowed={'max_packets_per_burst','fixed_sensing_s','random_sensing_s'} if protocol=='csburst' else {'slot_time_s','min_token_hold_s','max_token_hold_s'}
             if set(parameters)-allowed:raise ValueError('Unsupported module parameter')
@@ -230,11 +238,13 @@ def validate(config):
                     if current in visited:raise ValueError('Static route loop')
                     visited.add(current)
                     current=net.get('routes',{}).get(current,{}).get(destination,destination)
-        if net['mac']['protocol'] in ('tdma','tdma_frame'):
+        if net['mac']['protocol'] in ('tdma','tdma_frame','ranging_tdma'):
             if net['mac']['ack']:raise ValueError('TDMA does not support the ALOHA ACK option')
-            tdma=net['mac']['tdma'];slots=tdma.get('slot_assignment',{})
+            ranging=net['mac']['protocol']=='ranging_tdma'
+            # Ranging-TDMA slots follow the native creation order, so there is no assignment.
+            tdma=net['mac']['ranging_tdma' if ranging else 'tdma'];slots={} if ranging else tdma.get('slot_assignment',{})
             if slots and set(slots)!=set(ids):raise ValueError('Assign one slot to every node')
-            if not slots:
+            if not slots and not ranging:
                 tdma['slot_assignment']={node:i for i,node in enumerate(ids)}
             values=list(slots.values()) if slots else list(range(len(ids)))
             if sorted(values)!=list(range(len(ids))):raise ValueError('TDMA slot assignments must be unique in 0..N-1')
@@ -257,7 +267,8 @@ def validate(config):
                 # Conservatively include slower interfaces that may forward/reply.
                 bitrate=min(node['acoustic']['bitrate_bps'] for node in effective)
                 frame_bytes=flow.get('native_packet_bytes',125) if flow.get('generator','python')!='python' else len(json.dumps(wire,separators=(',',':')))
-                duration=(frame_bytes+overhead)*8/bitrate
+                # Ranging-TDMA sends its ranging frame (4 bytes per peer plus 2) first in every own slot.
+                duration=(frame_bytes+overhead)*8/bitrate+((4*(len(ids)-1)+2)*8/bitrate if ranging else 0)
                 if duration>slot-tdma['guard_time_s']:raise ValueError('Frame does not fit its TDMA slot: increase frame duration or reduce payload')
         for f in c.get('flows',[]):
             if f.get('final_interval') is not None and f.get('stop') is None:
@@ -296,7 +307,7 @@ def render(config):
     if net['routing']=='sun':
         lines.append('set sun_parameters {'+' '.join(k+' '+number(ids[v] if k=='sink' else int(v) if isinstance(v,bool) else v) for k,v in net['sun'].items())+'}')
     params=mac.get('tdma' if adapter=='tdma_frame' else adapter,{}) if adapter!='aloha' else {}
-    allowed={'tdma':{'frame_duration_s','guard_time_s','max_packets_per_slot','slot_assignment'},'tdma_frame':{'frame_duration_s','guard_time_s','max_packets_per_slot','slot_assignment'},'csma_ca':{'queue_size','backoff_delta_s','backoff_max','cts_wait_s','data_wait_s','ack_wait_s'},'dacap':{'wait_costant_s','delta_d','t_min','tw_min','max_prop_delay_s'},'aloha':set(),'csburst':{'max_packets_per_burst','fixed_sensing_s','random_sensing_s'},'tokenbus':{'slot_time_s','min_token_hold_s','max_token_hold_s'},'ranging_tokenbus':{'slot_time_s','min_token_hold_s','max_token_hold_s'}}
+    allowed={'tdma':{'frame_duration_s','guard_time_s','max_packets_per_slot','slot_assignment'},'tdma_frame':{'frame_duration_s','guard_time_s','max_packets_per_slot','slot_assignment'},'csma_ca':{'queue_size','backoff_delta_s','backoff_max','cts_wait_s','data_wait_s','ack_wait_s'},'dacap':{'wait_costant_s','delta_d','t_min','tw_min','max_prop_delay_s'},'aloha':set(),'csburst':{'max_packets_per_burst','fixed_sensing_s','random_sensing_s'},'tokenbus':{'slot_time_s','min_token_hold_s','max_token_hold_s'},'ranging_tokenbus':{'slot_time_s','min_token_hold_s','max_token_hold_s'},'ranging_tdma':{'frame_duration_s','guard_time_s','max_packets_per_slot'}}
     if set(params)-allowed[adapter]:raise ValueError('Unsupported module parameter')
     if set(net['flooding'])-{'ttl','maximum_cache_time_s','optimize'}:raise ValueError('Unsupported flooding parameter')
     parts=[]

@@ -1953,17 +1953,18 @@
     },
     {
       "id": "ranging",
-      "name": "Ranging / TDOA",
+      "name": "Ranging TDOA",
       "layer": "application",
-      "description": "Librerie presenti, ma richiedono messaggi, clock e inizializzazioni dedicate. Distanza geometrica non e una misura acustica.",
-      "reason": "Ranging-TokenBus è integrato (voce dedicata). RANGING_TDMA e TDOA non sono integrati: il costruttore senza slot configurati causa SIGFPE nel probe; header e output di misura non adattati.",
+      "description": "Ranging TDOA nativo: un livello RANGE sopra il MAC e un livello TAP sotto, con ping che condividono la coda dati. Ranging-TokenBus e Ranging-TDMA sono voci separate.",
+      "reason": "Non integrato: richiede due livelli aggiuntivi (RANGE sopra il MAC, TAP sotto) nella catena fissa del bridge; nell’esempio ufficiale l’errore medio per nodo arriva a 198 m (massimo 5992 m).",
       "operational": false,
       "validation": "not_integrated",
       "source_present": true,
       "compiled": true,
       "loadable": null,
       "bridge_compatible": false,
-      "parameters": []
+      "parameters": [],
+      "unavailable": "richiede i livelli RANGE e TAP fuori dalla catena del bridge"
     },
     {
       "id": "hardware",
@@ -2303,6 +2304,94 @@
           "acoustic"
         ]
       }
+    },
+    {
+      "id": "ranging_tdma",
+      "name": "Ranging TDMA",
+      "layer": "mac",
+      "description": "TDMA nativo che misura i tempi di volo: in ogni slot il drone invia prima un frame di ranging e poi i dati. Ogni drone stima tutte le coppie, con misure dirette e valori ricevuti dagli altri; stime distinte dalla ground truth HoloOcean.",
+      "reason": "Verificato con test nativi del bridge (consegna dati, stime per tutte le coppie entro 1 cm, aggiornamento dopo un movimento, riavvio) e con HoloOcean end-to-end fino alla dashboard (2026-10-22).",
+      "operational": true,
+      "validation": "verified_end_to_end",
+      "experimental": false,
+      "source_present": true,
+      "compiled": true,
+      "loadable": true,
+      "bridge_compatible": true,
+      "libraries": [
+        "libuwtdma.so",
+        "libuwranging_tdma.so"
+      ],
+      "tcl_class": "Module/UW/RANGING_TDMA",
+      "tcl_classes": [
+        "Module/UW/RANGING_TDMA"
+      ],
+      "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/ranging/uwranging_tdma",
+      "official_examples": [
+        "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/ranging/ranging_tdma.tcl"
+      ],
+      "official_example": "official sample run in a disposable container (5 nodes, exit 0); bridge chain verified separately",
+      "compatibility": {
+        "routing": [
+          "static"
+        ],
+        "media": [
+          "acoustic"
+        ],
+        "phy": [
+          "bpsk_upstream",
+          "bpsk_corrected"
+        ]
+      },
+      "telemetry": [
+        "ranging_estimate",
+        "mac_specific_stats",
+        "phy_control_* (frame di ranging)"
+      ],
+      "parameters": [
+        {
+          "path": "network.mac.ranging_tdma.frame_duration_s",
+          "label": "Durata del frame",
+          "default": 3,
+          "unit": "s",
+          "type": "number",
+          "min": 0.001,
+          "help": "Ciclo condiviso: ogni drone ha uno slot lungo frame / numero di droni, nell’ordine dei droni nello scenario.",
+          "constraint": "divisa per il numero di droni deve contenere frame di ranging, frame dati e tempo di guardia"
+        },
+        {
+          "path": "network.mac.ranging_tdma.guard_time_s",
+          "label": "Tempo di guardia",
+          "default": 0.1,
+          "unit": "s",
+          "type": "number",
+          "min": 0,
+          "help": "Margine alla fine dello slot. Per non sovrapporre slot vicini dovrebbe coprire la propagazione più lunga (distanza / velocità del suono).",
+          "constraint": "minore della durata di uno slot"
+        },
+        {
+          "path": "network.mac.ranging_tdma.max_packets_per_slot",
+          "label": "Trasmissioni per slot",
+          "default": 2,
+          "unit": "pacchetti",
+          "type": "integer",
+          "min": 2,
+          "max": 10000,
+          "help": "Trasmissioni native per slot: la prima è sempre il frame di ranging, le altre sono dati.",
+          "constraint": "almeno 2, perché una trasmissione è il frame di ranging"
+        },
+        {
+          "path": "network.mac.buffer_packets",
+          "label": "Buffer MAC",
+          "default": 100,
+          "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
+          "type": "integer",
+          "unit": "pacchetti",
+          "min": 1,
+          "max": 10000,
+          "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
+        }
+      ]
     }
   ],
   "inventory": {

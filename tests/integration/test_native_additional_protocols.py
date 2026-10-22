@@ -162,3 +162,43 @@ def test_sun_native_generators_ack_and_delivery(engine, generator):
         assert next(e['values']['queue'] for e in events if e['event'] == 'routing_stats' and e['role'] == 'node') == 0
     finally:
         backend.stop()
+
+
+@pytest.mark.parametrize('phy', ['bpsk_upstream', 'bpsk_corrected'])
+def test_native_ranging_tdma_delivers_data_and_measures_every_pair(engine, phy):
+    data = ScenarioManager().load('e01_chat').model_dump()
+    data['network']['mac']['protocol'] = 'ranging_tdma'
+    data['network']['acoustic']['phy'] = phy
+    data['flows'] = []
+    data['nodes'] = [dict(data['nodes'][0], id=f'auv_{i+1:02d}') for i in range(3)]
+    scenario = Scenario.model_validate(data)
+    for _ in range(2):  # a fresh NS process per start
+        backend = DESERTAdapter(manage_docker=False)
+        try:
+            backend.start(scenario)
+            for node, (x, y) in zip(scenario.nodes, [(0, 0), (150, 0), (0, 200)]):
+                backend.update_node_position(node.id, Pose(x, y, -20), 0)
+            backend.request_stats()
+            initial = [e for e in backend.advance(.00001) if e['event'] == 'ranging_estimate']
+            assert len(initial) == 9 and not any(e['valid'] for e in initial)
+            messages = [Message(a, b, b'ranging-tdma', backend.time) for a, b in
+                        (('auv_01', 'auv_02'), ('auv_02', 'auv_03'), ('auv_03', 'auv_01'))]
+            for message in messages:
+                backend.send(message)
+            events = backend.advance(15)
+            assert {Message.decode(bytes.fromhex(e['wire_hex'])).id for e in events if e['event'] == 'rx'} == {m.id for m in messages}
+            assert any(e['event'] == 'phy_control_tx_start' for e in events)  # native ranging frames
+            backend.request_stats()
+            events = backend.advance(15.5)
+            truth = {(1, 2): 150, (1, 3): 200, (2, 3): 250}
+            estimates = [e for e in events if e['event'] == 'ranging_estimate']
+            assert len(estimates) == 9 and all(e['valid'] and e['protocol'] == 'ranging_tdma' for e in estimates)
+            assert all(e['distance_m'] == pytest.approx(truth[(e['peer_a'], e['peer_b'])], abs=.01) for e in estimates)
+            assert all(e['values']['ranging_tx'] >= 4 for e in events if e['event'] == 'mac_specific_stats')
+            backend.update_node_position('auv_03', Pose(0, 300, -20), 15.5)
+            backend.advance(30)
+            backend.request_stats()
+            moved = [e for e in backend.advance(30.5) if e['event'] == 'ranging_estimate' and e['peer_b'] == 3]
+            assert moved and all(e['distance_m'] == pytest.approx({1: 300, 2: math.hypot(150, 300)}[e['peer_a']], abs=.01) for e in moved)
+        finally:
+            backend.stop()

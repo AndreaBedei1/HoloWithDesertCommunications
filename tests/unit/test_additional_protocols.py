@@ -80,3 +80,44 @@ def test_sun_roles_render_and_convergecast_validation():
         Scenario.model_validate(data)
     with pytest.raises(ValueError, match='sink'):
         render(data)
+
+
+def ranging_tdma(**mac):
+    data = ScenarioManager().load('e01_chat').model_dump()
+    data['network']['mac'].update(protocol='ranging_tdma', **mac)
+    return data
+
+
+def test_ranging_tdma_renders_native_class_creation_order_slots_and_parameters():
+    model = Scenario.model_validate(ranging_tdma(ranging_tdma={'frame_duration_s': 4, 'guard_time_s': .2, 'max_packets_per_slot': 3}))
+    text = render(model.model_dump())
+    assert 'set mac_class Module/UW/RANGING_TDMA' in text and 'libuwranging_tdma.so' in text
+    assert 'set mac_parameters {frame_duration_s 4 guard_time_s 0.2 max_packets_per_slot 3}' in text
+
+
+@pytest.mark.parametrize('patch,match', [({'ack': True}, 'ACK'), ({'ranging_tdma': {'max_packets_per_slot': 1}}, 'greater than or equal to 2|ranging frame'),
+                                         ({'ranging_tdma': {'guard_time_s': 5}}, 'guard'), ({'ranging_tdma': {'slot_assignment': {}}}, 'xtra|Unsupported')])
+def test_ranging_tdma_rejects_unsupported_settings_at_both_boundaries(patch, match):
+    data = ranging_tdma(**patch)
+    with pytest.raises(ValueError, match=match):
+        Scenario.model_validate(data)
+    with pytest.raises(ValueError):
+        render(data)
+
+
+def test_ranging_tdma_slot_must_fit_ranging_and_data_frames():
+    # 0.29 s of usable slot cannot carry the E01 request envelope (about 0.3 s at 4800 bit/s).
+    data = ranging_tdma(ranging_tdma={'frame_duration_s': .6, 'guard_time_s': .01})
+    with pytest.raises(ValueError, match='slot'):
+        Scenario.model_validate(data)
+    with pytest.raises(ValueError, match='slot'):
+        render(data)
+
+
+def test_ranging_tdma_requires_static_routing():
+    data = ranging_tdma()
+    data['network']['routing'] = 'flooding'
+    with pytest.raises(ValueError, match='Static'):
+        Scenario.model_validate(data)
+    with pytest.raises(ValueError, match='Static'):
+        render(data)
