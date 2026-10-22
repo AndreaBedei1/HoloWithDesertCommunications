@@ -5,7 +5,8 @@ import platform
 import socket
 import sys
 import subprocess
-from .desert_adapter.backend import docker_command, DESERTAdapter, BackendError, BASE_IMAGE
+from .desert_adapter.backend import docker_command, DESERTAdapter, BackendError
+from .resources.docker.stack_builder import engine_fingerprint, expected_base_image
 
 
 def doctor(library_only=False):
@@ -82,18 +83,20 @@ def doctor(library_only=False):
             return f"127.0.0.1:{port} available"
         check(f"port_{port}", available)
     def image():
-        reference = BASE_IMAGE.split("@")[0]
-        return docker_command("image", "inspect", reference, "--format", "{{json .RepoDigests}}", timeout=12).stdout.strip()
+        reference = expected_base_image()
+        image_id = docker_command("image", "inspect", reference, "--format", "{{.Id}}", timeout=12).stdout.strip()
+        pinned = "" if "@sha256:" in reference else "; not pinned by digest, so a moved tag is not detected"
+        return f"{reference} present locally ({image_id}){pinned}"
     check("desert_base_image", image)
     def service():
         info = DESERTAdapter().health_info()
         if info is None:
             raise RuntimeError(f"No DESERT service on port {desert_port}; run holo-desert engine up")
-        from .resources.docker.stack_builder import engine_fingerprint
-        expected = engine_fingerprint()
+        expected, base = engine_fingerprint(), expected_base_image()
         if info.get("engine_fingerprint") != expected:
-            raise RuntimeError(f"Engine image is outdated (service {info.get('engine_fingerprint')}, "
-                               f"package {expected}); run holo-desert engine up")
-        return f"healthy on port {desert_port}, engine {expected}"
+            raise RuntimeError(f"Engine image is outdated or built from another base (service "
+                               f"{info.get('engine_fingerprint')} from {info.get('desert_base_image') or 'an unrecorded base'}, "
+                               f"package {expected} from {base}); run holo-desert engine up")
+        return f"healthy on port {desert_port}, engine {expected}, base {base}"
     check("desert_engine", service)
     return checks

@@ -102,7 +102,7 @@ with `{"event":`.
 
 | First line | Behaviour |
 |---|---|
-| `HEALTH` | Replies `{"event":"health","backend":"desert","release":"4.0.0","engine_fingerprint":…}` and closes. Handled by `server.py`, not by the bridge |
+| `HEALTH` | Replies `{"event":"health","backend":"desert","release":"4.0.0","engine_fingerprint":…,"desert_base_image":…}` and closes. Handled by `server.py`, not by the bridge |
 | Scenario JSON (`Scenario.model_dump_json()`, read up to 131072 bytes) | Acquires the single-session lock (2 s timeout, else `{"event":"error","reason":"DESERT is busy"}`); validates with `stack_builder.validate`; emits `engine_info`; renders `config.tcl` into a new temporary directory; starts `ns /opt/holo/desert/tcl/bridge.tcl config.tcl` |
 
 Afterwards `server.py` forwards each client line (≤ 20000 bytes) to the NS
@@ -308,9 +308,10 @@ selector is not an integration: each step below is required.
    native packet ID; build-time source assertions should reject a different
    upstream implementation. Make the collector understand any new event
    fields; never synthesise values the native module does not expose.
-7. **Engine fingerprint.** Any file copied into the image is covered by
-   `engine_fingerprint()`; a new file in `resources/docker/` must be added to
-   `ENGINE_FILES` and to the `Dockerfile` `COPY` line. Rebuild with
+7. **Engine fingerprint.** Any file copied into the image, the `Dockerfile`
+   and the base image reference are covered by `engine_fingerprint()`; a new
+   file in `resources/docker/` must be added to `ENGINE_FILES` and to the
+   `Dockerfile` `COPY` line (a unit test compares the two). Rebuild with
    `holo-desert engine up`.
 8. **Tests.** Unit tests for schema and builder acceptance/rejection
    (`tests/unit/test_stack_builder.py`, `test_additional_protocols.py` as

@@ -11,6 +11,7 @@ import subprocess
 import time
 
 from ..common.models import Message, Pose
+from ..resources.docker.stack_builder import pinned_base_image
 from ..scenarios.config import RESOURCE_ROOT, Scenario
 
 
@@ -70,7 +71,7 @@ def docker_command(*args, timeout=120, check=True):
 
 
 COMPOSE = ["compose", "-p", "holo-desert", "-f", str(RESOURCE_ROOT / "docker/compose.yaml")]
-BASE_IMAGE = "uwsignet/desert:4.0.0@sha256:59c734d2980de64e4b36429c3fb4a60aceb1cb7efc5f9d605f9b7781fbc51ca6"
+BASE_IMAGE = pinned_base_image()
 
 
 class DESERTAdapter(CommunicationBackend):
@@ -125,7 +126,8 @@ class DESERTAdapter(CommunicationBackend):
             from ..resources.docker.stack_builder import CATALOG_VERSION, engine_fingerprint
             expected = engine_fingerprint()
             if self.versions.get('stack_builder') != CATALOG_VERSION or self.versions.get('engine_fingerprint') != expected:
-                raise BackendError(f"DESERT engine image is outdated (engine {self.versions.get('engine_fingerprint')}, "
+                raise BackendError(f"DESERT engine image is outdated or built from another base (engine "
+                                   f"{self.versions.get('engine_fingerprint')} from {self.versions.get('desert_base_image')}, "
                                    f"package {expected}): rebuild with holo-desert engine up")
             if self.time != 0 or any(e["event"] == "rx" for e in initial):
                 raise BackendError("DESERT did not initialize at time zero")

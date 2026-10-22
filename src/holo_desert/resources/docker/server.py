@@ -28,15 +28,17 @@ except ImportError:
     from stack_builder import render, validate, CATALOG_VERSION, effective_nodes
 
 
-def _fingerprint():
+def _image_file(name):
     try:
-        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "engine-fingerprint")) as f:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), name)) as f:
             return f.read().strip()
     except OSError:
         return None
 
 
-ENGINE_FINGERPRINT = _fingerprint()
+ENGINE_FINGERPRINT = _image_file("engine-fingerprint")
+# DESERT base image reference (DESERT_IMAGE build argument) of this image.
+ENGINE_BASE_IMAGE = _image_file("engine-base-image")
 
 
 class Handler(socketserver.StreamRequestHandler):
@@ -45,7 +47,8 @@ class Handler(socketserver.StreamRequestHandler):
         first = self.rfile.readline(131072)
         if first == b'HEALTH\n':
             self.wfile.write((json.dumps({"event": "health", "backend": "desert", "release": "4.0.0",
-                                          "engine_fingerprint": ENGINE_FINGERPRINT}) + "\n").encode())
+                                          "engine_fingerprint": ENGINE_FINGERPRINT,
+                                          "desert_base_image": ENGINE_BASE_IMAGE}) + "\n").encode())
             return
         # A stopped predecessor can still be reaping its child for a moment.
         if not self.server.owner.acquire(timeout=2):
@@ -56,7 +59,7 @@ class Handler(socketserver.StreamRequestHandler):
             config = validate(json.loads(first))
             commit = subprocess.check_output(["git", "-C", "/home/DESERT_Underwater", "rev-parse", "HEAD"], text=True).strip()
             self.wfile.write((json.dumps({"event": "engine_info", "time": 0,
-                "desert_release": "4.0.0", "desert_source_commit": commit,
+                "desert_release": "4.0.0", "desert_source_commit": commit, "desert_base_image": ENGINE_BASE_IMAGE,
                 "stack_builder": CATALOG_VERSION, "engine_fingerprint": ENGINE_FINGERPRINT, "phy_patch": {"optical":"native-optical-lambert-beer-body-frame-v1","em":"em-power-lut-v1"}.get(config['network'].get('medium'), "conditional-bpsk-v1" if any(n["acoustic"].get("phy")=="bpsk_corrected" for n in effective_nodes(config)) else "upstream-original"),
                 "effective_network": config["network"], "effective_nodes": effective_nodes(config)}) + "\n").encode())
             self.wfile.flush()

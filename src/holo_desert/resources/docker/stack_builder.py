@@ -15,6 +15,7 @@ import copy
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import re
 
@@ -60,20 +61,34 @@ ROUTING={'static':('Module/UW/StaticRouting','libuwstaticrouting.so'),
          'sun':('Module/UW/SUNNode','libsun.so')}
 
 
-# Files copied into the engine image (see Dockerfile). Their digest identifies
-# the bridge, adapters and builder actually running, so a stale image that
-# would silently ignore new options is rejected by the host client.
-ENGINE_FILES=('server.py','stack_builder.py','environment_config.py','medium_config.py','multiphy_config.py',
-              'application_config.py','communication-catalog.json','desert-inventory.json','build-extension.sh')
+# Files copied into the engine image (see Dockerfile). Their digest, with the
+# DESERT base image reference, identifies the build recipe, bridge, adapters and
+# builder actually running, so a stale image that would silently ignore new
+# options, or one built from another base, is rejected by the host client.
+ENGINE_FILES=('Dockerfile','server.py','stack_builder.py','environment_config.py','medium_config.py','multiphy_config.py',
+              'application_config.py','communication-catalog.json','desert-inventory.json','build-extension.sh','probe-sockets.py')
 
 
-def engine_fingerprint(docker_dir=HERE,desert_dir=None):
+def pinned_base_image(docker_dir=HERE):
+    """DESERT base image pinned by the Dockerfile (``ARG DESERT_IMAGE``)."""
+    for line in (Path(docker_dir)/'Dockerfile').read_text(encoding='utf-8').splitlines():
+        if line.startswith('ARG DESERT_IMAGE='):return line.split('=',1)[1].strip()
+    raise ValueError('Dockerfile does not pin the DESERT base image')
+
+
+def expected_base_image(docker_dir=HERE):
+    """Base image of the Compose build: the ``DESERT_IMAGE`` override, else the pin."""
+    return os.environ.get('DESERT_IMAGE') or pinned_base_image(docker_dir)
+
+
+def engine_fingerprint(docker_dir=HERE,desert_dir=None,base_image=None):
     docker_dir=Path(docker_dir)
     desert_dir=Path(desert_dir) if desert_dir else (docker_dir/'desert' if (docker_dir/'desert').is_dir() else docker_dir.parent/'desert')
     entries=[(name,docker_dir/name) for name in ENGINE_FILES]
     entries+=[('desert/'+p.relative_to(desert_dir).as_posix(),p) for p in desert_dir.rglob('*')
               if p.is_file() and '__pycache__' not in p.parts and p.suffix!='.pyc']
     digest=hashlib.sha256()
+    digest.update(b'base-image\x00'+(base_image or expected_base_image(docker_dir)).encode()+b'\x00')
     for name,path in sorted(entries):
         digest.update(name.encode()+b'\x00'+path.read_bytes().replace(b'\r\n',b'\n')+b'\x00')
     return digest.hexdigest()[:16]
@@ -310,4 +325,7 @@ def render(config):
 
 
 if __name__=='__main__':
-    print(engine_fingerprint())
+    import sys
+    # Image build: python3 stack_builder.py --base-image "$DESERT_IMAGE"
+    arguments=sys.argv[1:]
+    print(engine_fingerprint(base_image=arguments[1] if arguments[:1]==['--base-image'] else None))

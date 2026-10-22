@@ -18,7 +18,7 @@ next to the numeric DESERT `node` address and, when a payload is recognised,
 
 | Event | Emitted by | Content |
 |---|---|---|
-| `engine_info` | `server.py`, at session start | `desert_release`, `desert_source_commit` (Git commit inside the container), `stack_builder` (`desert-lab-v2`), `engine_fingerprint`, `phy_patch` (`upstream-original`, `conditional-bpsk-v1`, `native-optical-lambert-beer-body-frame-v1` or `em-power-lut-v1`), `effective_network`, `effective_nodes` (resolved per-node values) |
+| `engine_info` | `server.py`, at session start | `desert_release`, `desert_source_commit` (Git commit inside the container), `desert_base_image` (base image reference the engine was built from), `stack_builder` (`desert-lab-v2`), `engine_fingerprint`, `phy_patch` (`upstream-original`, `conditional-bpsk-v1`, `native-optical-lambert-beer-body-frame-v1` or `em-power-lut-v1`), `effective_network`, `effective_nodes` (resolved per-node values) |
 | `node_info` | `bridge.tcl` | DESERT node address and its MAC address |
 | `position_applied` | `bridge.tcl`, every tick per node | `x`, `y`, `z` applied to the DESERT position object (WOSS adds `latitude_deg`, `longitude_deg`, `altitude_m`) |
 | `power_applied` | `POWER` command | `tx_power_db`, `tx_power_w` or `tx_power_dbm` |
@@ -163,9 +163,9 @@ trajectory (see [dashboard.md](dashboard.md#mac-comparison)).
 
 | Item | Where it is recorded |
 |---|---|
-| DESERT base image digest `uwsignet/desert:4.0.0@sha256:59c734d2…51ca6` | pinned in `resources/docker/Dockerfile`, `compose.yaml`, `desert_adapter/backend.py` and `dependencies.lock.json`; not written per run |
+| DESERT base image digest `uwsignet/desert:4.0.0@sha256:59c734d2…51ca6` | pinned in `resources/docker/Dockerfile` (read by the client), `compose.yaml` and `dependencies.lock.json`; recorded per run in `engine_info.desert_base_image` and covered by the engine fingerprint |
 | DESERT source commit inside the image | `engine_info.desert_source_commit` (the pinned image reports `12203f3cdba7d85bac78074d1f2ccfddbfb08021`, while the public tag `4.0.0` resolves to `8991214a1379747a2450f0dc4dd69f9173128f90`; both are in `dependencies.lock.json`) |
-| Bridge/adapter/builder content | `engine_info.engine_fingerprint` (checked against the package before every run) and `engine_info.stack_builder` |
+| Build recipe, bridge/adapter/builder content and base image | `engine_info.engine_fingerprint` (checked against the package before every run) and `engine_info.stack_builder` |
 | Patches | `engine_info.phy_patch`, per-event `phy_patch_id`, `run_started.versions.holoocean_adapter_patch` (`windows-ipc-ready-v1` on Windows) |
 | Software versions | `run_started.versions`: `platform` (package version), `desert`, `holoocean`, `engine` (the full `engine_info`) |
 | Randomness | `run_started.seed` and `rng_substream` (= `network.seed`) |

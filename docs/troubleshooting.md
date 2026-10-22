@@ -20,12 +20,16 @@ directory to `PATH` for its own Docker calls, which also covers a missing
 `docker-credential-desktop` on the terminal `PATH`.
 
 **Outdated engine image (fingerprint mismatch).**
-Symptoms: doctor reports `Engine image is outdated (service <a>, package <b>);
-run holo-desert engine up`, or a run fails with `DESERT engine image is outdated
-(engine <a>, package <b>): rebuild with holo-desert engine up`. The running image
-was built from a different bridge/adapter/builder/catalog than the installed
-package. Run `holo-desert engine up` (it rebuilds) after every package update.
-If another service was started manually on the same port, stop it first.
+Symptoms: doctor reports `Engine image is outdated or built from another base
+(service <a> from <base>, package <b> from <base>); run holo-desert engine up`,
+or a run fails with `DESERT engine image is outdated or built from another base
+(engine <a> from <base>, package <b>): rebuild with holo-desert engine up`. The
+running image was built from a different Dockerfile, bridge, adapter, builder,
+catalogue or DESERT base image than the installed package expects. Run
+`holo-desert engine up` (it rebuilds) after every package update. If the
+engine was built with a custom `DESERT_IMAGE`, set the same variable for the
+client and `doctor`. If another service was started manually on the same port,
+stop it first.
 
 **`DESERT service did not become healthy; run holo-desert logs`.** The container
 did not answer `HEALTH` within 30 s after `compose up`. Read the logs; the first

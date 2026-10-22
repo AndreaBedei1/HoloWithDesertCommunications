@@ -155,19 +155,25 @@ Engine lifecycle rules:
 ### Engine fingerprint
 
 At build time the image stores a 16-hex-digit SHA-256 **engine fingerprint**
-computed over the files copied into the image: `server.py`, `stack_builder.py`,
-the `*_config.py` validators, `communication-catalog.json`,
-`desert-inventory.json`, `build-extension.sh` and every file under
-`resources/desert/` (bridge Tcl, module adapters, C++ extension). The service
-reports it in its `HEALTH` reply and in `engine_info`. The host recomputes it
-from the installed package:
+computed over the DESERT base image reference (the `DESERT_IMAGE` build
+argument, by default the digest pinned in the `Dockerfile`) and the files
+copied into the image: the `Dockerfile` itself, `server.py`,
+`stack_builder.py`, the `*_config.py` validators, `communication-catalog.json`,
+`desert-inventory.json`, `build-extension.sh`, `probe-sockets.py` and every
+file under `resources/desert/` (bridge Tcl, module adapters, C++ extension).
+The image also records the base reference it was built from. The service
+reports both (`engine_fingerprint`, `desert_base_image`) in its `HEALTH` reply
+and in `engine_info`. The host recomputes the fingerprint from the installed
+package and the expected base (`DESERT_IMAGE` if set, as for the Compose build,
+otherwise the pinned digest):
 
 - `holo-desert doctor` fails the `desert_engine` check when the fingerprints
-  differ;
+  differ and names both base images;
 - a session refuses to start on a mismatching image ("DESERT engine image is
-  outdated … rebuild with holo-desert engine up").
+  outdated or built from another base … rebuild with holo-desert engine up").
 
-This prevents an older image from silently ignoring newer configuration options.
+This prevents an older image, or one built from a different DESERT base, from
+silently ignoring newer configuration options.
 
 ## Ports and directories
 
@@ -193,8 +199,8 @@ are exported (see [telemetry-and-reproducibility.md](telemetry-and-reproducibili
 | `holoocean`, `ocean_package`, `gpu` | yes | HoloOcean 2.3.0, Ocean installed, `nvidia-smi` succeeds |
 | `port_8000` | yes | free, or already held by a HoloOcean-DESERT dashboard |
 | `port_<DESERT_PORT>` | no | free, or held by a healthy DESERT service |
-| `desert_base_image` | no | the pinned base image is present locally |
-| `desert_engine` | no | a service answers `HEALTH` and its fingerprint matches the package |
+| `desert_base_image` | no | the expected base image (`DESERT_IMAGE` or the pinned digest) is present locally; a reference without a digest is reported because a moved tag cannot be detected |
+| `desert_engine` | no | a service answers `HEALTH` and its fingerprint (content and base image) matches the package |
 
 `holo-desert doctor --json` prints the same results as JSON. The exit code is
 non-zero if any check fails.
