@@ -1,0 +1,71 @@
+cff-version: 1.2.0
+message: >-
+  If you use this software, please cite it as below, together with HoloOcean
+  and DESERT Underwater, which provide the vehicle and network simulation.
+type: software
+title: "HoloOcean-DESERT: co-simulation of HoloOcean vehicles and DESERT Underwater networks"
+abstract: >-
+  Python library and web laboratory that couple HoloOcean 2.3 vehicle physics
+  with the DESERT Underwater 4.0 / NS-MIRACLE network simulator running in a
+  container. HoloOcean supplies the vehicle poses; DESERT executes the whole
+  network stack (PHY, propagation, interference, MAC, routing, native traffic
+  generators and ranging) on a shared logical clock. The project adds no
+  network model of its own and records engine identity, effective
+  configuration and native object values with every run.
+authors:
+  - family-names: Bedei
+    given-names: Andrea
+version: 0.2.0
+license: MIT
+repository-code: "https://github.com/AndreaBedei1/HoloWithDesertCommunications"
+keywords:
+  - underwater acoustic networks
+  - optical and electromagnetic underwater communication
+  - co-simulation
+  - autonomous underwater vehicles
+  - HoloOcean
+  - DESERT Underwater
+  - NS-MIRACLE
+references:
+  - type: conference-paper
+    title: "HoloOcean: An Underwater Robotics Simulator"
+    authors:
+      - family-names: Potokar
+        given-names: Easton
+      - family-names: Ashford
+        given-names: Spencer
+      - family-names: Kaess
+        given-names: Michael
+      - family-names: Mangelson
+        given-names: Joshua G.
+    collection-title: "Proceedings of the IEEE International Conference on Robotics and Automation (ICRA)"
+    year: 2022
+    start: 3040
+    end: 3046
+    conference:
+      name: "IEEE International Conference on Robotics and Automation (ICRA)"
+      city: Philadelphia
+      country: US
+  - type: conference-paper
+    title: "The DESERT underwater framework v2: Improved capabilities and extension tools"
+    authors:
+      - family-names: Campagnaro
+        given-names: Filippo
+      - family-names: Francescon
+        given-names: Roberto
+      - family-names: Guerra
+        given-names: Federico
+      - family-names: Favaro
+        given-names: Federico
+      - family-names: Casari
+        given-names: Paolo
+      - family-names: Diamant
+        given-names: Roee
+      - family-names: Zorzi
+        given-names: Michele
+    collection-title: "3rd Underwater Communications and Networking Conference (UComms 2016)"
+    year: 2016
+    conference:
+      name: "Underwater Communications and Networking Conference (UComms)"
+      city: Lerici
+      country: IT

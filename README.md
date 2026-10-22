@@ -56,8 +56,11 @@ Status from executed tests (details and blockers: [capability matrix](docs/capab
 
 ## Quick start
 
+The current version is on branch `feat/desert-laboratory` (the default branch
+`master` does not contain it yet).
+
 ```bash
-git clone https://github.com/AndreaBedei1/HoloWithDesertCommunications.git
+git clone -b feat/desert-laboratory https://github.com/AndreaBedei1/HoloWithDesertCommunications.git
 cd HoloWithDesertCommunications
 python -m venv .venv
 .venv/bin/pip install -e ".[dashboard]"      # Windows: .venv\Scripts\pip ...
@@ -67,7 +70,7 @@ python -m venv .venv
 
 Windows scripted setup including HoloOcean: `scripts/setup.ps1`; Ubuntu:
 `scripts/setup.sh`. As a dependency of another project:
-`pip install "holoocean-desert @ git+https://github.com/AndreaBedei1/HoloWithDesertCommunications.git"`.
+`pip install "holoocean-desert @ git+https://github.com/AndreaBedei1/HoloWithDesertCommunications.git@feat/desert-laboratory"`.
 The library core needs only PyYAML and pydantic; `[dashboard]` adds FastAPI and
 uvicorn. See [installation](docs/installation.md).
 
@@ -158,8 +161,11 @@ Each run records the effective configuration, every engine event
 Metrics distinguish delivery over resolved vs generated messages, goodput,
 end-to-end latency, transmission airtime and propagation, PHY reception
 outcomes and MAC queue/statistics. Provenance includes the DESERT base digest
-and source commit, the engine fingerprint, applied patches and RNG substream.
-See [telemetry and reproducibility](docs/telemetry-and-reproducibility.md).
+and source commit, the engine fingerprint, applied patches, RNG substream and
+the values read back from the native DESERT objects at start (`native_bindings`).
+See [telemetry and reproducibility](docs/telemetry-and-reproducibility.md) and
+the [reproducibility guide](docs/reproducibility.md) (pinned versions, steps,
+expected E01–E06 results).
 
 ## Documentation
 
@@ -167,7 +173,7 @@ See [telemetry and reproducibility](docs/telemetry-and-reproducibility.md).
 [Stack configuration and YAML](docs/stack-configuration.md) ·
 [Dashboard](docs/dashboard.md) · [Developer guide](docs/developer-guide.md) ·
 [Troubleshooting](docs/troubleshooting.md) · [Limitations](docs/limitations.md) ·
-[Validation records](docs/evidence/README.md)
+[Reproducibility](docs/reproducibility.md) · [Validation records](docs/evidence/README.md)
 
 ## Tests
 
@@ -186,6 +192,13 @@ bathymetry; application messages are unicast; one MAC per network. The BPSK
 correction, optical and EM chains are experimental and none of the models is
 calibrated against a specific modem or sea trial. Full list:
 [limitations](docs/limitations.md).
+
+## How to cite
+
+Citation metadata are in [`CITATION.cff`](CITATION.cff) (GitHub shows a
+"Cite this repository" entry). Please also cite HoloOcean (Potokar et al.,
+ICRA 2022) and DESERT Underwater (Campagnaro et al., UComms 2016), listed in the
+same file, and state the commit and engine fingerprint you used.
 
 ## License and attribution
 

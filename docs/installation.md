@@ -66,6 +66,15 @@ holo-desert doctor --library-only   # skips HoloOcean, GPU and dashboard checks
 
 ## Option B: development checkout with the pinned lock file
 
+```bash
+git clone -b feat/desert-laboratory https://github.com/AndreaBedei1/HoloWithDesertCommunications.git
+cd HoloWithDesertCommunications
+```
+
+The work described in this documentation is on branch `feat/desert-laboratory`
+until it is merged into `master`; to repeat a recorded result, check out the
+exact commit (see [reproducibility.md](reproducibility.md)).
+
 The setup scripts create `.venv`, install `requirements-lock.txt` (exact
 versions, with platform markers for `pywin32` on Windows and `posix_ipc` on
 Linux), install the project in editable mode with `--no-deps` and, optionally,
