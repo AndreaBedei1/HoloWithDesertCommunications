@@ -186,7 +186,6 @@ function render(){
   $('#generated').textContent=hasRun?number(counts.generated||0,0):'—';$('#received').textContent=hasRun?number(counts.received||0,0):'—';$('#delivery-rate').textContent=resolved?number(counts.received/resolved*100,1)+'%':'—';$('#mean-latency').textContent=last?.mean_latency_s==null?'—':number(last.mean_latency_s,3)+' s';
   const nodes=Object.keys(s.fleet||{}),pairs=Object.keys(s.distances_m||{});
   choices('#metric-node',nodes,null,drone);choices('#metric-pair',pairs,null,p=>p.split('>').map(drone).join(' ↔ '));choices('#packet-node',nodes,'All drones',drone);choices('#packet-destination',nodes,'All recipients',drone);choices('#packet-type',[...new Set((s.packets||[]).map(p=>p.type))],'All types',typeName);
-  choices('#packet-mac',[...new Set((s.packets||[]).map(p=>p.protocol).filter(Boolean))],'All MACs',id=>moduleName('mac',id));
   const indices=[...new Set((s.packets||[]).flatMap(p=>p.events.filter(e=>e.event==='phy_tx_start'&&e.interface_index>0).map(e=>String(e.interface_index))))].sort();
   choices('#packet-interface',indices,'All interfaces',v=>interfaceLabel(Number(v)));$('#packet-interface-label').hidden=!s.configuration?.network?.multiphy&&!indices.length;
   if(selectedNode&&!nodes.includes(selectedNode))selectedNode=null;
@@ -210,7 +209,7 @@ $('#stop').onclick=()=>action(()=>api('/api/stop',{}));
 $('#reset').onclick=()=>action(async()=>{await api('/api/reset',{});latest=await api('/api/state');selectedNode=null;selectedPacket=null;resetMaps();showView('home')});
 $('#clear-selection').onclick=()=>{selectedNode=null;selectedPacket=null;render()};
 bindMap('#fleet-canvas','#fit-map',node=>{selectedNode=node;selectedPacket=null},render);
-for(const id of ['trails','route-layer','phy-layer','delivery-layer','packet-node','packet-status','packet-event','packet-destination','packet-type','packet-mac','packet-interface','metric-window','metric-node','metric-pair'])$('#'+id).onchange=render;
+for(const id of ['trails','route-layer','phy-layer','delivery-layer','packet-node','packet-status','packet-event','packet-destination','packet-type','packet-interface','metric-window','metric-node','metric-pair'])$('#'+id).onchange=render;
 for(const id of ['filter','packet-from','packet-to'])$('#'+id).oninput=render;
 $('#analysis-tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{analysisGroup=b.dataset.group;$('#analysis-tabs').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));if(analysisGroup==='compare')loadComparisons().catch(showError);render()});
 $('#retain').onclick=()=>action(async()=>{await api('/api/comparison',{});await loadComparisons();notify('Summary kept in memory.')});

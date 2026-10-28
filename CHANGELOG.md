@@ -19,7 +19,7 @@ configurations and their recorded results are unchanged.
   each fact tagged observed, inferred or configured; durations only when both
   endpoints are recorded. The selected message's hops are drawn on the map as
   arrows coloured by outcome.
-- Message filters by MAC, interface (multi-PHY) and generation time range, in
+- Message filters by interface (multi-PHY) and generation time range, in
   addition to drone, recipient, type, status and technical event; the
   selected message persists across the periodic refresh.
 - Home page groups the bundled scenarios into "Reference Scenarios" (E01–E06)

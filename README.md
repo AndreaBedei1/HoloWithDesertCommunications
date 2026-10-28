@@ -130,7 +130,7 @@ holo-desert dashboard            # http://127.0.0.1:8000
 
 Choose a scenario, start it, follow vehicles and messages on the map and
 timeline, then open *Analysis* for metrics and comparisons. *Messages* lists
-every message with filters (drone, status, recipient, type, MAC, interface
+every message with filters (drone, status, recipient, type, interface
 for multi-PHY, generation time range); selecting one opens its lifecycle:
 final status, a per-drone timeline, per-hop outcomes, relays and the drones
 that decoded or overheard it, each fact tagged as observed, inferred or

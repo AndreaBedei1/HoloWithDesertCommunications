@@ -197,14 +197,17 @@ class ScenarioManager:
         return self.library.delete(identifier, expected_revision)
 
     def list(self):
-        return sorted(p.parent.name for root in self.roots for p in root.glob("*/scenario.yaml"))
+        return sorted({p.parent.name for root in self.roots for p in root.glob("*/scenario.yaml")})
 
     def group(self, name: str) -> str:
         """``reference`` for E01-E06, ``demonstration`` for E07-E09."""
-        return next(self.GROUPS.get(root.name, "reference") for root in self.roots if (root / name / "scenario.yaml").is_file())
+        return self.GROUPS.get(self._path(name).parent.parent.name, "reference")
 
     def _path(self, name: str) -> Path:
-        return next(root / name / "scenario.yaml" for root in self.roots if (root / name / "scenario.yaml").is_file())
+        path = next((root / name / "scenario.yaml" for root in self.roots if (root / name / "scenario.yaml").is_file()), None)
+        if path is None:
+            raise ValueError(f"Unknown scenario: {name}")
+        return path
 
     def load(self, name_or_path: str) -> Scenario:
         if name_or_path.startswith("user_") and self.library.ID.fullmatch(name_or_path):

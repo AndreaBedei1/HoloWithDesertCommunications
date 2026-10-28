@@ -33,7 +33,7 @@ test('real-event presentation distinguishes pending, expired and delivered; filt
   await page.locator('#packet-details summary').click();await expect(page.locator('#packet-details pre')).toBeVisible();await expect(page.locator('#packet-details pre')).toBeVisible({timeout:2000});
   await page.locator('#packet-status').selectOption('');await page.locator('#packet-destination').selectOption('auv_02');await expect(page.locator('#packet-rows tr[data-id]')).toHaveCount(1);
   await page.locator('#packet-type').selectOption('heartbeat');await expect(page.locator('#packet-rows')).toContainText('Transmission observed');
-  await page.locator('#packet-type').selectOption('');await page.locator('#packet-destination').selectOption('');await page.locator('#packet-mac').selectOption('csma_aloha');await expect(page.locator('#packet-rows tr[data-id]')).toHaveCount(3);
+  await page.locator('#packet-type').selectOption('');await page.locator('#packet-destination').selectOption('');
   await page.locator('#packet-from').fill('2');await expect(page.locator('#packet-rows')).toContainText('No messages match');await page.locator('#packet-from').fill('');await expect(page.locator('#packet-interface-label')).toBeHidden();
   await page.locator('.app-header [data-view="analysis"]').click();await page.locator('[data-group="channel"]').first().click();await expect(page.locator('#queue-chart')).toBeVisible();await expect(page.locator('#pdr-chart')).toBeHidden();
   await page.locator('[data-group="geometry"]').first().click();await expect(page.locator('#distance-chart')).toBeVisible();expect(errors).toEqual([]);
