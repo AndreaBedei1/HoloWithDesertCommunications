@@ -36,7 +36,7 @@ def test_metrics_pending_not_lost_export_and_cleanup():
 def test_dashboard_routes_and_invalid_config():
     with TestClient(DashboardServer(manage_docker=False).application()) as client:
         assert client.get("/").status_code == 200
-        assert len(client.get("/api/scenarios").json()) == 6
+        assert [s["group"] for s in client.get("/api/scenarios").json()] == ["reference"] * 6 + ["demonstration"] * 3
         assert client.get("/api/state").json()["state"] == "idle"
         assert client.post("/api/pause").status_code == 409
         assert client.get("/api/export").status_code == 409

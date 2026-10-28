@@ -175,8 +175,12 @@ class Scenario(Strict):
 
 
 class ScenarioManager:
+    # Bundled scenarios: the reference experiments (E01-E06) and the advanced demonstrations (E07-E09).
+    GROUPS = {"examples": "reference", "demos": "demonstration"}
+
     def __init__(self, root: Path | None = None, user_root: Path | None = None):
         self.root = root or RESOURCE_ROOT / "examples"
+        self.roots = [self.root] if root else [RESOURCE_ROOT / folder for folder in self.GROUPS]
         from .library import ScenarioLibrary
         self.library = ScenarioLibrary(user_root, self.list())
 
@@ -193,7 +197,14 @@ class ScenarioManager:
         return self.library.delete(identifier, expected_revision)
 
     def list(self):
-        return sorted(p.parent.name for p in self.root.glob("*/scenario.yaml"))
+        return sorted(p.parent.name for root in self.roots for p in root.glob("*/scenario.yaml"))
+
+    def group(self, name: str) -> str:
+        """``reference`` for E01-E06, ``demonstration`` for E07-E09."""
+        return next(self.GROUPS.get(root.name, "reference") for root in self.roots if (root / name / "scenario.yaml").is_file())
+
+    def _path(self, name: str) -> Path:
+        return next(root / name / "scenario.yaml" for root in self.roots if (root / name / "scenario.yaml").is_file())
 
     def load(self, name_or_path: str) -> Scenario:
         if name_or_path.startswith("user_") and self.library.ID.fullmatch(name_or_path):
@@ -202,7 +213,7 @@ class ScenarioManager:
         if not path.is_file():
             if name_or_path not in self.list():
                 raise ValueError(f"Unknown scenario {name_or_path!r}; choose {', '.join(self.list())}")
-            path = self.root / name_or_path / "scenario.yaml"
+            path = self._path(name_or_path)
         return Scenario.model_validate(self.library._upgrade(yaml.safe_load(path.read_text(encoding="utf-8"))))
 
 

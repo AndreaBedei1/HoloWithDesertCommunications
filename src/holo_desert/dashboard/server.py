@@ -72,7 +72,7 @@ class DashboardServer:
 
         @app.get("/api/scenarios")
         def scenarios():
-            return [{"id": name, "description": self.manager.load(name).description} for name in self.manager.list()]
+            return [{"id": name, "group": self.manager.group(name), "description": self.manager.load(name).description} for name in self.manager.list()]
 
         @app.get("/api/scenarios/{name}")
         def configuration(name: str):

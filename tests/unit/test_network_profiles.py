@@ -32,7 +32,7 @@ def test_profiles_persist_revision_export_and_do_not_modify_examples(tmp_path):
     with TestClient(DashboardServer(manage_docker=False,scenario_directory=tmp_path).application()) as client:
         saved=client.get('/api/network-profiles').json()['personal'];assert len(saved)==1
         assert client.delete('/api/network-profiles/'+identifier+'?revision='+saved[0]['revision']).status_code==200
-        assert len(client.get('/api/scenarios').json())==6
+        assert len(client.get('/api/scenarios').json())==9
 
 
 def test_builtins_are_renderable_and_provenance_is_not_tcl():

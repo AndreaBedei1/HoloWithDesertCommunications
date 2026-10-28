@@ -12,8 +12,10 @@ def builder():
 
 
 def test_old_examples_keep_original_protocols_and_explicit_phy_version():
-    for name in ScenarioManager().list():
-        scenario=ScenarioManager().load(name)
+    manager=ScenarioManager()
+    # E01-E06 only: the demonstrations use other protocols on purpose.
+    for name in [n for n in manager.list() if manager.group(n)=='reference']:
+        scenario=manager.load(name)
         assert scenario.network.acoustic.phy=='bpsk_upstream'
         text=builder().render(scenario.model_dump())
         assert 'set mac_adapter aloha' in text

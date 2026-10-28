@@ -75,7 +75,7 @@ def main(argv=None):
     try:
         if args.command == "examples":
             for name in manager.list():
-                print(f"{name:20} {manager.load(name).description}")
+                print(f"{name:22} {manager.group(name):14} {manager.load(name).description}")
         elif args.command == "doctor":
             results = doctor(library_only=args.library_only)
             if args.json:
