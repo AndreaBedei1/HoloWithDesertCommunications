@@ -26,6 +26,6 @@ def test_symlink_cannot_redirect_a_personal_file(tmp_path):
         (root / (identifier + ".yaml")).symlink_to(outside)
     except OSError:
         pytest.skip("Creating symlinks requires privileges on this Windows host")
-    with pytest.raises(ValueError, match="consentito"):
+    with pytest.raises(ValueError, match="not allowed"):
         ScenarioLibrary(root).get(identifier)
     assert outside.read_text(encoding="utf-8") == "private"
