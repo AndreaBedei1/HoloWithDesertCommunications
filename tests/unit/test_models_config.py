@@ -31,6 +31,9 @@ def test_coordinate_contract():
 def test_all_scenarios_validate():
     manager = ScenarioManager()
     assert len(manager.list()) == 9 and [manager.group(n) for n in manager.list()].count("reference") == 6
+    assert manager.group("e08_woss") == "demonstration"
+    with pytest.raises(ValueError):
+        manager.group("missing")
     for name in manager.list():
         scenario = manager.load(name)
         assert list(scenario.node_map.values()) == list(range(1, len(scenario.nodes) + 1))
