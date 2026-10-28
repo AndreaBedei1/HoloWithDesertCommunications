@@ -129,37 +129,57 @@ holo-desert dashboard            # http://127.0.0.1:8000
 ```
 
 Choose a scenario, start it, follow vehicles and messages on the map and
-timeline, then open *Analisi* for metrics and comparisons. *Impostazioni →
-Network Designer* selects medium (acoustic, optical, EM), MAC, PHY, routing,
-WOSS with its sound-speed profile, acoustic or optical multi-PHY
-interfaces, Position-Based Routing anchors and native CBR/VBR generators, with
-contextual help (meaning, unit, default, constraints) for each parameter and a
-reason for every unavailable option; *Analisi → Interfacce* shows which
-interface each transmission used and when the controller switched;
-*Analisi → Ranging* compares native distance estimates with the HoloOcean
-geometry; *I miei
-scenari* edits vehicles, waypoints, flows and routes and imports/exports YAML.
-The interface is in Italian.
+timeline, then open *Analysis* for metrics and comparisons. *Messages* lists
+every message with filters (drone, status, recipient, type, MAC, interface
+for multi-PHY, generation time range); selecting one opens its lifecycle:
+final status, a per-drone timeline, per-hop outcomes, relays and the drones
+that decoded or overheard it, each fact tagged as observed, inferred or
+configured, with its relay path drawn on the map. *Settings → Network
+Designer* selects medium (acoustic, optical, EM), MAC, PHY, routing, WOSS
+with its sound-speed profile, acoustic or optical multi-PHY interfaces,
+Position-Based Routing anchors and native CBR/VBR generators, with contextual
+help (meaning, unit, default, constraints) for each parameter and a reason
+for every unavailable option. Its menus list only operational modules; the
+complete inventory is in the *Module catalogue*. *Analysis → Interfaces*
+shows which interface each transmission used and when the controller
+switched; *Analysis → Ranging* compares native distance estimates with the
+HoloOcean geometry; *My scenarios* edits vehicles, waypoints, flows and
+routes and imports/exports YAML. The interface is in English.
 
+<!-- screenshot to refresh: captured with the 1.0.0 Italian interface -->
 ![Network Designer](docs/images/network-designer-2026-10-22.png)
 
 ## Scenarios
 
-| ID | Scenario | What it shows |
-|---|---|---|
-| E01 | Message exchange | request/reply between two vehicles |
-| E02 | Multi-node | four vehicles on one channel |
-| E03 | Mobility | delivery while range grows and shrinks |
-| E04 | Congestion | queues, interference, MAC comparison |
-| E05 | Multi-hop | static relay A → B → C where the direct link fails |
-| E06 | Coordination | heartbeat-driven HOLD/PROCEED, outage by PHY power |
-| e07 | Ranging-TokenBus | native distance estimates between three vehicles |
-| e08 | WOSS/Bellhop | moving receiver in a synthetic sound-speed profile |
-| e09 | SUN convergecast | native route discovery through relays to a sink |
+Nine scenarios are bundled, shown on the dashboard home page in two groups.
 
-E01–E06 are the original reference experiments and are kept unchanged; the
-demos live in `src/holo_desert/resources/demos`. `holo-desert run e03_mobility
---fast --no-dashboard` runs one from the command line.
+**Reference Scenarios** (E01–E06, `src/holo_desert/resources/examples`): one
+communication concept each, on the analytic acoustic channel.
+
+| ID | Title | What it shows |
+|---|---|---|
+| `e01_chat` | Message exchange | request/reply between two stationary vehicles |
+| `e02_multi_node` | Multi-drone communication | four vehicles on one channel |
+| `e03_mobility` | Moving drones | delivery while range grows and shrinks |
+| `e04_congestion` | Network congestion | queues, interference, MAC comparison |
+| `e05_multihop` | Relay communication | static relay A → B → C where the direct link fails |
+| `e06_coordination` | Drone coordination | heartbeat-driven HOLD/PROCEED, outage by PHY power |
+
+**Advanced Demonstrations** (E07–E09, `src/holo_desert/resources/demos`):
+native DESERT ranging, Bellhop propagation and dynamic routing.
+
+| ID | Title | What it shows |
+|---|---|---|
+| `e07_ranging_tokenbus` | Native ranging with TokenBus | native distance estimates between three vehicles |
+| `e08_woss` | Bellhop propagation (WOSS) | moving receiver in a synthetic sound-speed profile |
+| `e09_sun_convergecast` | SUN convergecast to a sink | native route discovery through relays to a sink |
+
+E01–E06 are the original reference experiments and are kept unchanged.
+`holo-desert examples` lists all nine with their group; any of them runs by ID
+from the command line (`holo-desert run e08_woss`, or `holo-desert run
+e03_mobility --fast --no-dashboard`), from Python
+(`ManagedSimulation("e09_sun_convergecast")`) or from the dashboard home page.
+See [scenarios](docs/scenarios.md).
 
 ## Results and metrics
 
@@ -197,7 +217,9 @@ The analytic channel holds geometry constant for one physics tick and has no
 Doppler; HoloOcean obstacles and seabed are not converted into acoustic
 bathymetry; application messages are unicast; one MAC per network. The BPSK
 correction, optical and EM chains are experimental and none of the models is
-calibrated against a specific modem or sea trial. Full list:
+calibrated against a specific modem or sea trial. The message inspector shows
+only what DESERT and the telemetry observe (it attributes no collisions), and
+recorded runs cannot be replayed. Full list:
 [limitations](docs/limitations.md).
 
 ## How to cite

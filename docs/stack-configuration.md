@@ -84,11 +84,13 @@ flows:
 | `power_events` | list, `[]` | see [Power events](#power-events-and-coordination) |
 | `coordination` | bool, `false` | built-in heartbeat leader/follower demo (E06) |
 
-Bundled examples: `src/holo_desert/resources/examples/<id>/scenario.yaml`
-(`e01_chat` … `e06_coordination`, listed by `holo-desert examples`). Additional
-demonstrations live in `src/holo_desert/resources/demos/` (for example
-`e08_woss`); pass their path to `holo-desert run` or import them in the
-dashboard.
+Bundled scenarios: the reference experiments in
+`src/holo_desert/resources/examples/<id>/scenario.yaml` (`e01_chat` …
+`e06_coordination`) and the advanced demonstrations in
+`src/holo_desert/resources/demos/<id>/scenario.yaml` (`e07_ranging_tokenbus`,
+`e08_woss`, `e09_sun_convergecast`). All nine are listed by
+`holo-desert examples` with their group and run by ID
+(`holo-desert run e08_woss`); see [scenarios.md](scenarios.md).
 
 ## Nodes
 
@@ -1149,7 +1151,7 @@ are DESERT addresses (1-based, file order). Unavailable measurements are
 measurement, so `measurement_time` is always `null` and a retained valid
 estimate must not be read as a fresh measurement (Ranging-TDMA keeps the
 last value of a pair that lost contact). HoloOcean distances remain ground
-truth and are never reported as ranging; the dashboard's **Analisi → Ranging**
+truth and are never reported as ranging; the dashboard's **Analysis → Ranging**
 tab shows them only as a labelled reference next to the estimates. A demo scenario is provided in
 `src/holo_desert/resources/demos/e07_ranging_tokenbus/scenario.yaml`.
 

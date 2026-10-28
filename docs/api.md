@@ -235,7 +235,8 @@ the built-in traffic applications with your own objects exposing
 
 ### Helpers
 
-`load_scenario(name_or_path)`, `list_examples()`, `pose_from_sensors(sensors)`.
+`load_scenario(name_or_path)`, `list_examples()` (the IDs of all nine bundled
+scenarios, E01–E09), `pose_from_sensors(sensors)`.
 
 `network_catalog()` returns the module catalogue that the engine also uses
 for validation (verification status, parameters with unit, default, bounds
@@ -244,8 +245,10 @@ returns the audit of what the pinned DESERT image installs.
 
 ### Scenario and profile libraries
 
-`ScenarioManager(root=None, user_root=None)` lists and loads the bundled
-examples and the personal scenarios (`list()`, `load(name_or_id)`,
+`ScenarioManager(root=None, user_root=None)` lists and loads the nine bundled
+scenarios and the personal scenarios (`list()`, `load(name_or_id)`,
+`group(name)`, which returns `reference` for E01–E06 in
+`resources/examples` and `demonstration` for E07–E09 in `resources/demos`,
 `list_user()`, `get_user(id)`, `save_user(configuration, id=None,
 expected_revision=None)`, `delete_user(id, expected_revision)`; the store is
 `ScenarioManager.library`, a `ScenarioLibrary` with its `directory`, the `ID`
@@ -264,5 +267,6 @@ engine or orchestrator.
 ```bash
 holo-desert run e03_mobility --fast --no-dashboard --persist results/e03
 holo-desert run e01_chat --standalone --no-dashboard
+holo-desert examples                 # ID, group and description of every bundled scenario
 holo-desert doctor --library-only
 ```

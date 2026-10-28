@@ -10,7 +10,7 @@ sea-trial measurements. How to cite the software: [`CITATION.cff`](../CITATION.c
 
 | Component | Version used for the recorded results | Where it is pinned |
 |---|---|---|
-| Source code | `master` (release 1.0.0); cite the exact commit you ran (`git rev-parse HEAD`) | Git |
+| Source code | `master` (release 1.1.0); cite the exact commit you ran (`git rev-parse HEAD`) | Git |
 | Python packages | Python 3.10.20 on Windows (CI: 3.10 and 3.12 on Ubuntu 24.04) | `requirements-lock.txt`, `pyproject.toml` |
 | HoloOcean client | 2.3.0, commit `49e70552dfd97273b7dfbe755fbe65d7738b24b7` | `dependencies.lock.json`, `scripts/install_holoocean.py` |
 | HoloOcean world | Ocean package 2.3.0, world `OpenWater` | installed with `holoocean.install("Ocean")` |
@@ -67,7 +67,7 @@ with each run retained for comparison) to make such differences visible.
 ## What every run records
 
 The export ZIP (`holo-desert run … --persist DIR`, `ManagedSimulation.export`,
-`NetworkSession.export`, dashboard **Esporta risultati**) contains:
+`NetworkSession.export`, dashboard **Export results**) contains:
 
 - `config.json`: the validated scenario as run;
 - `events.jsonl`: every event, including `run_started.versions` (package,

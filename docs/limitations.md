@@ -106,6 +106,13 @@ summary of verified capabilities is in [capabilities.md](capabilities.md).
   complete history is in the run's `events.jsonl` until reset.
 - Identical seed and configured trajectories do not imply identical measured
   HoloOcean trajectories.
+- The dashboard message inspector shows only what DESERT and the telemetry
+  observe. It does not attribute collisions or causes of loss; facts derived by
+  matching events are tagged as inferred, and durations are shown only when
+  both endpoints are recorded.
+- Replay of a recorded run in the dashboard is not implemented; exported ZIPs
+  are for offline analysis.
+- On narrow phone screens the messages table scrolls horizontally.
 
 ## Operation
 

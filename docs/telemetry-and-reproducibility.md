@@ -66,7 +66,7 @@ not globally unique across sources; always correlate with the application
 | `application_state` | state change of an application (for example HOLD/PROCEED in E06) |
 | `run_error`, `cleanup_error`, `run_ended` | failure, teardown failure, final state |
 
-Per-message records (dashboard Packet Inspector, `packets.csv`) move through
+Per-message records (dashboard message inspector, `packets.csv`) move through
 `queued` → `in_flight` (after `app_tx`) → `phy_tx_observed` → `received` or
 `timeout_unknown_cause`. A generated message is not necessarily transmitted;
 "transmission observed" describes history, not a radio that is still active.
@@ -150,7 +150,7 @@ simulators at a barrier.
 
 | Export | Contents |
 |---|---|
-| `NetworkSession.export(path)`, `ManagedSimulation.export(path)` / `export_bytes()`, dashboard **Esporta risultati** (`GET /api/export`) | ZIP with `config.json` (the validated scenario as run), `events.jsonl` (complete event log), `packets.csv` (`id`, `source`, `destination`, `size`, `wire_size`, `creation_time`, `status`, `delay` of the retained message rows) and `summary.json` (the summary dictionary above) |
+| `NetworkSession.export(path)`, `ManagedSimulation.export(path)` / `export_bytes()`, dashboard **Export results** (`GET /api/export`) | ZIP with `config.json` (the validated scenario as run), `events.jsonl` (complete event log), `packets.csv` (`id`, `source`, `destination`, `size`, `wire_size`, `creation_time`, `status`, `delay` of the retained message rows) and `summary.json` (the summary dictionary above) |
 | `holo-desert run … --persist DIR` / `persist=` in the API | keeps `config.json` and `events.jsonl` in `DIR` instead of a temporary directory (`NetworkSession` writes one `run-NNN` subdirectory per start) |
 
 Ordinary runs live in a temporary directory deleted at reset/close; export

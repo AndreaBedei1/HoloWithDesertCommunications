@@ -20,9 +20,10 @@ the bridge (`pytest -m desert`). **E2E**: the stack ran inside a HoloOcean
 co-simulation (`pytest -m holoocean`, `tests/end_to_end`). **Designer**:
 selectable in the dashboard's Network Designer, verified by the Playwright
 suite (`tests/frontend`); every verified stack is also configurable from YAML
-(scenario import) and from the Python API. Options that cannot be combined
-with the current choices, or that are not integrated, are shown disabled with
-a short reason.
+(scenario import) and from the Python API. Since 1.1.0 the Designer menus list
+only operational modules; options that cannot be combined with the current
+choices are shown disabled with a short reason, and modules that are not
+integrated appear only in the module catalogue dialog.
 
 ## Operational
 

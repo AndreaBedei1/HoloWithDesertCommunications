@@ -13,12 +13,12 @@ physics; DESERT takes every network decision.
 | [stack-configuration.md](stack-configuration.md) | Scenario YAML format and network stack: MAC, routing (static, Flooding, SUN, Position-Based), PHY, WOSS, optical/EM, acoustic/optical multi-PHY (controller power units), ranging (TokenBus, TDMA), native applications, power events, non-integrated modules |
 | [telemetry-and-reproducibility.md](telemetry-and-reproducibility.md) | Events, metric definitions, time quantities, exports, provenance, reproducing E01–E06 |
 | [reproducibility.md](reproducibility.md) | Pinned versions, step-by-step reproduction, what each run records, citation (`CITATION.cff`) |
-| [dashboard.md](dashboard.md) | Web dashboard, Network Designer (media, WOSS, acoustic/optical multi-PHY, Position-Based Routing, native generators), interface and ranging views, personal scenarios, communication profiles |
+| [dashboard.md](dashboard.md) | Web dashboard, message inspector, Network Designer (media, WOSS, acoustic/optical multi-PHY, Position-Based Routing, native generators), interface and ranging views, personal scenarios, communication profiles |
 | [developer-guide.md](developer-guide.md) | Architecture, bridge protocol, tests, adding a DESERT adapter |
 | [troubleshooting.md](troubleshooting.md) | Known problems on Windows and Linux and their fixes |
 | [limitations.md](limitations.md) | Modelling and verification boundaries |
 | [evidence/](evidence/README.md) | Dated validation records (Italian), kept for provenance |
-| [scenarios.md](scenarios.md) | The bundled reference experiments (E01–E06) and demos |
+| [scenarios.md](scenarios.md) | The nine bundled scenarios: Reference Scenarios (E01–E06) and Advanced Demonstrations (E07–E09), and how to launch them |
 
 Images used by the documentation are in [images/](images/) and
 [assets/](assets/).

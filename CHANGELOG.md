@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.1.0 — 2026-10-28
+
+Dashboard and scenario discovery release. Engines, protocols, the E01–E06
+configurations and their recorded results are unchanged.
+
+### Added
+- `ScenarioManager` discovers all nine bundled scenarios: E01–E06 in
+  `resources/examples` (group `reference`) and E07–E09 in `resources/demos`
+  (group `demonstration`: `e07_ranging_tokenbus`, `e08_woss`,
+  `e09_sun_convergecast`). New `ScenarioManager.group(name)`;
+  `list_examples()`, `holo-desert run <id>` and the dashboard accept the demos
+  by name.
+- `GET /api/scenarios` returns `id`, `group` and `description`;
+  `holo-desert examples` prints name, group and description.
+- Message inspector with a per-message lifecycle: final status, per-drone
+  lane timeline, per-hop outcomes, relays, decoded-by and overheard-by drones,
+  each fact tagged observed, inferred or configured; durations only when both
+  endpoints are recorded. The selected message's hops are drawn on the map as
+  arrows coloured by outcome.
+- Message filters by MAC, interface (multi-PHY) and generation time range, in
+  addition to drone, recipient, type, status and technical event; the
+  selected message persists across the periodic refresh.
+- Home page groups the bundled scenarios into "Reference Scenarios" (E01–E06)
+  and "Advanced Demonstrations" (E07–E09).
+
+### Changed
+- Dashboard, module catalogue and user-facing Python messages are in English.
+- Network Designer menus list only operational modules; the full inventory,
+  including modules not integrated, remains in the Module catalogue dialog.
+
 ## 1.0.0 — 2026-10-23
 
 First stable release of the library and web laboratory. Every network behaviour
