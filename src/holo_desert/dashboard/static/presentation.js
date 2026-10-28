@@ -1,43 +1,48 @@
 import {esc,number} from './ui.js';
 
 export const SCENARIOS = {
-  e01_chat: {code:'E01', title:'Scambio di messaggi', description:'Due droni fermi si scambiano una richiesta e una risposta.', observe:'Segui il viaggio di un messaggio, dalla generazione alla consegna.', diagram:['A','→ ←','B']},
-  e02_multi_node: {code:'E02', title:'Comunicazione tra più droni', description:'Quattro droni condividono lo stesso canale acustico e inviano messaggi contemporaneamente.', observe:'Osserva quali messaggi arrivano quando più droni usano il canale.', diagram:['A','B','C','D']},
-  e03_mobility: {code:'E03', title:'Droni in movimento', description:'Due droni si allontanano e poi tornano vicini, continuando a scambiarsi messaggi.', observe:'Confronta la distanza misurata con la percentuale di consegna.', diagram:['A','← →','B']},
-  e04_congestion: {code:'E04', title:'Congestione della rete', description:'Tre droni inviano messaggi sempre più spesso verso un quarto drone.', observe:'Osserva messaggi in attesa, code e interferenza. Puoi confrontare i due MAC.', diagram:['A · B · C','→','D']},
-  e05_multihop: {code:'E05', title:'Comunicazione tramite relay', description:'Il messaggio raggiunge C passando per B, che lo inoltra. Nelle condizioni configurate il collegamento diretto non consegna.', observe:'Segui le due tratte A → B e B → C e la consegna finale.', diagram:['A','→','B','→','C']},
-  e06_coordination: {code:'E06', title:'Coordinamento tra droni', description:'Un drone procede quando riceve heartbeat recenti dal leader e attende quando la comunicazione si interrompe.', observe:'Segui lo stato del follower durante l’interruzione e il ripristino della comunicazione.', diagram:['Leader','→','Follower']},
+  e01_chat: {code:'E01', title:'Message exchange', description:'Two stationary drones exchange a request and a reply.', observe:'Follow a message from generation to delivery.', diagram:['A','→ ←','B']},
+  e02_multi_node: {code:'E02', title:'Multi-drone communication', description:'Four drones share the same acoustic channel and send messages at the same time.', observe:'See which messages arrive when several drones use the channel.', diagram:['A','B','C','D']},
+  e03_mobility: {code:'E03', title:'Moving drones', description:'Two drones move apart and then close in again while they keep exchanging messages.', observe:'Compare the measured distance with the delivery ratio.', diagram:['A','← →','B']},
+  e04_congestion: {code:'E04', title:'Network congestion', description:'Three drones send messages to a fourth drone at an increasing rate.', observe:'Watch pending messages, queues and interference. You can compare the two MACs.', diagram:['A · B · C','→','D']},
+  e05_multihop: {code:'E05', title:'Relay communication', description:'The message reaches C through B, which forwards it. Under the configured conditions the direct link does not deliver.', observe:'Follow the two hops A → B and B → C and the final delivery.', diagram:['A','→','B','→','C']},
+  e06_coordination: {code:'E06', title:'Drone coordination', description:'A drone proceeds while it receives recent heartbeats from the leader and holds when communication is interrupted.', observe:'Follow the follower state while communication is lost and restored.', diagram:['Leader','→','Follower']},
+  e07_ranging_tokenbus: {code:'E07', title:'Native ranging with TokenBus', description:'Three stationary drones share the native DESERT Ranging-TokenBus MAC. Data travels on the token ring while the MAC measures one-way travel times and estimates distances (travel time × sound speed).', observe:'In Analysis → Ranging, compare the native DESERT estimates with the HoloOcean geometric distance, which the protocol does not know.', diagram:['A','B','C']},
+  e08_woss: {code:'E08', title:'Bellhop propagation (WOSS)', description:'Native Bellhop propagation with a synthetic non-uniform sound speed profile. The receiver changes range and depth over a flat seabed.', observe:'Inspect the native received power and the arrival delay as the receiver moves.', diagram:['A','→','B']},
+  e09_sun_convergecast: {code:'E09', title:'SUN convergecast to a sink', description:'Four stationary drones use native SUN dynamic routing towards the sink D. Probes select relays B or C instead of the 800 m direct link; routes can change during the run.', observe:'Follow the relays SUN discovers for each message. Some late messages are still pending when the run ends.', diagram:['A · C','→','B / C','→','Sink D']},
 };
 export const HELP = {
-  PDR:'Percentuale di messaggi consegnati tra quelli già ricevuti o scaduti. I messaggi ancora in attesa sono esclusi.',
-  MAC:'Regola usata dai droni per accedere al canale condiviso. Il Designer mostra i moduli verificati nel catalogo DESERT.',
-  Latenza:'Tempo simulato dalla generazione alla consegna di un messaggio. La media include solo i messaggi consegnati.',
-  Relay:'Drone intermedio che inoltra un messaggio verso la destinazione finale attraverso lo stack di rete.',
-  Interferenza:'Il contatore registra esiti del ramo PHY interferenza. Nel modello BPSK originale il secondo test può fallire anche senza interferenza. Leggi potenze, patch ed esito dell’evento; un timeout non dimostra una collisione.',
-  Scadenza:'Il messaggio non è stato consegnato entro il proprio TTL. La causa è ignota; non significa necessariamente collisione o perdita fisica.',
-  Goodput:'Bit di payload applicativo consegnati per secondo nell’intervallo campionato.',
-  Throughput:'Bit dell’envelope applicativo consegnato al secondo, inclusi JSON e base64. Esclude header PHY/MAC, ACK e ritrasmissioni.',
-  PHY:'Livello fisico del canale (acustico, ottico o elettromagnetico). Una ricezione PHY non conferma da sola la consegna all’applicazione.',
-  'Multi-PHY':'Ogni drone ha più interfacce (acustiche o ottiche) sotto lo stesso MAC; il controller nativo DESERT sceglie quella attiva, a mano tramite l’API o in base alla potenza ricevuta. Il grafico mostra l’interfaccia di ogni trasmissione osservata.',
-  TTL:'Tempo massimo di validità applicativa del messaggio. Non cancella un pacchetto già nella coda del MAC.',
-  Ranging:'Stima nativa DESERT: tempo di volo misurato dal MAC di ranging moltiplicato per la velocità del suono configurata. La distanza geometrica HoloOcean è un riferimento esterno che il protocollo non conosce; la differenza mostra l’errore della stima.',
+  PDR:'Share of delivered messages among those already received or expired. Messages still pending are excluded.',
+  MAC:'Rule the drones use to access the shared channel. The Designer shows the verified modules of the DESERT catalogue.',
+  Latenza:'Simulated time from the generation to the delivery of a message. The mean includes delivered messages only.',
+  Relay:'Intermediate drone that forwards a message towards its final destination through the network stack.',
+  Interferenza:'This counter records outcomes of the PHY interference branch. In the original BPSK model the second test can fail even without interference. Read the powers, the patch and the event outcome; a timeout does not prove a collision.',
+  Scadenza:'The message was not delivered within its TTL. The cause is unknown; it does not necessarily mean a collision or a physical loss.',
+  Goodput:'Application payload bits delivered per second in the sampled interval.',
+  Throughput:'Bits of the delivered application envelope per second, including JSON and base64. Excludes PHY/MAC headers, ACKs and retransmissions.',
+  PHY:'Physical layer of the channel (acoustic, optical or electromagnetic). A PHY reception alone does not confirm delivery to the application.',
+  'Multi-PHY':'Each drone has several interfaces (acoustic or optical) under the same MAC; the native DESERT controller selects the active one, manually through the API or from the received power. The chart shows the interface of every observed transmission.',
+  TTL:'Maximum application validity time of the message. It does not remove a packet already in the MAC queue.',
+  Ranging:'Native DESERT estimate: time of flight measured by the ranging MAC multiplied by the configured sound speed. The HoloOcean geometric distance is an external reference the protocol does not know; the difference shows the estimation error.',
 };
-export const help = term => '<button type="button" class="help" data-help="'+esc(term)+'" aria-label="Spiega '+esc(term)+'">?</button>';
+// HELP keys are stable data-help identifiers; these give the readable term for screen readers.
+const TERMS={Latenza:'latency',Interferenza:'interference',Scadenza:'expiry'};
+export const help = term => '<button type="button" class="help" data-help="'+esc(term)+'" aria-label="Explain '+esc(TERMS[term]||term)+'">?</button>';
 export const drone = id => id ? 'Drone '+id.replace(/^auv_/, '') : '—';
-export const typeName = type => ({data:'Dati',binary:'Dati binari',json:'Dati JSON',request:'Richiesta',reply:'Risposta',heartbeat:'Heartbeat'}[type]||type);
+export const typeName = type => ({data:'Data',binary:'Binary data',json:'JSON data',request:'Request',reply:'Reply',heartbeat:'Heartbeat'}[type]||type);
 export function interferenceLabel(e){
   const patch=e.phy_patch_id||'',zero=e.positive_interference===false||e.pi===0,positive=e.positive_interference===true||e.pi>0;
-  if(zero&&/upstream/.test(patch))return 'Secondo test PHY fallito (interferenza nulla)';
-  if(!zero&&positive&&/conditional|corrected/.test(patch))return 'Errore di interferenza';
-  return 'Errore nel ramo PHY interferenza (causa non misurata)';
+  if(zero&&/upstream/.test(patch))return 'Second PHY test failed (zero interference)';
+  if(!zero&&positive&&/conditional|corrected/.test(patch))return 'Interference error';
+  return 'Error in the PHY interference branch (cause not measured)';
 }
 // Multi-PHY interface names of the configuration on screen (events carry 1-based indices).
 let interfaceNames=[];
 export function setInterfaceNames(configuration){interfaceNames=(configuration?.network?.multiphy?.interfaces||[]).map(i=>i.id)}
-export const interfaceLabel=index=>(interfaceNames[index-1]||'interfaccia')+' · '+index;
+export const interfaceLabel=index=>(interfaceNames[index-1]||'interface')+' · '+index;
 export const powerLabel=e=>e.tx_power_db!=null?number(e.tx_power_db,1)+' dB re 1 µPa':e.tx_power_dbm!=null?number(e.tx_power_dbm,1)+' dBm':e.tx_power_w!=null?Number(e.tx_power_w).toExponential(3)+' W':null;
-const signal=e=>({optical:'ottico',em:'EM'}[e.medium]||'acustico'),transmission=e=>({optical:'ottica',em:'EM'}[e.medium]||'acustica');
-export const eventLabel = e => ({late_receive:'Ricevuto dopo il TTL (non consegnato)',duplicate:'Duplicato applicativo ignorato',generated:'Messaggio generato',app_tx:'Inserito nella rete',forward:'Inoltro di rete',phy_tx_start:'Trasmissione '+transmission(e)+' iniziata',phy_tx_end:'Trasmissione '+transmission(e)+' terminata',phy_rx_start:'Segnale '+signal(e)+' osservato',phy_rx_end:e.outcome==='decoded'?'Segnale '+signal(e)+' decodificato':e.outcome==='interference_error'?(e.medium==='optical'?'Errore di interferenza (potenza interferente non nulla)':interferenceLabel(e)):e.outcome==='noise_error'?'Errore dovuto al rumore':e.outcome==='not_synchronized'?'Ricezione non sincronizzata':'Fine ricezione (esito non esposto dal PHY)',rx:'Ricezione nello stack applicativo',delivered:'Consegnato all’applicazione',ttl_expired:'Tempo di validità scaduto',application_state:'Stato del drone',power_applied:'Potenza applicata'}[e.event.replace('phy_control_','phy_')]||e.event)+(e.event.startsWith('phy_control_')?' (controllo MAC)':'');
+const signal=e=>({optical:'Optical',em:'EM'}[e.medium]||'Acoustic'),transmission=e=>({optical:'Optical',em:'EM'}[e.medium]||'Acoustic');
+export const eventLabel = e => ({late_receive:'Received after the TTL (not delivered)',duplicate:'Application duplicate ignored',generated:'Message generated',app_tx:'Injected into the network',forward:'Network forwarding',phy_tx_start:transmission(e)+' transmission started',phy_tx_end:transmission(e)+' transmission ended',phy_rx_start:signal(e)+' signal observed',phy_rx_end:e.outcome==='decoded'?signal(e)+' signal decoded':e.outcome==='interference_error'?(e.medium==='optical'?'Interference error (non-zero interfering power)':interferenceLabel(e)):e.outcome==='noise_error'?'Error due to noise':e.outcome==='not_synchronized'?'Reception not synchronised':'End of reception (outcome not exposed by the PHY)',rx:'Received by the application stack',delivered:'Delivered to the application',ttl_expired:'Validity time expired',application_state:'Drone state',power_applied:'Power applied'}[e.event.replace('phy_control_','phy_')]||e.event)+(e.event.startsWith('phy_control_')?' (MAC control)':'');
 export function eventTone(e) {
   if(e.event==='delivered')return 'success';
   if(e.event==='ttl_expired')return 'warning';
@@ -46,7 +51,7 @@ export function eventTone(e) {
   return 'neutral';
 }
 export function scenarioInfo(id,configuration) {
-  return SCENARIOS[id] || {code:'Personale',title:configuration?.name||'Scenario personale',description:configuration?.description||'Il tuo esperimento di comunicazione.',observe:'Osserva movimento, trasmissioni e consegne nella mappa.',diagram:[]};
+  return SCENARIOS[id] || {code:'Custom',title:configuration?.name||'Custom scenario',description:configuration?.description||'Your communication experiment.',observe:'Watch motion, transmissions and deliveries on the map.',diagram:[]};
 }
 export function bindHelp() {
   const box=document.querySelector('#tooltip');let pinned=false;

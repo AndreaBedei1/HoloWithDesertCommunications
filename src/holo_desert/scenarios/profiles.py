@@ -22,11 +22,11 @@ def builtin_profiles():
         if not any(m['id']==protocol and m['operational'] for m in catalog()['modules']):continue
         config=Network().model_dump();config['mac']['protocol']=protocol
         result.append({'id':'builtin_'+protocol,'kind':'example','name':protocol.upper().replace('_','-'),
-                       'description':'Profilo acustico '+protocol,'network':config})
+                       'description':'Acoustic profile '+protocol,'network':config})
     for identifier,name,network in [
-        ('flooding','Flooding con TDMA',Network(mac={'protocol':'tdma'},routing='flooding')),
-        ('bpsk_corrected','BPSK corretto sperimentale',Network(acoustic={'phy':'bpsk_corrected'}))]:
+        ('flooding','Flooding with TDMA',Network(mac={'protocol':'tdma'},routing='flooding')),
+        ('bpsk_corrected','Experimental corrected BPSK',Network(acoustic={'phy':'bpsk_corrected'}))]:
         result.append({'id':'builtin_'+identifier,'kind':'example','name':name,
-                       'description':'Configurazione verificata; applicazione soggetta ai vincoli dello scenario.',
+                       'description':'Verified configuration; applying it is subject to the scenario constraints.',
                        'network':network.model_dump()})
     return result

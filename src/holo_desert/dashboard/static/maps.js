@@ -29,19 +29,19 @@ export function drawMap(selector,s,selected,packetId=null){
   const link=(a,b,color,options)=>{if(s.fleet[a]&&s.fleet[b])arrow(ctx,xy(s.fleet[a]),xy(s.fleet[b]),color,options)};
   if($('#route-layer').checked){const routes=s.configured_routes||[],relevant=new Set();for(const r of routes)if(r.explicit)relevant.add(r.source+'>'+r.destination);
     for(const f of s.configuration?.flows||[]){let n=f.source;const visited=new Set();while(n!==f.destination&&!visited.has(n)){visited.add(n);const r=routes.find(r=>r.source===n&&r.destination===f.destination);if(!r)break;relevant.add(n+'>'+f.destination);n=r.next_hop}}
-    for(const r of routes)if(relevant.has(r.source+'>'+r.destination))link(r.source,r.next_hop,'#9aa5b5',{dash:[4,5],offset:-25,label:'Route configurata',width:1});
+    for(const r of routes)if(relevant.has(r.source+'>'+r.destination))link(r.source,r.next_hop,'#9aa5b5',{dash:[4,5],offset:-25,label:'Configured route',width:1});
   }
   const packet=(s.packets||[]).find(p=>p.id===packetId),events=packet?packet.events:(s.observations||[]),observed=new Map();
   if($('#phy-layer').checked){for(const e of events){if(e.event==='forward')observed.set('forward'+e.node_id+'>'+e.next_hop_id,e);if(e.event==='phy_tx_start')observed.set('tx'+e.node_id+'>'+e.next_hop_id,e);if(e.event==='phy_rx_end'&&e.outcome==='decoded'&&e.node_id===e.next_hop_id)observed.set('rx'+e.transmitter_id+'>'+e.node_id,e)}
     for(const e of observed.values()){const recent=s.time>=e.time&&s.time-e.time<1.2;
       if(!packet&&!recent)continue;
       if(e.event==='forward'){if(packet)link(e.node_id,e.next_hop_id,'#7e91b2',{dash:[3,4],offset:-18,width:1})}
-      else link(e.event==='phy_rx_end'?e.transmitter_id:e.node_id,e.event==='phy_rx_end'?e.node_id:e.next_hop_id,recent?'#3165cf':'#8ca7d0',{offset:e.event==='phy_rx_end'?12:0,dash:e.event==='phy_rx_end'?[2,3]:[],label:packet&&e.event==='phy_tx_start'?'TX osservata · t assoluto = '+number(e.time,2)+' s':'',width:recent?2.2:1.5});
+      else link(e.event==='phy_rx_end'?e.transmitter_id:e.node_id,e.event==='phy_rx_end'?e.node_id:e.next_hop_id,recent?'#3165cf':'#8ca7d0',{offset:e.event==='phy_rx_end'?12:0,dash:e.event==='phy_rx_end'?[2,3]:[],label:packet&&e.event==='phy_tx_start'?'Observed TX · absolute t = '+number(e.time,2)+' s':'',width:recent?2.2:1.5});
     }
   }
   const delivered=packet?(packet.status==='received'?[{source:packet.source,destination:packet.destination,last_receive:packet.receive_time}]:[]):s.edges||[];
   const newest=Math.max(...delivered.map(e=>e.last_receive));
-  if($('#delivery-layer').checked)for(const e of delivered)link(e.source,e.destination,e.last_receive===newest?'#438264':'#a0b7ab',{offset:85,dash:[6,4],label:packet||e.last_receive===newest?'Consegna · t assoluto = '+number(e.last_receive,2)+' s':'',width:1.5});
+  if($('#delivery-layer').checked)for(const e of delivered)link(e.source,e.destination,e.last_receive===newest?'#438264':'#a0b7ab',{offset:85,dash:[6,4],label:packet||e.last_receive===newest?'Delivery · absolute t = '+number(e.last_receive,2)+' s':'',width:1.5});
   camera.hits=[];
   for(const [node,p]of fleet){const [x,y]=xy(p);camera.hits.push({node,x,y});
     const recent=events.filter(e=>e.node_id===node&&s.time>=e.time&&s.time-e.time<1.2&&['phy_tx_start','phy_rx_end'].includes(e.event)).at(-1);

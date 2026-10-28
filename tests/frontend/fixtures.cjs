@@ -10,7 +10,7 @@ async function fixturePage(page,request){
   await page.route('**/api/state',route=>route.fulfill({json:state}));
   for(const action of ['pause','resume','stop'])await page.route('**/api/'+action,route=>{state={...state,state:{pause:'paused',resume:'running',stop:'stopped'}[action]};return route.fulfill({json:{ok:true}})});
   await page.goto('/');await page.locator('#simulation').waitFor({state:'visible'});await page.locator('#fleet-canvas').waitFor({state:'visible'});await page.locator('#map-empty').waitFor({state:'hidden'});
-  await page.evaluate(()=>{const banner=document.querySelector('#snapshot-banner');banner.textContent='Fixture di test · dati sintetici, nessuna simulazione DESERT';banner.hidden=false});
+  await page.evaluate(()=>{const banner=document.querySelector('#snapshot-banner');banner.textContent='Test fixture · synthetic data, no DESERT simulation';banner.hidden=false});
   return {setState:value=>state=value,state:()=>state};
 }
 module.exports={observedState,fixturePage};

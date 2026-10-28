@@ -1,6 +1,6 @@
 export const $ = s => document.querySelector(s);
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export const number = (x, digits=2) => x == null || !Number.isFinite(Number(x)) ? 'N/D' : Number(x).toLocaleString('it-IT',{minimumFractionDigits:digits,maximumFractionDigits:digits});
+export const number = (x, digits=2) => x == null || !Number.isFinite(Number(x)) ? 'N/A' : Number(x).toLocaleString('en-US',{minimumFractionDigits:digits,maximumFractionDigits:digits});
 export async function api(url, body, method='POST') {
   const r = await fetch(url, body === undefined && method==='POST' ? {} : {method,headers:{'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})});
   const data = await r.json();
@@ -28,9 +28,9 @@ export function canvas(selector) {
   return {c,ctx,w,h};
 }
 export function fields(data) {
-  return '<dl>'+Object.entries(data).map(([k,v])=>'<dt>'+esc(k)+'</dt><dd>'+esc(v??'N/D')+'</dd>').join('')+'</dl>';
+  return '<dl>'+Object.entries(data).map(([k,v])=>'<dt>'+esc(k)+'</dt><dd>'+esc(v??'N/A')+'</dd>').join('')+'</dl>';
 }
-export const statusName = s => ({queued:'Generato',in_flight:'Nella rete',phy_tx_observed:'Trasmissione osservata',received:'Consegnato',timeout_unknown_cause:'Scaduto'}[s]||s);
+export const statusName = s => ({queued:'Generated',in_flight:'In the network',phy_tx_observed:'Transmission observed',received:'Delivered',timeout_unknown_cause:'Expired'}[s]||s);
 export function timeline(events) {
   return events.map(e=>'<li><time>'+number(e.time)+' s</time> <b>'+esc(e.event)+'</b> '+esc(e.node_id||e.node||'')+' '+esc(e.state||e.outcome||'')+
     (e.next_hop_id?' → '+esc(e.next_hop_id):'')+(e.tx_power_db!=null?' · '+number(e.tx_power_db,1)+' dB re 1 µPa':e.tx_power_dbm!=null?' · '+number(e.tx_power_dbm,1)+' dBm':e.tx_power_w!=null?' · '+Number(e.tx_power_w).toExponential(3)+' W':'')+'</li>').join('');

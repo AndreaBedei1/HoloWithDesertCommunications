@@ -22,10 +22,10 @@ def test_library_roundtrip_conflicts_atomic_write_and_restart(tmp_path, monkeypa
     library = ScenarioLibrary(tmp_path)
     record = library.save(configuration())
     assert len(ScenarioLibrary(tmp_path).get(record["id"])["configuration"]["nodes"]) == 3
-    with pytest.raises(ScenarioConflict, match="nome"):
+    with pytest.raises(ScenarioConflict, match="name"):
         library.save(configuration("  TRE DRONI  "))
     updated = configuration("Tre droni modificati")
-    with pytest.raises(ScenarioConflict, match="cambiato"):
+    with pytest.raises(ScenarioConflict, match="changed"):
         library.save(updated, record["id"], "obsolete")
     from holo_desert.scenarios import library as module
     original = module.os.replace

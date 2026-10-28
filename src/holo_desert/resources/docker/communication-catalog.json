@@ -14,37 +14,37 @@
           "path": "network.mac.ack",
           "label": "ACK",
           "default": false,
-          "help": "Conferma MAC quando supportata. No-ACK rimuove il frame alla prima trasmissione; non attende il TTL.",
+          "help": "MAC acknowledgement when supported. No-ACK removes the frame at its first transmission; it does not wait for the TTL.",
           "type": "checkbox",
           "unit": "",
           "default_origin": "bridge historical profile",
-          "constraint": "non disponibile con TDMA, TokenBus, CS-Burst, SUN e multi-PHY"
+          "constraint": "not available with TDMA, TokenBus, CS-Burst, SUN and multi-PHY"
         },
         {
           "path": "network.mac.max_tx_tries",
-          "label": "Massimo tentativi",
+          "label": "Maximum attempts",
           "default": 3,
-          "help": "Limite dei tentativi con ACK. Non implica ritrasmissioni nella modalita no-ACK.",
+          "help": "Limit on attempts with ACK. It implies no retransmissions in no-ACK mode.",
           "type": "integer",
-          "unit": "tentativi",
+          "unit": "attempts",
           "min": 1,
           "max": 20,
           "default_origin": "bridge historical profile",
-          "constraint": "conta solo con ACK MAC attivo"
+          "constraint": "applies only with MAC ACK enabled"
         },
         {
           "path": "network.mac.buffer_packets",
-          "label": "Buffer MAC",
+          "label": "MAC buffer",
           "default": 100,
-          "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
+          "help": "Native queue limit in packets, set before construction where needed.",
           "type": "integer",
-          "unit": "pacchetti",
+          "unit": "packets",
           "min": 1,
           "max": 10000,
           "default_origin": "bridge historical profile"
         }
       ],
-      "description": "Accesso casuale senza ascolto preventivo.",
+      "description": "Random access without prior channel sensing.",
       "operational": true,
       "validation": "verified_end_to_end",
       "reason": "",
@@ -96,49 +96,49 @@
           "path": "network.mac.ack",
           "label": "ACK",
           "default": false,
-          "help": "Conferma MAC quando supportata. No-ACK rimuove il frame alla prima trasmissione; non attende il TTL.",
+          "help": "MAC acknowledgement when supported. No-ACK removes the frame at its first transmission; it does not wait for the TTL.",
           "type": "checkbox",
           "unit": "",
           "default_origin": "bridge historical profile",
-          "constraint": "non disponibile con TDMA, TokenBus, CS-Burst, SUN e multi-PHY"
+          "constraint": "not available with TDMA, TokenBus, CS-Burst, SUN and multi-PHY"
         },
         {
           "path": "network.mac.max_tx_tries",
-          "label": "Massimo tentativi",
+          "label": "Maximum attempts",
           "default": 3,
-          "help": "Limite dei tentativi con ACK. Non implica ritrasmissioni nella modalita no-ACK.",
+          "help": "Limit on attempts with ACK. It implies no retransmissions in no-ACK mode.",
           "type": "integer",
-          "unit": "tentativi",
+          "unit": "attempts",
           "min": 1,
           "max": 20,
           "default_origin": "bridge historical profile",
-          "constraint": "conta solo con ACK MAC attivo"
+          "constraint": "applies only with MAC ACK enabled"
         },
         {
           "path": "network.mac.queue_mode",
-          "label": "Modalita coda CSMA-ALOHA",
+          "label": "CSMA-ALOHA queue mode",
           "default": "legacy",
           "type": "select",
           "unit": "",
-          "help": "Legacy riproduce il costruttore originale con coda illimitata. Bounded applica il limite prima del costruttore e puo causare scarti MAC durante burst.",
+          "help": "Legacy reproduces the original constructor with an unbounded queue. Bounded applies the limit before the constructor and may cause MAC discards during bursts.",
           "choices": [
             {
               "value": "legacy",
-              "label": "Legacy - esperimenti originali"
+              "label": "Legacy - original experiments"
             },
             {
               "value": "bounded",
-              "label": "Bounded - limite nativo attivo"
+              "label": "Bounded - native limit active"
             }
           ]
         },
         {
           "path": "network.mac.buffer_packets",
-          "label": "Buffer MAC",
+          "label": "MAC buffer",
           "default": 100,
-          "help": "Limite della coda CSMA-ALOHA in modalita bounded. La modalita storica legacy mantiene la coda senza limite nativo.",
+          "help": "CSMA-ALOHA queue limit in bounded mode. The historical legacy mode keeps the queue without a native limit.",
           "type": "integer",
-          "unit": "pacchetti",
+          "unit": "packets",
           "min": 1,
           "max": 10000,
           "default_origin": "bridge historical profile",
@@ -150,7 +150,7 @@
           }
         }
       ],
-      "description": "Ascolto del canale e attesa casuale prima dei dati.",
+      "description": "Channel sensing and random wait before data.",
       "operational": true,
       "validation": "verified_end_to_end",
       "reason": "",
@@ -204,49 +204,49 @@
       "parameters": [
         {
           "path": "network.mac.tdma.frame_duration_s",
-          "label": "Durata frame TDMA",
+          "label": "TDMA frame duration",
           "default": 3,
-          "help": "Durata di un ciclo condiviso. Profilo iniziale tratto dal campione ufficiale TDMA; gli slot sono frame / numero nodi.",
+          "help": "Duration of one shared cycle. Initial profile taken from the official TDMA sample; slots are frame / number of nodes.",
           "type": "number",
           "unit": "s",
           "min": 0.001,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
-          "constraint": "divisa per il numero di droni deve contenere il frame più lungo più il tempo di guardia"
+          "constraint": "divided by the number of drones, it must fit the longest frame plus the guard time"
         },
         {
           "path": "network.mac.tdma.guard_time_s",
           "label": "Guard time",
           "default": 0.1,
-          "help": "Margine sottratto alla durata dello slot. Deve consentire propagazione e incertezze; la validazione verifica che il frame dati entri nello slot.",
+          "help": "Margin subtracted from the slot duration. It must allow for propagation and uncertainties; validation checks that the data frame fits in the slot.",
           "type": "number",
           "unit": "s",
           "min": 0,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
-          "constraint": "minore della durata di uno slot (frame diviso per il numero di droni)"
+          "constraint": "shorter than one slot (frame divided by the number of drones)"
         },
         {
           "path": "network.mac.tdma.max_packets_per_slot",
-          "label": "Pacchetti per slot",
+          "label": "Packets per slot",
           "default": 1,
-          "help": "Numero massimo nativo trasmesso nel proprio slot. Nessun ACK ALOHA nel TDMA.",
+          "help": "Native maximum number transmitted in the drone's own slot. No ALOHA ACK in TDMA.",
           "type": "integer",
-          "unit": "pacchetti",
+          "unit": "packets",
           "min": 1,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
         },
         {
           "path": "network.mac.buffer_packets",
-          "label": "Buffer MAC",
+          "label": "MAC buffer",
           "default": 100,
-          "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
+          "help": "Native queue limit in packets, set before construction where needed.",
           "type": "integer",
-          "unit": "pacchetti",
+          "unit": "packets",
           "min": 1,
           "max": 10000,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
         }
       ],
-      "description": "Slot assegnati: ogni drone trasmette nel proprio intervallo.",
+      "description": "Assigned slots: each drone transmits in its own interval.",
       "operational": true,
       "validation": "verified_end_to_end",
       "reason": "",
@@ -298,49 +298,49 @@
       "parameters": [
         {
           "path": "network.mac.tdma.frame_duration_s",
-          "label": "Durata frame TDMA",
+          "label": "TDMA frame duration",
           "default": 3,
-          "help": "Durata di un ciclo condiviso. Profilo iniziale tratto dal campione ufficiale TDMA; gli slot sono frame / numero nodi.",
+          "help": "Duration of one shared cycle. Initial profile taken from the official TDMA sample; slots are frame / number of nodes.",
           "type": "number",
           "unit": "s",
           "min": 0.001,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
-          "constraint": "divisa per il numero di droni deve contenere il frame più lungo più il tempo di guardia"
+          "constraint": "divided by the number of drones, it must fit the longest frame plus the guard time"
         },
         {
           "path": "network.mac.tdma.guard_time_s",
           "label": "Guard time",
           "default": 0.1,
-          "help": "Margine sottratto alla durata dello slot. Deve consentire propagazione e incertezze; la validazione verifica che il frame dati entri nello slot.",
+          "help": "Margin subtracted from the slot duration. It must allow for propagation and uncertainties; validation checks that the data frame fits in the slot.",
           "type": "number",
           "unit": "s",
           "min": 0,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
-          "constraint": "minore della durata di uno slot (frame diviso per il numero di droni)"
+          "constraint": "shorter than one slot (frame divided by the number of drones)"
         },
         {
           "path": "network.mac.tdma.max_packets_per_slot",
-          "label": "Pacchetti per slot",
+          "label": "Packets per slot",
           "default": 1,
-          "help": "Numero massimo nativo trasmesso nel proprio slot. Nessun ACK ALOHA nel TDMA.",
+          "help": "Native maximum number transmitted in the drone's own slot. No ALOHA ACK in TDMA.",
           "type": "integer",
-          "unit": "pacchetti",
+          "unit": "packets",
           "min": 1,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
         },
         {
           "path": "network.mac.buffer_packets",
-          "label": "Buffer MAC",
+          "label": "MAC buffer",
           "default": 100,
-          "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
+          "help": "Native queue limit in packets, set before construction where needed.",
           "type": "integer",
-          "unit": "pacchetti",
+          "unit": "packets",
           "min": 1,
           "max": 10000,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
         }
       ],
-      "description": "Slot definiti da matrice nativa, generata da assegnazioni esplicite.",
+      "description": "Slots defined by a native matrix generated from explicit assignments.",
       "operational": true,
       "validation": "verified_end_to_end",
       "reason": "",
@@ -391,80 +391,80 @@
       "parameters": [
         {
           "path": "network.mac.csma_ca.queue_size",
-          "label": "Coda CSMA/CA",
+          "label": "CSMA/CA queue",
           "default": 10,
-          "help": "Soglia nativa della coda. Il sorgente ammette queue_size <= soglia: puo accodare soglia + 1 pacchetti, oltre al frame in servizio. Nessun limite ALOHA viene applicato.",
+          "help": "Native queue threshold. The source accepts queue_size <= threshold: it can queue threshold + 1 packets, in addition to the frame in service. No ALOHA limit is applied.",
           "type": "integer",
-          "unit": "pacchetti",
+          "unit": "packets",
           "min": 1,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
         },
         {
           "path": "network.mac.csma_ca.backoff_delta_s",
-          "label": "Passo backoff",
+          "label": "Backoff step",
           "default": 1,
-          "help": "Passo intero del backoff casuale nativo.",
+          "help": "Integer step of the native random backoff.",
           "type": "integer",
           "unit": "s",
           "min": 1,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
-          "constraint": "intero"
+          "constraint": "integer"
         },
         {
           "path": "network.mac.csma_ca.backoff_max",
-          "label": "Backoff massimo",
+          "label": "Maximum backoff",
           "default": 20,
-          "help": "Limite nativo della finestra di backoff.",
+          "help": "Native limit of the backoff window.",
           "type": "integer",
-          "unit": "passi",
+          "unit": "steps",
           "min": 1,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
         },
         {
           "path": "network.mac.csma_ca.cts_wait_s",
-          "label": "Attesa CTS",
+          "label": "CTS timeout",
           "default": 10,
-          "help": "Timer dopo RTS per ricevere CTS.",
+          "help": "Timer after RTS for receiving the CTS.",
           "type": "integer",
           "unit": "s",
           "min": 1,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
-          "constraint": "intero"
+          "constraint": "integer"
         },
         {
           "path": "network.mac.csma_ca.data_wait_s",
-          "label": "Attesa dati",
+          "label": "Data timeout",
           "default": 10,
-          "help": "Timer dopo CTS per ricevere il frame dati.",
+          "help": "Timer after CTS for receiving the data frame.",
           "type": "integer",
           "unit": "s",
           "min": 1,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
-          "constraint": "intero"
+          "constraint": "integer"
         },
         {
           "path": "network.mac.csma_ca.ack_wait_s",
-          "label": "Attesa ACK",
+          "label": "ACK timeout",
           "default": 10,
-          "help": "Timer di conferma dati se ACK abilitato.",
+          "help": "Data acknowledgement timer when ACK is enabled.",
           "type": "integer",
           "unit": "s",
           "min": 1,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
-          "constraint": "intero"
+          "constraint": "integer"
         },
         {
           "path": "network.mac.ack",
           "label": "ACK",
           "default": false,
-          "help": "Conferma MAC quando supportata. No-ACK rimuove il frame alla prima trasmissione; non attende il TTL.",
+          "help": "MAC acknowledgement when supported. No-ACK removes the frame at its first transmission; it does not wait for the TTL.",
           "type": "checkbox",
           "unit": "",
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
-          "constraint": "non disponibile con TDMA, TokenBus, CS-Burst, SUN e multi-PHY"
+          "constraint": "not available with TDMA, TokenBus, CS-Burst, SUN and multi-PHY"
         }
       ],
-      "description": "Handshake RTS/CTS nel protocollo DESERT originale.",
+      "description": "RTS/CTS handshake in the original DESERT protocol.",
       "operational": true,
       "validation": "verified_end_to_end",
       "reason": "",
@@ -501,7 +501,7 @@
         "MAC counters when exposed; otherwise null"
       ],
       "initialization": "Set native integer bindings before construction; per-node integer bitrate; ACK/noACK then initialize",
-      "compatibility_reason": "Questo MAC richiede routing statico nello stack verificato: il broadcast Flooding non completa il suo handshake. La combinazione viene bloccata prima della simulazione."
+      "compatibility_reason": "In the verified stack this MAC requires static routing: Flooding broadcasts do not complete its handshake. The combination is blocked before the simulation."
     },
     {
       "id": "dacap",
@@ -514,9 +514,9 @@
       "parameters": [
         {
           "path": "network.mac.dacap.wait_costant_s",
-          "label": "Attesa costante",
+          "label": "Constant wait",
           "default": 0.2,
-          "help": "Margine nativo DACAP wait_costant.",
+          "help": "Native DACAP wait_costant margin.",
           "type": "number",
           "unit": "s",
           "min": 0.001,
@@ -524,9 +524,9 @@
         },
         {
           "path": "network.mac.dacap.max_prop_delay_s",
-          "label": "Massima propagazione prevista",
+          "label": "Maximum expected propagation",
           "default": 2,
-          "help": "Parametro nativo max_prop_delay che determina i tempi di handshake, non una portata fisica imposta.",
+          "help": "Native max_prop_delay parameter that sets the handshake timings; not an imposed physical range.",
           "type": "number",
           "unit": "s",
           "min": 0.001,
@@ -534,9 +534,9 @@
         },
         {
           "path": "network.mac.dacap.delta_d",
-          "label": "Delta distanza",
+          "label": "Distance delta",
           "default": 1500,
-          "help": "delta_D nativo del protocollo DACAP; non e una misura di ranging HoloOcean.",
+          "help": "Native delta_D of the DACAP protocol; it is not a HoloOcean ranging measurement.",
           "type": "number",
           "unit": "m",
           "min": 0,
@@ -544,9 +544,9 @@
         },
         {
           "path": "network.mac.dacap.t_min",
-          "label": "Tempo minimo",
+          "label": "Minimum time",
           "default": 2,
-          "help": "t_min nativo della procedura di accesso DACAP.",
+          "help": "Native t_min of the DACAP access procedure.",
           "type": "number",
           "unit": "s",
           "min": 0,
@@ -554,9 +554,9 @@
         },
         {
           "path": "network.mac.dacap.tw_min",
-          "label": "Attesa minima",
+          "label": "Minimum wait",
           "default": 0,
-          "help": "T_W_min nativo, distinto dal TTL applicativo.",
+          "help": "Native T_W_min, distinct from the application TTL.",
           "type": "number",
           "unit": "s",
           "min": 0,
@@ -566,37 +566,37 @@
           "path": "network.mac.ack",
           "label": "ACK",
           "default": false,
-          "help": "Conferma MAC quando supportata. No-ACK rimuove il frame alla prima trasmissione; non attende il TTL.",
+          "help": "MAC acknowledgement when supported. No-ACK removes the frame at its first transmission; it does not wait for the TTL.",
           "type": "checkbox",
           "unit": "",
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
-          "constraint": "non disponibile con TDMA, TokenBus, CS-Burst, SUN e multi-PHY"
+          "constraint": "not available with TDMA, TokenBus, CS-Burst, SUN and multi-PHY"
         },
         {
           "path": "network.mac.max_tx_tries",
-          "label": "Massimo tentativi",
+          "label": "Maximum attempts",
           "default": 3,
-          "help": "Limite dei tentativi con ACK. Non implica ritrasmissioni nella modalita no-ACK.",
+          "help": "Limit on attempts with ACK. It implies no retransmissions in no-ACK mode.",
           "type": "integer",
-          "unit": "tentativi",
+          "unit": "attempts",
           "min": 1,
           "max": 20,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range",
-          "constraint": "conta solo con ACK MAC attivo"
+          "constraint": "applies only with MAC ACK enabled"
         },
         {
           "path": "network.mac.buffer_packets",
-          "label": "Buffer MAC",
+          "label": "MAC buffer",
           "default": 100,
-          "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
+          "help": "Native queue limit in packets, set before construction where needed.",
           "type": "integer",
-          "unit": "pacchetti",
+          "unit": "packets",
           "min": 1,
           "max": 10000,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
         }
       ],
-      "description": "Accesso con handshake e temporizzazioni per il canale acustico.",
+      "description": "Access with handshake and timings designed for the acoustic channel.",
       "operational": true,
       "validation": "verified_end_to_end",
       "reason": "",
@@ -633,18 +633,18 @@
         "MAC counters when exposed; otherwise null"
       ],
       "initialization": "Native bindings without underscores; per-node MAC address, ACK/noACK; no ALOHA initialize",
-      "compatibility_reason": "Questo MAC richiede routing statico nello stack verificato: il broadcast Flooding non completa il suo handshake. La combinazione viene bloccata prima della simulazione."
+      "compatibility_reason": "In the verified stack this MAC requires static routing: Flooding broadcasts do not complete its handshake. The combination is blocked before the simulation."
     },
     {
       "id": "static",
-      "name": "Routing statico",
+      "name": "Static routing",
       "layer": "routing",
       "tcl_class": "Module/UW/StaticRouting",
       "libraries": [
         "libuwstaticrouting.so"
       ],
       "parameters": [],
-      "description": "Destinazioni e next hop espliciti, diretto o multi-hop.",
+      "description": "Explicit destinations and next hops, direct or multi-hop.",
       "operational": true,
       "validation": "verified_end_to_end",
       "reason": "",
@@ -691,20 +691,20 @@
       "parameters": [
         {
           "path": "network.flooding.ttl",
-          "label": "TTL di rete",
+          "label": "Network TTL",
           "default": 10,
-          "help": "Numero di inoltri previsto da Flooding; distinto dalla validita temporale del messaggio applicativo.",
+          "help": "Number of forwards allowed by Flooding; distinct from the time validity of the application message.",
           "type": "integer",
-          "unit": "inoltri",
+          "unit": "forwards",
           "min": 1,
           "max": 255,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
         },
         {
           "path": "network.flooding.maximum_cache_time_s",
-          "label": "Cache duplicati",
+          "label": "Duplicate cache",
           "default": 60,
-          "help": "Tempo nativo di conservazione degli identificativi per sopprimere duplicati.",
+          "help": "Native retention time of identifiers used to suppress duplicates.",
           "type": "number",
           "unit": "s",
           "min": 0.001,
@@ -712,15 +712,15 @@
         },
         {
           "path": "network.flooding.optimize",
-          "label": "Soppressione duplicati",
+          "label": "Duplicate suppression",
           "default": true,
-          "help": "Ottimizzazione nativa di Flooding: evita gli inoltri ripetuti secondo la cache DESERT.",
+          "help": "Native Flooding optimisation: avoids repeated forwards according to the DESERT cache.",
           "type": "checkbox",
           "unit": "",
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
         }
       ],
-      "description": "Inoltro broadcast reale DESERT per una destinazione applicativa unicast; TTL di rete e cache nativi.",
+      "description": "Real DESERT broadcast forwarding towards a unicast application destination; native network TTL and cache.",
       "operational": true,
       "validation": "verified_end_to_end",
       "reason": "",
@@ -764,7 +764,7 @@
     },
     {
       "id": "bpsk_upstream",
-      "name": "BPSK upstream originale",
+      "name": "Original upstream BPSK",
       "layer": "phy",
       "tcl_class": "Module/MPhy/BPSK/Underwater/HOLO",
       "libraries": [
@@ -776,7 +776,7 @@
           "path": "network.acoustic.bitrate_bps",
           "label": "Bitrate",
           "default": 4800,
-          "help": "Bit al secondo usati dal PHY per la durata del frame. La BER BPSK usa SNR e penalita senza una conversione Eb/N0 aggiuntiva.",
+          "help": "Bits per second used by the PHY for the frame duration. The BPSK BER uses SNR and penalty without an additional Eb/N0 conversion.",
           "type": "number",
           "unit": "bit/s",
           "min": 0.001,
@@ -784,9 +784,9 @@
         },
         {
           "path": "network.acoustic.tx_power_db",
-          "label": "Potenza acustica",
+          "label": "Acoustic power",
           "default": 135,
-          "help": "Livello SPL riferito a 1 microPa. Non e potenza elettrica, dBm o dBW. Il PHY usa 10^(SPL/10).",
+          "help": "SPL level referenced to 1 microPa. It is not electrical power, dBm or dBW. The PHY uses 10^(SPL/10).",
           "type": "number",
           "unit": "dB SPL",
           "min": 0,
@@ -795,33 +795,33 @@
         },
         {
           "path": "network.acoustic.frequency_hz",
-          "label": "Frequenza centrale",
+          "label": "Centre frequency",
           "default": 25000,
-          "help": "Centro della maschera rettangolare. Influenza Thorp e rumore ambientale.",
+          "help": "Centre of the rectangular mask. Affects Thorp attenuation and ambient noise.",
           "type": "number",
           "unit": "Hz",
           "min": 0.001,
           "default_origin": "bridge historical profile",
-          "constraint": "la banda deve restare minore del doppio della frequenza centrale"
+          "constraint": "the bandwidth must stay below twice the centre frequency"
         },
         {
           "path": "network.acoustic.bandwidth_hz",
-          "label": "Larghezza di banda",
+          "label": "Bandwidth",
           "default": 5000,
-          "help": "Banda della maschera. Il modello moltiplica per la densita di rumore al centro, assunta piatta.",
+          "help": "Mask bandwidth. The model multiplies it by the noise density at the centre frequency, assumed flat.",
           "type": "number",
           "unit": "Hz",
           "min": 0.001,
           "default_origin": "bridge historical profile",
-          "constraint": "la banda deve restare minore del doppio della frequenza centrale"
+          "constraint": "the bandwidth must stay below twice the centre frequency"
         },
         {
           "path": "network.acoustic.spreading",
-          "label": "Spreading geometrico",
+          "label": "Geometric spreading",
           "default": 1.75,
-          "help": "Esponente k nel termine 10 k log10(distanza in metri). Default nativo 1.75.",
+          "help": "Exponent k in the term 10 k log10(distance in metres). Native default 1.75.",
           "type": "number",
-          "unit": "adimensionale",
+          "unit": "dimensionless",
           "min": 0.001,
           "max": 3,
           "default_origin": "bridge historical profile",
@@ -834,20 +834,20 @@
         },
         {
           "path": "network.acoustic.shipping",
-          "label": "Traffico navale",
+          "label": "Shipping activity",
           "default": 0.5,
-          "help": "Fattore shipping del rumore DESERT tra 0 e 1; non genera altri pacchetti in rete.",
+          "help": "DESERT noise shipping factor between 0 and 1; it does not generate additional network packets.",
           "type": "number",
-          "unit": "adimensionale",
+          "unit": "dimensionless",
           "min": 0,
           "max": 1,
           "default_origin": "bridge historical profile"
         },
         {
           "path": "network.acoustic.wind_speed_mps",
-          "label": "Velocita del vento",
+          "label": "Wind speed",
           "default": 0,
-          "help": "Parametro del rumore ambientale. Non modifica il movimento dei droni HoloOcean.",
+          "help": "Ambient noise parameter. It does not affect the motion of the HoloOcean drones.",
           "type": "number",
           "unit": "m/s",
           "min": 0,
@@ -855,37 +855,37 @@
         },
         {
           "path": "network.acoustic.sound_speed_mps",
-          "label": "Velocita del suono",
+          "label": "Sound speed",
           "default": 1500,
-          "help": "Valore positivo di propSpeed_ del canale: ritardo = distanza / velocita. Unico valore per il canale condiviso.",
+          "help": "Positive value of the channel propSpeed_: delay = distance / speed. A single value for the shared channel.",
           "type": "number",
           "unit": "m/s",
           "min": 0.001,
           "default_origin": "bridge historical profile",
-          "constraint": "unico valore per tutto il canale; con WOSS il profilo SSP governa Bellhop"
+          "constraint": "a single value for the whole channel; with WOSS the SSP profile drives Bellhop"
         },
         {
           "path": "network.acoustic.rx_snr_penalty_db",
-          "label": "Penalita SNR ricevitore",
+          "label": "Receiver SNR penalty",
           "default": -10,
-          "help": "Somma in dB prima della BER. Il valore nativo -10 riduce gamma di dieci volte. Lo SNR osservato rimane grezzo.",
+          "help": "Added in dB before the BER. The native value -10 reduces gamma tenfold. The observed SNR stays raw.",
           "type": "number",
           "unit": "dB",
           "default_origin": "bridge historical profile",
-          "constraint": "qualsiasi valore finito"
+          "constraint": "any finite value"
         },
         {
           "path": "network.acoustic.acquisition_threshold_db",
-          "label": "Soglia di acquisizione",
+          "label": "Acquisition threshold",
           "default": 0,
-          "help": "La ricezione deve superare strettamente questa soglia SNR grezza per sincronizzarsi.",
+          "help": "A reception must strictly exceed this raw SNR threshold to synchronise.",
           "type": "number",
           "unit": "dB",
           "default_origin": "bridge historical profile",
-          "constraint": "qualsiasi valore finito"
+          "constraint": "any finite value"
         }
       ],
-      "description": "Modello storico invariato. Il ramo interferenza puo ritestare il rumore con interferenza zero.",
+      "description": "Unchanged historical model. The interference branch may retest the noise with zero interference.",
       "operational": true,
       "validation": "verified_end_to_end",
       "reason": "",
@@ -923,7 +923,7 @@
     },
     {
       "id": "bpsk_corrected",
-      "name": "BPSK corretto",
+      "name": "Corrected BPSK",
       "layer": "phy",
       "tcl_class": "Module/MPhy/BPSK/Underwater/HOLO/Corrected",
       "libraries": [
@@ -935,7 +935,7 @@
           "path": "network.acoustic.bitrate_bps",
           "label": "Bitrate",
           "default": 4800,
-          "help": "Bit al secondo usati dal PHY per la durata del frame. La BER BPSK usa SNR e penalita senza una conversione Eb/N0 aggiuntiva.",
+          "help": "Bits per second used by the PHY for the frame duration. The BPSK BER uses SNR and penalty without an additional Eb/N0 conversion.",
           "type": "number",
           "unit": "bit/s",
           "min": 0.001,
@@ -943,9 +943,9 @@
         },
         {
           "path": "network.acoustic.tx_power_db",
-          "label": "Potenza acustica",
+          "label": "Acoustic power",
           "default": 135,
-          "help": "Livello SPL riferito a 1 microPa. Non e potenza elettrica, dBm o dBW. Il PHY usa 10^(SPL/10).",
+          "help": "SPL level referenced to 1 microPa. It is not electrical power, dBm or dBW. The PHY uses 10^(SPL/10).",
           "type": "number",
           "unit": "dB SPL",
           "min": 0,
@@ -954,33 +954,33 @@
         },
         {
           "path": "network.acoustic.frequency_hz",
-          "label": "Frequenza centrale",
+          "label": "Centre frequency",
           "default": 25000,
-          "help": "Centro della maschera rettangolare. Influenza Thorp e rumore ambientale.",
+          "help": "Centre of the rectangular mask. Affects Thorp attenuation and ambient noise.",
           "type": "number",
           "unit": "Hz",
           "min": 0.001,
           "default_origin": "bridge historical profile",
-          "constraint": "la banda deve restare minore del doppio della frequenza centrale"
+          "constraint": "the bandwidth must stay below twice the centre frequency"
         },
         {
           "path": "network.acoustic.bandwidth_hz",
-          "label": "Larghezza di banda",
+          "label": "Bandwidth",
           "default": 5000,
-          "help": "Banda della maschera. Il modello moltiplica per la densita di rumore al centro, assunta piatta.",
+          "help": "Mask bandwidth. The model multiplies it by the noise density at the centre frequency, assumed flat.",
           "type": "number",
           "unit": "Hz",
           "min": 0.001,
           "default_origin": "bridge historical profile",
-          "constraint": "la banda deve restare minore del doppio della frequenza centrale"
+          "constraint": "the bandwidth must stay below twice the centre frequency"
         },
         {
           "path": "network.acoustic.spreading",
-          "label": "Spreading geometrico",
+          "label": "Geometric spreading",
           "default": 1.75,
-          "help": "Esponente k nel termine 10 k log10(distanza in metri). Default nativo 1.75.",
+          "help": "Exponent k in the term 10 k log10(distance in metres). Native default 1.75.",
           "type": "number",
-          "unit": "adimensionale",
+          "unit": "dimensionless",
           "min": 0.001,
           "max": 3,
           "default_origin": "bridge historical profile",
@@ -993,20 +993,20 @@
         },
         {
           "path": "network.acoustic.shipping",
-          "label": "Traffico navale",
+          "label": "Shipping activity",
           "default": 0.5,
-          "help": "Fattore shipping del rumore DESERT tra 0 e 1; non genera altri pacchetti in rete.",
+          "help": "DESERT noise shipping factor between 0 and 1; it does not generate additional network packets.",
           "type": "number",
-          "unit": "adimensionale",
+          "unit": "dimensionless",
           "min": 0,
           "max": 1,
           "default_origin": "bridge historical profile"
         },
         {
           "path": "network.acoustic.wind_speed_mps",
-          "label": "Velocita del vento",
+          "label": "Wind speed",
           "default": 0,
-          "help": "Parametro del rumore ambientale. Non modifica il movimento dei droni HoloOcean.",
+          "help": "Ambient noise parameter. It does not affect the motion of the HoloOcean drones.",
           "type": "number",
           "unit": "m/s",
           "min": 0,
@@ -1014,37 +1014,37 @@
         },
         {
           "path": "network.acoustic.sound_speed_mps",
-          "label": "Velocita del suono",
+          "label": "Sound speed",
           "default": 1500,
-          "help": "Valore positivo di propSpeed_ del canale: ritardo = distanza / velocita. Unico valore per il canale condiviso.",
+          "help": "Positive value of the channel propSpeed_: delay = distance / speed. A single value for the shared channel.",
           "type": "number",
           "unit": "m/s",
           "min": 0.001,
           "default_origin": "bridge historical profile",
-          "constraint": "unico valore per tutto il canale; con WOSS il profilo SSP governa Bellhop"
+          "constraint": "a single value for the whole channel; with WOSS the SSP profile drives Bellhop"
         },
         {
           "path": "network.acoustic.rx_snr_penalty_db",
-          "label": "Penalita SNR ricevitore",
+          "label": "Receiver SNR penalty",
           "default": -10,
-          "help": "Somma in dB prima della BER. Il valore nativo -10 riduce gamma di dieci volte. Lo SNR osservato rimane grezzo.",
+          "help": "Added in dB before the BER. The native value -10 reduces gamma tenfold. The observed SNR stays raw.",
           "type": "number",
           "unit": "dB",
           "default_origin": "bridge historical profile",
-          "constraint": "qualsiasi valore finito"
+          "constraint": "any finite value"
         },
         {
           "path": "network.acoustic.acquisition_threshold_db",
-          "label": "Soglia di acquisizione",
+          "label": "Acquisition threshold",
           "default": 0,
-          "help": "La ricezione deve superare strettamente questa soglia SNR grezza per sincronizzarsi.",
+          "help": "A reception must strictly exceed this raw SNR threshold to synchronise.",
           "type": "number",
           "unit": "dB",
           "default_origin": "bridge historical profile",
-          "constraint": "qualsiasi valore finito"
+          "constraint": "any finite value"
         }
       ],
-      "description": "Patch separata conditional-bpsk-v1: rumore una volta, rischio condizionato per interferenza reale.",
+      "description": "Separate conditional-bpsk-v1 patch: noise tested once, conditional risk for actual interference.",
       "operational": true,
       "validation": "verified_end_to_end",
       "reason": "",
@@ -1085,8 +1085,8 @@
       "id": "polling",
       "name": "Polling",
       "layer": "mac",
-      "description": "Richiede ruoli coordinatore/nodi, formati e procedure specifici; non integrato nel bridge.",
-      "reason": "Richiede ruoli coordinatore/nodi, formati e procedure specifici; non integrato nel bridge.",
+      "description": "Requires coordinator/node roles and specific formats and procedures; not integrated in the bridge.",
+      "reason": "Requires coordinator/node roles and specific formats and procedures; not integrated in the bridge.",
       "operational": false,
       "validation": "not_integrated",
       "source_present": true,
@@ -1117,14 +1117,14 @@
           "acoustic"
         ]
       },
-      "unavailable": "richiede ruoli AUV, sink e nodo che il bridge non assegna"
+      "unavailable": "requires AUV, sink and node roles that the bridge does not assign"
     },
     {
       "id": "t_lohi",
       "name": "T-LOHI",
       "layer": "mac",
-      "description": "Richiede gestione toni e controllo di accesso dedicato; non verificato con il PHY del bridge.",
-      "reason": "Libreria libuwtlohi.so caricabile (fallisce solo il tracer libuwtlohiTracer.so: simbolo hdr_tlohi::offset_). Non integrato: il MAC cerca per nome di classe un PHY dei toni (Module/MPhy/Underwater/WKUP) e il PHY dati sotto di sé; con un solo PHY il PHY dei toni non viene impostato e la prenotazione non esiste.",
+      "description": "Requires tone handling and dedicated access control; not verified with the bridge PHY.",
+      "reason": "Library libuwtlohi.so loads (only the tracer libuwtlohiTracer.so fails: symbol hdr_tlohi::offset_). Not integrated: the MAC looks up a tone PHY by class name (Module/MPhy/Underwater/WKUP) and the data PHY below it; with a single PHY the tone PHY is never set and no reservation takes place.",
       "operational": false,
       "validation": "not_integrated",
       "source_present": true,
@@ -1151,13 +1151,13 @@
           "acoustic"
         ]
       },
-      "unavailable": "richiede un secondo PHY per i toni di prenotazione"
+      "unavailable": "requires a second PHY for the reservation tones"
     },
     {
       "id": "tokenbus",
       "name": "TokenBus",
       "layer": "mac",
-      "description": "Anello nativo con token e recupero tramite timeout.",
+      "description": "Native token ring with timeout-based recovery.",
       "reason": "",
       "operational": true,
       "validation": "verified_end_to_end",
@@ -1168,39 +1168,39 @@
       "parameters": [
         {
           "path": "network.mac.tokenbus.slot_time_s",
-          "label": "Timeout del token",
+          "label": "Token timeout",
           "default": 10.0,
           "unit": "s",
-          "help": "Timeout nativo di attesa del token. Deve coprire airtime e propagazione; non è uno slot TDMA.",
+          "help": "Native token wait timeout. It must cover airtime and propagation; it is not a TDMA slot.",
           "type": "number",
           "min": 1e-06
         },
         {
           "path": "network.mac.tokenbus.min_token_hold_s",
-          "label": "Possesso minimo del token",
+          "label": "Minimum token holding time",
           "default": 0.1,
           "unit": "s",
-          "help": "Tempo minimo prima del passaggio del token.",
+          "help": "Minimum time before passing the token.",
           "type": "number",
           "min": 1e-06
         },
         {
           "path": "network.mac.tokenbus.max_token_hold_s",
-          "label": "Possesso massimo del token",
+          "label": "Maximum token holding time",
           "default": 10.0,
           "unit": "s",
-          "help": "Il frame deve entrare in questo tempo; il builder rifiuta flussi che non entrano.",
+          "help": "The frame must fit within this time; the builder rejects flows that do not fit.",
           "type": "number",
           "min": 1e-06,
-          "constraint": "non inferiore al tempo minimo; deve contenere il frame più lungo"
+          "constraint": "not less than the minimum time; it must fit the longest frame"
         },
         {
           "path": "network.mac.buffer_packets",
-          "label": "Buffer MAC",
+          "label": "MAC buffer",
           "default": 100,
-          "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
+          "help": "Native queue limit in packets, set before construction where needed.",
           "type": "integer",
-          "unit": "pacchetti",
+          "unit": "packets",
           "min": 1,
           "max": 10000,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
@@ -1234,8 +1234,8 @@
       "id": "aloha_q",
       "name": "ALOHA-Q",
       "layer": "mac",
-      "description": "Stato e aggiornamenti apprendimento non integrati nel bridge.",
-      "reason": "Stato e aggiornamenti apprendimento non integrati nel bridge.",
+      "description": "Learning state and updates not integrated in the bridge.",
+      "reason": "Learning state and updates not integrated in the bridge.",
       "operational": false,
       "validation": "not_integrated",
       "source_present": true,
@@ -1260,14 +1260,14 @@
           "acoustic"
         ]
       },
-      "unavailable": "richiede ruoli nodo/sink e un PHY dedicato agli ACK"
+      "unavailable": "requires node/sink roles and a PHY dedicated to ACKs"
     },
     {
       "id": "aloha_q_sync",
       "name": "ALOHA-Q Sync",
       "layer": "mac",
-      "description": "Sincronizzazione e apprendimento non integrati.",
-      "reason": "Sincronizzazione e apprendimento non integrati.",
+      "description": "Synchronisation and learning not integrated.",
+      "reason": "Synchronisation and learning not integrated.",
       "operational": false,
       "validation": "not_integrated",
       "source_present": true,
@@ -1292,14 +1292,14 @@
           "acoustic"
         ]
       },
-      "unavailable": "richiede ruoli, sincronizzazione e un PHY per gli ACK"
+      "unavailable": "requires roles, synchronisation and a PHY for ACKs"
     },
     {
       "id": "ufetch",
       "name": "UFetch",
       "layer": "mac",
-      "description": "Caricamento/ruoli e dipendenze richiedono adapter specifico; audit documenta i vincoli del linker.",
-      "reason": "Caricamento/ruoli e dipendenze richiedono adapter specifico; audit documenta i vincoli del linker.",
+      "description": "Loading, roles and dependencies require a dedicated adapter; the audit documents the linker constraints.",
+      "reason": "Loading, roles and dependencies require a dedicated adapter; the audit documents the linker constraints.",
       "operational": false,
       "validation": "not_integrated",
       "source_present": true,
@@ -1323,13 +1323,13 @@
           "acoustic"
         ]
       },
-      "unavailable": "richiede ruoli AUV/head-node e dipendenze native"
+      "unavailable": "requires AUV/head-node roles and native dependencies"
     },
     {
       "id": "sun",
       "name": "SUN convergecast",
       "layer": "routing",
-      "description": "Discovery e inoltro nativi verso un sink; ACK di routing. I contatori class_values sono globali per classe, non per drone.",
+      "description": "Native discovery and forwarding towards a sink; routing ACKs. The class_values counters are global per class, not per drone.",
       "reason": "",
       "operational": true,
       "validation": "verified_end_to_end",
@@ -1340,96 +1340,96 @@
       "parameters": [
         {
           "path": "network.sun.sink",
-          "label": "Sink SUN",
+          "label": "SUN sink",
           "default": "auv_02",
           "unit": "",
-          "help": "Destinazione convergecast: tutti i flussi devono terminare qui.",
+          "help": "Convergecast destination: every flow must end here.",
           "type": "select",
           "choices": [],
           "node_choices": true,
-          "constraint": "un drone configurato; ogni flusso deve terminare qui e non avere risposte"
+          "constraint": "a configured drone; every flow must end here and have no replies"
         },
         {
           "path": "network.sun.probe_interval_s",
-          "label": "Intervallo probe",
+          "label": "Probe interval",
           "default": 2.0,
           "unit": "s",
-          "help": "Intervallo dei probe nativi del sink.",
+          "help": "Interval of the sink's native probes.",
           "type": "number",
           "min": 1e-06
         },
         {
           "path": "network.sun.buffer_interval_s",
-          "label": "Controllo buffer",
+          "label": "Buffer check",
           "default": 1.0,
           "unit": "s",
-          "help": "Timer nativo della coda di routing.",
+          "help": "Native routing queue timer.",
           "type": "number",
           "min": 1e-06
         },
         {
           "path": "network.sun.data_interval_s",
-          "label": "Intervallo dati SUN",
+          "label": "SUN data interval",
           "default": 1.0,
           "unit": "s",
-          "help": "Periodo del servizio dati dopo discovery.",
+          "help": "Period of the data service after discovery.",
           "type": "number",
           "min": 1e-06
         },
         {
           "path": "network.sun.status_interval_s",
-          "label": "Intervallo stato SUN",
+          "label": "SUN state interval",
           "default": 1.0,
           "unit": "s",
-          "help": "Timer dello stato del protocollo.",
+          "help": "Protocol state timer.",
           "type": "number",
           "min": 1e-06
         },
         {
           "path": "network.sun.max_ack_errors",
-          "label": "Errori ACK prima della riscoperta",
+          "label": "ACK errors before rediscovery",
           "default": 3,
-          "unit": "errori",
-          "help": "Soglia nativa per la gestione del percorso.",
+          "unit": "errors",
+          "help": "Native threshold for path management.",
           "type": "integer",
           "min": 1,
           "max": 100
         },
         {
           "path": "network.sun.max_retransmissions",
-          "label": "Ritrasmissioni SUN",
+          "label": "SUN retransmissions",
           "default": 3,
-          "unit": "tentativi",
-          "help": "Limite del routing, distinto dai tentativi MAC.",
+          "unit": "attempts",
+          "help": "Routing limit, distinct from MAC attempts.",
           "type": "integer",
           "min": 0,
           "max": 100
         },
         {
           "path": "network.sun.buffer_packets",
-          "label": "Buffer SUN",
+          "label": "SUN buffer",
           "default": 5,
-          "unit": "pacchetti",
-          "help": "Coda nativa di routing.",
+          "unit": "packets",
+          "help": "Native routing queue.",
           "type": "integer",
           "min": 1,
           "max": 10000
         },
         {
           "path": "network.sun.probe_min_snr_db",
-          "label": "SNR minimo dei probe",
+          "label": "Minimum probe SNR",
           "default": 0.0,
           "unit": "dB",
-          "help": "Soglia nativa per accettare un probe; non modifica il PHY.",
+          "help": "Native threshold for accepting a probe; it does not change the PHY.",
           "type": "number",
-          "constraint": "qualsiasi valore finito"
+          "constraint": "any finite value"
         },
         {
           "path": "network.sun.poisson_timing",
-          "label": "Timer SUN Poisson",
+          "label": "SUN Poisson timer",
           "default": true,
           "unit": "",
-          "help": "Usa i timer casuali implementati nel routing SUN.",
+          "help": "Uses the random timers implemented in SUN routing.",
           "type": "checkbox"
         }
       ],
@@ -1458,14 +1458,14 @@
           "acoustic"
         ]
       },
-      "compatibility_reason": "SUN richiede CSMA-ALOHA senza ACK MAC e supporta solo convergecast verso il sink configurato."
+      "compatibility_reason": "SUN requires CSMA-ALOHA without MAC ACK and supports only convergecast towards the configured sink."
     },
     {
       "id": "icrp",
       "name": "ICRP",
       "layer": "routing",
-      "description": "Il caricamento testato fallisce per UWIP_CLMSG_SEND_ADDR: simbolo presente ma non esportato dal caricamento RTLD_LOCAL.",
-      "reason": "Il caricamento testato fallisce per UWIP_CLMSG_SEND_ADDR: simbolo presente ma non esportato dal caricamento RTLD_LOCAL.",
+      "description": "The tested loading fails on UWIP_CLMSG_SEND_ADDR: the symbol exists but is not exported by RTLD_LOCAL loading.",
+      "reason": "The tested loading fails on UWIP_CLMSG_SEND_ADDR: the symbol exists but is not exported by RTLD_LOCAL loading.",
       "operational": false,
       "validation": "not_integrated",
       "source_present": true,
@@ -1483,14 +1483,14 @@
       "source_path": "/home/DESERT_Underwater/DESERT_Framework/DESERT/network/uwicrp",
       "official_examples": [],
       "official_example": "load sequence only; scheduler run not verified",
-      "unavailable": "richiede simboli di uwip non esportati e ruoli dedicati"
+      "unavailable": "requires unexported uwip symbols and dedicated roles"
     },
     {
       "id": "position_based",
       "name": "Position-Based Routing",
       "layer": "routing",
-      "description": "Routing nativo DESERT basato sulla posizione, senza ground truth globale. Le ancore sono droni fermi che conoscono solo la propria posizione rilevata e le proprie tabelle; un veicolo conosce solo la propria posizione (dal proprio fix) e le posizioni rilevate delle ancore, e invia all’ancora più vicina. Le ancore stimano la posizione del veicolo dalle intestazioni dei pacchetti ricevuti e lo raggiungono direttamente quando la stima è entro la portata, altrimenti tramite la tabella.",
-      "reason": "Verificato con test nativi del bridge (prossimo nodo che segue il veicolo, scarto nativo fuori portata, ruoli e portate negli oggetti), con HoloOcean end-to-end (veicolo che si allontana da un’ancora: percorsi diretti e poi tramite l’altra ancora) e nel Network Designer (2026-10-23).",
+      "description": "Native DESERT position-based routing, without global ground truth. Anchors are stationary drones that know only their own surveyed position and their own tables; a vehicle knows only its own position (from its own fix) and the surveyed positions of the anchors, and sends to the nearest anchor. Anchors estimate the vehicle position from the headers of received packets and reach it directly when the estimate is within range, otherwise through the table.",
+      "reason": "Verified with native bridge tests (next hop following the vehicle, native discard out of range, roles and ranges in the objects), with HoloOcean end to end (a vehicle moving away from an anchor: direct paths, then through the other anchor) and in the Network Designer (2026-10-23).",
       "operational": true,
       "validation": "verified_end_to_end",
       "source_present": true,
@@ -1500,23 +1500,23 @@
       "parameters": [
         {
           "path": "network.position_based.anchor_range_m",
-          "label": "Portata delle ancore",
+          "label": "Anchor range",
           "type": "number",
           "default": 3000,
           "min": 0.001,
           "unit": "m",
-          "help": "Distanza entro cui un’ancora invia direttamente al veicolo, confrontata con la sua stima della posizione del veicolo (maxTxRange_ di Module/UW/PosBasedRt); oltre usa la tabella di inoltro.",
-          "constraint": "valore positivo"
+          "help": "Distance within which an anchor sends directly to the vehicle, compared with its estimate of the vehicle position (maxTxRange_ of Module/UW/PosBasedRt); beyond it, the forwarding table is used.",
+          "constraint": "positive value"
         },
         {
           "path": "network.position_based.vehicle_range_m",
-          "label": "Portata del veicolo",
+          "label": "Vehicle range",
           "type": "number",
           "default": 3000,
           "min": 0.001,
           "unit": "m",
-          "help": "Il veicolo invia all’ancora rilevata più vicina se è entro questa distanza dalla propria posizione (maxTxRange_ di Module/UW/PosBasedRt/ROV); altrimenti il modulo nativo scarta il pacchetto.",
-          "constraint": "valore positivo"
+          "help": "The vehicle sends to the nearest surveyed anchor if it is within this distance of its own position (maxTxRange_ of Module/UW/PosBasedRt/ROV); otherwise the native module discards the packet.",
+          "constraint": "positive value"
         }
       ],
       "libraries": [
@@ -1545,14 +1545,14 @@
           "underwater"
         ]
       },
-      "compatibility_reason": "Verificato con CSMA-ALOHA, mezzo acustico analitico e una interfaccia per drone. Le ancore non hanno waypoint; la stima del veicolo è l’ultima posizione ricevuta (modello «hold»)."
+      "compatibility_reason": "Verified with CSMA-ALOHA, the analytical acoustic medium and one interface per drone. Anchors have no waypoints; the vehicle estimate is the last position received (“hold” model)."
     },
     {
       "id": "woss",
       "name": "WOSS / Bellhop",
       "layer": "channel",
-      "description": "Bellhop reale senza database globali: SSP esplicito, fondale e superficie piatti, sedimento sintetico. Cache locale alla sessione, posizioni aggiornate alle barriere. Separazione orizzontale ≥1 m; margine superficie/fondo >0,1 m.",
-      "reason": "Verificato con test nativi del bridge, con HoloOcean end-to-end e nel Network Designer (test Playwright, 2026-10-22). Configurabile anche da YAML e API Python. Combinazioni con ogni MAC, routing e mezzo elencati in compatibility verificate con consegna reale in DESERT (tests/integration/test_compatibility_matrix.py, 2026-10-22).",
+      "description": "Real Bellhop without global databases: explicit SSP, flat seabed and surface, synthetic sediment. Session-local cache, positions updated at the barriers. Horizontal separation ≥1 m; surface/seabed margin >0.1 m.",
+      "reason": "Verified with native bridge tests, with HoloOcean end to end and in the Network Designer (Playwright tests, 2026-10-22). Also configurable from YAML and the Python API. Combinations with every MAC, routing and medium listed in compatibility verified with real delivery in DESERT (tests/integration/test_compatibility_matrix.py, 2026-10-22).",
       "operational": true,
       "validation": "verified_end_to_end",
       "source_present": true,
@@ -1562,71 +1562,71 @@
       "parameters": [
         {
           "path": "network.woss.origin_latitude_deg",
-          "label": "Origine: latitudine",
+          "label": "Origin: latitude",
           "default": 42.59,
           "unit": "°",
-          "help": "Origine geografica del sistema locale HoloOcean.",
+          "help": "Geographic origin of the local HoloOcean frame.",
           "type": "number",
           "min": -85,
           "max": 85
         },
         {
           "path": "network.woss.origin_longitude_deg",
-          "label": "Origine: longitudine",
+          "label": "Origin: longitude",
           "default": 10.125,
           "unit": "°",
-          "help": "Origine geografica del sistema locale HoloOcean.",
+          "help": "Geographic origin of the local HoloOcean frame.",
           "type": "number",
           "min": -180,
           "max": 180
         },
         {
           "path": "network.woss.x_bearing_deg",
-          "label": "Direzione geografica di +X",
+          "label": "Geographic direction of +X",
           "default": 90.0,
           "unit": "°",
-          "help": "Azimut di +X, orario da nord. +Y resta a sinistra.",
+          "help": "Azimuth of +X, clockwise from north. +Y stays to the left.",
           "type": "number",
           "min": 0,
           "max": 360
         },
         {
           "path": "network.woss.water_depth_m",
-          "label": "Profondità del fondale",
+          "label": "Seabed depth",
           "default": 100.0,
           "unit": "m",
-          "help": "Fondale piatto sintetico; non viene letto dalla scena Unreal. Richiede adeguare SSP.",
+          "help": "Synthetic flat seabed; it is not read from the Unreal scene. The SSP must be adjusted accordingly.",
           "type": "number",
           "min": 1,
           "max": 11000,
-          "constraint": "il profilo SSP deve terminare a questa profondità; ogni drone resta ad almeno 0,1 m da superficie e fondale"
+          "constraint": "the SSP profile must end at this depth; every drone stays at least 0.1 m from the surface and the seabed"
         },
         {
           "path": "network.woss.sediment_speed_mps",
-          "label": "Velocità nel sedimento",
+          "label": "Sediment sound speed",
           "default": 1560.0,
           "unit": "m/s",
-          "help": "Velocità compressiva nel modello nativo Bellhop.",
+          "help": "Compressional speed in the native Bellhop model.",
           "type": "number",
           "min": 100,
           "max": 10000
         },
         {
           "path": "network.woss.sediment_density_g_cm3",
-          "label": "Densità del sedimento",
+          "label": "Sediment density",
           "default": 1.5,
           "unit": "g/cm³",
-          "help": "Densità nativa del sedimento.",
+          "help": "Native sediment density.",
           "type": "number",
           "min": 0.1,
           "max": 20
         },
         {
           "path": "network.woss.sediment_attenuation_db_lambda",
-          "label": "Attenuazione del sedimento",
+          "label": "Sediment attenuation",
           "default": 0.9,
           "unit": "dB/λ",
-          "help": "Attenuazione nativa per lunghezza d’onda.",
+          "help": "Native attenuation per wavelength.",
           "type": "number",
           "min": 0,
           "max": 100
@@ -1667,10 +1667,10 @@
     },
     {
       "id": "optical",
-      "name": "Ottico DESERT",
+      "name": "DESERT optical",
       "layer": "phy",
-      "description": "Catena nativa con unità proprie. Lambert-Beer e rumore solare, ricevitore omnidirezionale; adattatore orientamento sperimentale.",
-      "reason": "Verificato con test nativi del bridge, con HoloOcean end-to-end e nel Network Designer (test Playwright, 2026-10-22). Configurabile anche da YAML e API Python.",
+      "description": "Native chain with its own units. Lambert-Beer and solar noise, omnidirectional receiver; experimental orientation adapter.",
+      "reason": "Verified with native bridge tests, with HoloOcean end to end and in the Network Designer (Playwright tests, 2026-10-22). Also configurable from YAML and the Python API.",
       "operational": true,
       "validation": "verified_end_to_end",
       "source_present": true,
@@ -1680,10 +1680,10 @@
       "parameters": [
         {
           "path": "network.optical.tx_power_w",
-          "label": "Potenza ottica",
+          "label": "Optical power",
           "default": 50.0,
           "unit": "W",
-          "help": "Potenza ottica emessa (TxPower_ del PHY ottico nativo): watt lineari, non un livello SPL.",
+          "help": "Emitted optical power (TxPower_ of the native optical PHY): linear watts, not an SPL level.",
           "type": "number",
           "min": 1e-15,
           "max": 10000
@@ -1693,129 +1693,129 @@
           "label": "Bitrate",
           "default": 1000000.0,
           "unit": "bit/s",
-          "help": "Bit al secondo del PHY ottico; determinano la durata del frame.",
+          "help": "Bits per second of the optical PHY; they determine the frame duration.",
           "type": "number",
           "min": 1,
           "max": 1000000000.0
         },
         {
           "path": "network.optical.frequency_hz",
-          "label": "Frequenza del modello",
+          "label": "Model frequency",
           "default": 10000000.0,
           "unit": "Hz",
-          "help": "Centro della maschera spettrale nativa. Le tabelle di rumore sono a 532 nm: il valore non ricalibra il modello ottico.",
+          "help": "Centre of the native spectral mask. The noise tables are at 532 nm: this value does not recalibrate the optical model.",
           "type": "number",
-          "constraint": "la banda deve restare minore del doppio della frequenza centrale",
+          "constraint": "the bandwidth must stay below twice the centre frequency",
           "min": 1,
           "max": 1000000000000000.0
         },
         {
           "path": "network.optical.bandwidth_hz",
-          "label": "Banda",
+          "label": "Bandwidth",
           "default": 100000.0,
           "unit": "Hz",
-          "help": "Larghezza della maschera spettrale usata per il rumore del ricevitore.",
+          "help": "Width of the spectral mask used for receiver noise.",
           "type": "number",
-          "constraint": "la banda deve restare minore del doppio della frequenza centrale",
+          "constraint": "the bandwidth must stay below twice the centre frequency",
           "min": 1,
           "max": 1000000000000.0
         },
         {
           "path": "network.optical.attenuation_per_m",
-          "label": "Attenuazione ottica",
+          "label": "Optical attenuation",
           "default": 0.043,
           "unit": "1/m",
-          "help": "Coefficiente di attenuazione c dell’acqua nella legge di Lambert-Beer (setFixedC).",
+          "help": "Water attenuation coefficient c in the Lambert-Beer law (setFixedC).",
           "type": "number",
           "min": 0,
           "max": 100
         },
         {
           "path": "network.optical.temperature_k",
-          "label": "Temperatura ricevitore",
+          "label": "Receiver temperature",
           "default": 293.15,
           "unit": "K",
-          "help": "Temperatura del ricevitore per il rumore termico (T_).",
+          "help": "Receiver temperature for thermal noise (T_).",
           "type": "number",
           "min": 250,
           "max": 350
         },
         {
           "path": "network.optical.receiver_area_m2",
-          "label": "Area ricevitore",
+          "label": "Receiver area",
           "default": 1.1e-06,
           "unit": "m²",
-          "help": "Area del fotorivelatore (Ar_), usata sia dalla propagazione sia dal PHY.",
+          "help": "Photodetector area (Ar_), used by both the propagation model and the PHY.",
           "type": "number",
           "min": 1e-12,
           "max": 10
         },
         {
           "path": "network.optical.transmitter_area_m2",
-          "label": "Area trasmettitore",
+          "label": "Transmitter area",
           "default": 1e-05,
           "unit": "m²",
-          "help": "Area di apertura del trasmettitore (At_).",
+          "help": "Transmitter aperture area (At_).",
           "type": "number",
           "min": 1e-12,
           "max": 10
         },
         {
           "path": "network.optical.beam_angle_rad",
-          "label": "Angolo nativo del fascio",
+          "label": "Native beam angle",
           "default": 1.0,
           "unit": "rad",
-          "help": "Semiangolo del fascio (theta_): il guadagno Lambert dipende dal coseno dell’angolo.",
+          "help": "Beam half-angle (theta_): the Lambertian gain depends on the cosine of the angle.",
           "type": "number",
           "min": 0,
           "max": 1.56
         },
         {
           "path": "network.optical.dark_current_a",
-          "label": "Corrente oscura",
+          "label": "Dark current",
           "default": 1e-09,
           "unit": "A",
-          "help": "Corrente di buio del fotodiodo (Id_), contributo al rumore shot.",
+          "help": "Photodiode dark current (Id_), contributing to shot noise.",
           "type": "number",
           "min": 0,
           "max": 1
         },
         {
           "path": "network.optical.shunt_resistance_ohm",
-          "label": "Resistenza shunt",
+          "label": "Shunt resistance",
           "default": 1490000000.0,
           "unit": "Ω",
-          "help": "Resistenza di shunt del fotodiodo (R_), contributo al rumore termico.",
+          "help": "Photodiode shunt resistance (R_), contributing to thermal noise.",
           "type": "number",
           "min": 1,
           "max": 1000000000000000.0
         },
         {
           "path": "network.optical.responsivity_a_w",
-          "label": "Responsività",
+          "label": "Responsivity",
           "default": 0.26,
           "unit": "A/W",
-          "help": "Responsività del fotodiodo (S_): corrente prodotta per watt ottico ricevuto.",
+          "help": "Photodiode responsivity (S_): current produced per optical watt received.",
           "type": "number",
           "min": 1e-12,
           "max": 100
         },
         {
           "path": "network.optical.acquisition_threshold_db",
-          "label": "Soglia acquisizione",
+          "label": "Acquisition threshold",
           "default": 10.0,
           "unit": "dB",
-          "help": "Soglia SNR che la ricezione deve superare per sincronizzarsi (AcquisitionThreshold_dB_).",
+          "help": "SNR threshold a reception must exceed to synchronise (AcquisitionThreshold_dB_).",
           "type": "number",
           "min": -100,
           "max": 100
         },
         {
           "path": "network.optical.directional",
-          "label": "Trasduttore direzionale",
+          "label": "Directional transducer",
           "default": false,
           "unit": "",
-          "help": "Adattatore sperimentale: orienta il trasmettitore con yaw/pitch/roll misurati da HoloOcean. Il ricevitore resta omnidirezionale.",
+          "help": "Experimental adapter: orients the transmitter with the yaw/pitch/roll measured by HoloOcean. The receiver remains omnidirectional.",
           "type": "checkbox"
         },
         {
@@ -1823,7 +1823,7 @@
           "label": "mount yaw deg",
           "default": 0.0,
           "unit": "°",
-          "help": "Rotazione del trasmettitore attorno all’asse verticale del veicolo.",
+          "help": "Transmitter rotation around the vehicle's vertical axis.",
           "type": "number",
           "min": -360,
           "max": 360
@@ -1833,7 +1833,7 @@
           "label": "mount pitch deg",
           "default": 0.0,
           "unit": "°",
-          "help": "Inclinazione del trasmettitore rispetto al corpo del veicolo.",
+          "help": "Transmitter pitch relative to the vehicle body.",
           "type": "number",
           "min": -360,
           "max": 360
@@ -1843,7 +1843,7 @@
           "label": "mount roll deg",
           "default": 0.0,
           "unit": "°",
-          "help": "Rollio del trasmettitore rispetto al corpo del veicolo.",
+          "help": "Transmitter roll relative to the vehicle body.",
           "type": "number",
           "min": -360,
           "max": 360
@@ -1853,7 +1853,7 @@
           "label": "offset x m",
           "default": 0.0,
           "unit": "m",
-          "help": "Spostamento del trasduttore lungo X del corpo (avanti), dal baricentro.",
+          "help": "Transducer offset along the body X axis (forward), from the centre of mass.",
           "type": "number",
           "min": -100,
           "max": 100
@@ -1863,7 +1863,7 @@
           "label": "offset y m",
           "default": 0.0,
           "unit": "m",
-          "help": "Spostamento del trasduttore lungo Y del corpo (sinistra), dal baricentro.",
+          "help": "Transducer offset along the body Y axis (left), from the centre of mass.",
           "type": "number",
           "min": -100,
           "max": 100
@@ -1873,7 +1873,7 @@
           "label": "offset z m",
           "default": 0.0,
           "unit": "m",
-          "help": "Spostamento del trasduttore lungo Z del corpo (alto), dal baricentro.",
+          "help": "Transducer offset along the body Z axis (up), from the centre of mass.",
           "type": "number",
           "min": -100,
           "max": 100
@@ -1909,10 +1909,10 @@
     },
     {
       "id": "em",
-      "name": "EM DESERT (LUT sicura)",
+      "name": "DESERT EM (safe LUT)",
       "layer": "phy",
-      "description": "Catena nativa con unità proprie. LUT originale percentuale con correzione separata dei limiti/interpolazione; classe upstream conservata.",
-      "reason": "Verificato con test nativi del bridge, con HoloOcean end-to-end e nel Network Designer (test Playwright, 2026-10-22). Configurabile anche da YAML e API Python.",
+      "description": "Native chain with its own units. Original percentage LUT with a separate fix for bounds/interpolation; upstream class preserved.",
+      "reason": "Verified with native bridge tests, with HoloOcean end to end and in the Network Designer (Playwright tests, 2026-10-22). Also configurable from YAML and the Python API.",
       "operational": true,
       "validation": "verified_end_to_end",
       "source_present": true,
@@ -1922,10 +1922,10 @@
       "parameters": [
         {
           "path": "network.em.tx_power_dbm",
-          "label": "Potenza EM",
+          "label": "EM power",
           "default": 14.0,
           "unit": "dBm",
-          "help": "Potenza trasmessa del PHY EM nativo (TxPower_), in dBm; i valori negativi sono validi.",
+          "help": "Transmit power of the native EM PHY (TxPower_), in dBm; negative values are valid.",
           "type": "number",
           "min": -100,
           "max": 100
@@ -1935,59 +1935,59 @@
           "label": "Bitrate",
           "default": 27000.0,
           "unit": "bit/s",
-          "help": "Bit al secondo del PHY EM; la tabella di errore resta quella SF7 CR4/5.",
+          "help": "Bits per second of the EM PHY; the error table remains the SF7 CR4/5 one.",
           "type": "number",
           "min": 1,
           "max": 1000000000.0
         },
         {
           "path": "network.em.frequency_hz",
-          "label": "Frequenza del modello",
+          "label": "Model frequency",
           "default": 868000000.0,
           "unit": "Hz",
-          "help": "Portante: con temperatura e salinità determina l’attenuazione nativa in acqua.",
+          "help": "Carrier: together with temperature and salinity it determines the native attenuation in water.",
           "type": "number",
-          "constraint": "la banda deve restare minore del doppio della frequenza centrale",
+          "constraint": "the bandwidth must stay below twice the centre frequency",
           "min": 1,
           "max": 1000000000000000.0
         },
         {
           "path": "network.em.bandwidth_hz",
-          "label": "Banda",
+          "label": "Bandwidth",
           "default": 125000.0,
           "unit": "Hz",
-          "help": "Larghezza della maschera spettrale.",
+          "help": "Width of the spectral mask.",
           "type": "number",
-          "constraint": "la banda deve restare minore del doppio della frequenza centrale",
+          "constraint": "the bandwidth must stay below twice the centre frequency",
           "min": 1,
           "max": 1000000000000.0
         },
         {
           "path": "network.em.temperature_c",
-          "label": "Temperatura acqua",
+          "label": "Water temperature",
           "default": 20.0,
           "unit": "°C",
-          "help": "Temperatura dell’acqua usata dalla propagazione EM nativa (T_).",
+          "help": "Water temperature used by the native EM propagation (T_).",
           "type": "number",
           "min": 0,
           "max": 40
         },
         {
           "path": "network.em.salinity_ppt",
-          "label": "Salinità",
+          "label": "Salinity",
           "default": 0.0,
           "unit": "ppt",
-          "help": "Salinità dell’acqua (S_): l’acqua salata attenua molto più di quella dolce.",
+          "help": "Water salinity (S_): salt water attenuates much more than fresh water.",
           "type": "number",
           "min": 0,
           "max": 40
         },
         {
           "path": "network.em.antenna_gain_db",
-          "label": "Guadagno antenna",
+          "label": "Antenna gain",
           "default": 2.0,
           "unit": "dB",
-          "help": "Guadagno costante delle antenne (setGain); non dipende dall’orientamento del veicolo.",
+          "help": "Constant antenna gain (setGain); it does not depend on the vehicle orientation.",
           "type": "number",
           "min": -100,
           "max": 100
@@ -2019,8 +2019,8 @@
       "id": "ofdm",
       "name": "OFDM",
       "layer": "phy",
-      "description": "Libreria presente; moduli di accesso e framing dedicati non verificati con envelope del bridge.",
-      "reason": "Libreria presente; moduli di accesso e framing dedicati non verificati con envelope del bridge.",
+      "description": "Library present; dedicated access and framing modules not verified with the bridge envelope.",
+      "reason": "Library present; dedicated access and framing modules not verified with the bridge envelope.",
       "operational": false,
       "validation": "not_integrated",
       "source_present": true,
@@ -2040,14 +2040,14 @@
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/OFDM/test_ofdmaloha_desert_integration.tcl"
       ],
       "official_example": "load sequence only; scheduler run not verified",
-      "unavailable": "framing OFDM dedicato non verificato con il bridge"
+      "unavailable": "dedicated OFDM framing not verified with the bridge"
     },
     {
       "id": "hmm",
       "name": "PHY HMM",
       "layer": "phy",
-      "description": "Modelli richiedono stati/tabelle e PHY specifici, non testati con questo bridge.",
-      "reason": "Modelli richiedono stati/tabelle e PHY specifici, non testati con questo bridge.",
+      "description": "The models require specific states/tables and PHYs, not tested with this bridge.",
+      "reason": "The models require specific states/tables and PHYs, not tested with this bridge.",
       "operational": false,
       "validation": "not_integrated",
       "source_present": true,
@@ -2072,14 +2072,14 @@
         "/home/DESERT_Underwater/DESERT_Framework/DESERT/samples/desert_samples/PHY/test_uwhmmphy.tcl"
       ],
       "official_example": "load sequence only; scheduler run not verified",
-      "unavailable": "stati e tabelle HMM non verificati con il bridge"
+      "unavailable": "HMM states and tables not verified with the bridge"
     },
     {
       "id": "multi_phy",
       "name": "Multi-PHY",
       "layer": "interface",
-      "description": "Controller nativo multi-stack DESERT: 2-3 interfacce sotto un solo MAC, acustiche BPSK sul canale acustico condiviso oppure ottiche (UW/OPTICAL) su un canale ottico separato, con selezione manuale (API) o per potenza ricevuta (master/slave nativi). Ogni soglia è nell’unità della potenza ricevuta del PHY dell’interfaccia di partenza.",
-      "reason": "Verificato con test nativi del bridge (selezione manuale, controller per potenza ricevuta, POWER per interfaccia), con HoloOcean end-to-end (cambio di interfaccia guidato dalla distanza reale e selezione manuale in un ambiente collegato) e nel Network Designer (2026-10-22). Interfacce ottiche verificate con test nativi (consegna per mezzo e portata, commutazione automatica acustico/ottico, potenza in W, oggetti nativi per interfaccia), con HoloOcean end-to-end (ottico da vicino, acustico dopo l’allontanamento reale) e nel Network Designer. Solo CSMA-ALOHA senza ACK e routing statico; interfacce ottiche fra 0 e 20 m di profondità.",
+      "description": "Native DESERT multi-stack controller: 2-3 interfaces under a single MAC, either acoustic BPSK on the shared acoustic channel or optical (UW/OPTICAL) on a separate optical channel, with manual selection (API) or received-power selection (native master/slave). Each threshold is in the received-power unit of the PHY of the interface being left.",
+      "reason": "Verified with native bridge tests (manual selection, received-power controller, POWER per interface), with HoloOcean end to end (interface switching driven by the real distance, and manual selection in a connected environment) and in the Network Designer (2026-10-22). Optical interfaces verified with native tests (delivery per medium and range, automatic acoustic/optical switching, power in W, native objects per interface), with HoloOcean end to end (optical at short range, acoustic after the vehicles actually move apart) and in the Network Designer. Only CSMA-ALOHA without ACK and static routing; optical interfaces between 0 and 20 m depth.",
       "operational": true,
       "validation": "verified_end_to_end",
       "source_present": true,
@@ -2110,8 +2110,8 @@
       "id": "ranging",
       "name": "Ranging TDOA",
       "layer": "application",
-      "description": "Ranging TDOA nativo: un livello RANGE sopra il MAC e un livello TAP sotto, con ping che condividono la coda dati. Ranging-TokenBus e Ranging-TDMA sono voci separate.",
-      "reason": "Non integrato: richiede due livelli aggiuntivi (RANGE sopra il MAC, TAP sotto) nella catena fissa del bridge; nell’esempio ufficiale l’errore medio per nodo arriva a 198 m (massimo 5992 m).",
+      "description": "Native TDOA ranging: a RANGE layer above the MAC and a TAP layer below it, with pings sharing the data queue. Ranging-TokenBus and Ranging-TDMA are separate entries.",
+      "reason": "Not integrated: it requires two additional layers (RANGE above the MAC, TAP below) in the fixed bridge chain; in the official example the mean error per node reaches 198 m (maximum 5992 m).",
       "operational": false,
       "validation": "not_integrated",
       "source_present": true,
@@ -2119,14 +2119,14 @@
       "loadable": null,
       "bridge_compatible": false,
       "parameters": [],
-      "unavailable": "richiede i livelli RANGE e TAP fuori dalla catena del bridge"
+      "unavailable": "requires the RANGE and TAP layers outside the bridge chain"
     },
     {
       "id": "hardware",
-      "name": "Modem fisici",
+      "name": "Physical modems",
       "layer": "hardware",
-      "description": "Driver upstream installati, nessun modem rilevato o configurazione hardware verificata; non selezionabile per simulazione.",
-      "reason": "Driver upstream installati, nessun modem rilevato o configurazione hardware verificata; non selezionabile per simulazione.",
+      "description": "Upstream drivers installed; no modem detected and no verified hardware configuration; not selectable for simulation.",
+      "reason": "Upstream drivers installed; no modem detected and no verified hardware configuration; not selectable for simulation.",
       "operational": false,
       "validation": "not_integrated",
       "source_present": true,
@@ -2137,14 +2137,14 @@
       "driver_installed": true,
       "hardware_detected": false,
       "configuration_verified": false,
-      "unavailable": "nessun modem collegato o verificato"
+      "unavailable": "no connected or verified modem"
     },
     {
       "id": "native_cbr",
-      "name": "UW/CBR nativo",
+      "name": "Native UW/CBR",
       "layer": "application",
-      "description": "Timer e pacchetti generati nel DESERT reale. Nessun envelope JSON o TTL Python; statistiche native distinte.",
-      "reason": "Verificato con test nativi del bridge, con HoloOcean end-to-end e nel Network Designer (test Playwright, 2026-10-22). Configurabile anche da YAML e API Python. Combinazioni con ogni MAC, routing e mezzo elencati in compatibility verificate con consegna reale in DESERT (tests/integration/test_compatibility_matrix.py, 2026-10-22).",
+      "description": "Timers and packets generated inside real DESERT. No JSON envelope or Python TTL; separate native statistics.",
+      "reason": "Verified with native bridge tests, with HoloOcean end to end and in the Network Designer (Playwright tests, 2026-10-22). Also configurable from YAML and the Python API. Combinations with every MAC, routing and medium listed in compatibility verified with real delivery in DESERT (tests/integration/test_compatibility_matrix.py, 2026-10-22).",
       "operational": true,
       "validation": "verified_end_to_end",
       "source_present": true,
@@ -2229,10 +2229,10 @@
       "flow_parameters": [
         {
           "path": "native_packet_bytes",
-          "label": "Pacchetto nativo",
+          "label": "Native packet",
           "default": 125,
           "unit": "byte",
-          "help": "Dimensione packetSize_ del modello nativo; distinta da payload JSON e bit PHY.",
+          "help": "packetSize_ of the native model; distinct from the JSON payload and the PHY bits.",
           "type": "integer",
           "min": 16,
           "max": 2048
@@ -2274,10 +2274,10 @@
     },
     {
       "id": "native_vbr",
-      "name": "UW/VBR nativo",
+      "name": "Native UW/VBR",
       "layer": "application",
-      "description": "Timer e pacchetti generati nel DESERT reale. Nessun envelope JSON o TTL Python; statistiche native distinte.",
-      "reason": "Verificato con test nativi del bridge, con HoloOcean end-to-end e nel Network Designer (test Playwright, 2026-10-22). Configurabile anche da YAML e API Python. Combinazioni con ogni MAC, routing e mezzo elencati in compatibility verificate con consegna reale in DESERT (tests/integration/test_compatibility_matrix.py, 2026-10-22).",
+      "description": "Timers and packets generated inside real DESERT. No JSON envelope or Python TTL; separate native statistics.",
+      "reason": "Verified with native bridge tests, with HoloOcean end to end and in the Network Designer (Playwright tests, 2026-10-22). Also configurable from YAML and the Python API. Combinations with every MAC, routing and medium listed in compatibility verified with real delivery in DESERT (tests/integration/test_compatibility_matrix.py, 2026-10-22).",
       "operational": true,
       "validation": "verified_end_to_end",
       "source_present": true,
@@ -2304,38 +2304,38 @@
       "flow_parameters": [
         {
           "path": "native_packet_bytes",
-          "label": "Pacchetto nativo",
+          "label": "Native packet",
           "default": 125,
           "unit": "byte",
-          "help": "Dimensione packetSize_ del modello nativo; distinta da payload JSON e bit PHY.",
+          "help": "packetSize_ of the native model; distinct from the JSON payload and the PHY bits.",
           "type": "integer",
           "min": 16,
           "max": 2048
         },
         {
           "path": "native_period2_s",
-          "label": "Secondo intervallo VBR",
+          "label": "VBR second interval",
           "default": 2.0,
           "unit": "s",
-          "help": "Intervallo fra pacchetti nel secondo stato del timer UW/VBR nativo (il primo stato usa l’intervallo del flusso).",
+          "help": "Interval between packets in the second state of the native UW/VBR timer (the first state uses the flow interval).",
           "type": "number",
           "min": 1e-06
         },
         {
           "path": "native_duration1_s",
-          "label": "Durata primo stato VBR",
+          "label": "VBR first-state duration",
           "default": 5.0,
           "unit": "s",
-          "help": "Durata del primo stato del timer UW/VBR nativo prima di passare al secondo.",
+          "help": "Duration of the first state of the native UW/VBR timer before switching to the second.",
           "type": "number",
           "min": 1e-06
         },
         {
           "path": "native_duration2_s",
-          "label": "Durata secondo stato VBR",
+          "label": "VBR second-state duration",
           "default": 5.0,
           "unit": "s",
-          "help": "Durata del secondo stato del timer UW/VBR nativo prima di tornare al primo.",
+          "help": "Duration of the second state of the native UW/VBR timer before returning to the first.",
           "type": "number",
           "min": 1e-06
         }
@@ -2378,7 +2378,7 @@
       "id": "csburst",
       "name": "CS-Burst",
       "layer": "mac",
-      "description": "Ascolto del canale e invio nativo di raffiche; nessun ACK ALOHA.",
+      "description": "Channel sensing and native burst transmission; no ALOHA ACK.",
       "reason": "",
       "operational": true,
       "validation": "verified_end_to_end",
@@ -2389,39 +2389,39 @@
       "parameters": [
         {
           "path": "network.mac.csburst.max_packets_per_burst",
-          "label": "Pacchetti per burst",
+          "label": "Packets per burst",
           "default": 3,
-          "unit": "pacchetti",
-          "help": "Massimo numero nativo di frame inviati consecutivamente dopo il sensing.",
+          "unit": "packets",
+          "help": "Native maximum number of frames sent consecutively after sensing.",
           "type": "integer",
           "min": 1,
           "max": 10000
         },
         {
           "path": "network.mac.csburst.fixed_sensing_s",
-          "label": "Sensing fisso",
+          "label": "Fixed sensing",
           "default": 0.1,
           "unit": "s",
-          "help": "Parte fissa dell’ascolto prima del burst.",
+          "help": "Fixed part of the sensing before the burst.",
           "type": "number",
           "min": 1e-06
         },
         {
           "path": "network.mac.csburst.random_sensing_s",
-          "label": "Sensing casuale",
+          "label": "Random sensing",
           "default": 0.1,
           "unit": "s",
-          "help": "Componente casuale del sensing nativo.",
+          "help": "Random component of the native sensing.",
           "type": "number",
           "min": 0
         },
         {
           "path": "network.mac.buffer_packets",
-          "label": "Buffer MAC",
+          "label": "MAC buffer",
           "default": 100,
-          "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
+          "help": "Native queue limit in packets, set before construction where needed.",
           "type": "integer",
-          "unit": "pacchetti",
+          "unit": "packets",
           "min": 1,
           "max": 10000,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
@@ -2454,7 +2454,7 @@
       "id": "ranging_tokenbus",
       "name": "Ranging TokenBus",
       "layer": "mac",
-      "description": "Anello nativo con token e recupero tramite timeout. Produce tempi di viaggio stimati, distinti dalla ground truth HoloOcean.",
+      "description": "Native token ring with timeout-based recovery. Produces estimated travel times, kept separate from the HoloOcean ground truth.",
       "reason": "",
       "operational": true,
       "validation": "verified_end_to_end",
@@ -2465,39 +2465,39 @@
       "parameters": [
         {
           "path": "network.mac.ranging_tokenbus.slot_time_s",
-          "label": "Timeout del token",
+          "label": "Token timeout",
           "default": 10.0,
           "unit": "s",
-          "help": "Timeout nativo di attesa del token. Deve coprire airtime e propagazione; non è uno slot TDMA.",
+          "help": "Native token wait timeout. It must cover airtime and propagation; it is not a TDMA slot.",
           "type": "number",
           "min": 1e-06
         },
         {
           "path": "network.mac.ranging_tokenbus.min_token_hold_s",
-          "label": "Possesso minimo del token",
+          "label": "Minimum token holding time",
           "default": 0.1,
           "unit": "s",
-          "help": "Tempo minimo prima del passaggio del token.",
+          "help": "Minimum time before passing the token.",
           "type": "number",
           "min": 1e-06
         },
         {
           "path": "network.mac.ranging_tokenbus.max_token_hold_s",
-          "label": "Possesso massimo del token",
+          "label": "Maximum token holding time",
           "default": 10.0,
           "unit": "s",
-          "help": "Il frame deve entrare in questo tempo; il builder rifiuta flussi che non entrano.",
+          "help": "The frame must fit within this time; the builder rejects flows that do not fit.",
           "type": "number",
           "min": 1e-06,
-          "constraint": "non inferiore al tempo minimo; deve contenere il frame più lungo"
+          "constraint": "not less than the minimum time; it must fit the longest frame"
         },
         {
           "path": "network.mac.buffer_packets",
-          "label": "Buffer MAC",
+          "label": "MAC buffer",
           "default": 100,
-          "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
+          "help": "Native queue limit in packets, set before construction where needed.",
           "type": "integer",
-          "unit": "pacchetti",
+          "unit": "packets",
           "min": 1,
           "max": 10000,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
@@ -2532,8 +2532,8 @@
       "id": "ranging_tdma",
       "name": "Ranging TDMA",
       "layer": "mac",
-      "description": "TDMA nativo che misura i tempi di volo: in ogni slot il drone invia prima un frame di ranging e poi i dati. Ogni drone stima tutte le coppie, con misure dirette e valori ricevuti dagli altri; stime distinte dalla ground truth HoloOcean.",
-      "reason": "Verificato con test nativi del bridge (consegna dati, stime per tutte le coppie entro 1 cm, aggiornamento dopo un movimento, riavvio) e con HoloOcean end-to-end fino alla dashboard (2026-10-22).",
+      "description": "Native TDMA that measures times of flight: in every slot the drone first sends a ranging frame and then data. Each drone estimates all pairs, from direct measurements and values received from the others; estimates are kept separate from the HoloOcean ground truth.",
+      "reason": "Verified with native bridge tests (data delivery, estimates for all pairs within 1 cm, update after a movement, restart) and with HoloOcean end to end up to the dashboard (2026-10-22).",
       "operational": true,
       "validation": "verified_end_to_end",
       "experimental": false,
@@ -2569,47 +2569,47 @@
       "telemetry": [
         "ranging_estimate",
         "mac_specific_stats",
-        "phy_control_* (frame di ranging)"
+        "phy_control_* (ranging frames)"
       ],
       "parameters": [
         {
           "path": "network.mac.ranging_tdma.frame_duration_s",
-          "label": "Durata del frame",
+          "label": "Frame duration",
           "default": 3,
           "unit": "s",
           "type": "number",
           "min": 0.001,
-          "help": "Ciclo condiviso: ogni drone ha uno slot lungo frame / numero di droni, nell’ordine dei droni nello scenario.",
-          "constraint": "divisa per il numero di droni deve contenere frame di ranging, frame dati e tempo di guardia"
+          "help": "Shared cycle: each drone has a slot of length frame / number of drones, in the order of the drones in the scenario.",
+          "constraint": "divided by the number of drones, it must fit the ranging frame, the data frame and the guard time"
         },
         {
           "path": "network.mac.ranging_tdma.guard_time_s",
-          "label": "Tempo di guardia",
+          "label": "Guard time",
           "default": 0.1,
           "unit": "s",
           "type": "number",
           "min": 0,
-          "help": "Margine alla fine dello slot. Per non sovrapporre slot vicini dovrebbe coprire la propagazione più lunga (distanza / velocità del suono).",
-          "constraint": "minore della durata di uno slot"
+          "help": "Margin at the end of the slot. To keep adjacent slots from overlapping it should cover the longest propagation delay (distance / sound speed).",
+          "constraint": "shorter than one slot"
         },
         {
           "path": "network.mac.ranging_tdma.max_packets_per_slot",
-          "label": "Trasmissioni per slot",
+          "label": "Transmissions per slot",
           "default": 2,
-          "unit": "pacchetti",
+          "unit": "packets",
           "type": "integer",
           "min": 2,
           "max": 10000,
-          "help": "Trasmissioni native per slot: la prima è sempre il frame di ranging, le altre sono dati.",
-          "constraint": "almeno 2, perché una trasmissione è il frame di ranging"
+          "help": "Native transmissions per slot: the first is always the ranging frame, the others are data.",
+          "constraint": "at least 2, because one transmission is the ranging frame"
         },
         {
           "path": "network.mac.buffer_packets",
-          "label": "Buffer MAC",
+          "label": "MAC buffer",
           "default": 100,
-          "help": "Limite nativo della coda in pacchetti, impostato prima della costruzione ove necessario.",
+          "help": "Native queue limit in packets, set before construction where needed.",
           "type": "integer",
-          "unit": "pacchetti",
+          "unit": "packets",
           "min": 1,
           "max": 10000,
           "default_origin": "verified native binding; bridge initialization profile, not a recommended operating range"
@@ -2641,51 +2641,51 @@
   "selectors": {
     "medium": {
       "path": "network.medium",
-      "label": "Tecnologia",
+      "label": "Technology",
       "default": "acoustic",
       "unit": "",
-      "help": "Catena nativa PHY, propagazione e canale. Acustica: BPSK DESERT; ottica: Lambert-Beer con rumore tabulato; elettromagnetica: tabella di errore SF7. Unità e parametri cambiano con la tecnologia.",
+      "help": "Native PHY, propagation and channel chain. Acoustic: DESERT BPSK; optical: Lambert-Beer with tabulated noise; electromagnetic: SF7 error table. Units and parameters change with the technology.",
       "type": "select",
       "choices": [
         {
           "value": "acoustic",
-          "label": "Acustica"
+          "label": "Acoustic"
         },
         {
           "value": "optical",
-          "label": "Ottica"
+          "label": "Optical"
         },
         {
           "value": "em",
-          "label": "Elettromagnetica"
+          "label": "Electromagnetic"
         }
       ],
-      "constraint": "ottica ed EM sono verificate con CSMA-ALOHA e routing statico, senza multi-PHY, WOSS o override acustici per drone; l’ottica solo fra 0 e 20 m di profondità"
+      "constraint": "optical and EM are verified with CSMA-ALOHA and static routing, without multi-PHY, WOSS or per-drone acoustic overrides; optical only between 0 and 20 m depth"
     },
     "propagation": {
       "path": "network.acoustic.propagation",
-      "label": "Propagazione acustica",
+      "label": "Acoustic propagation",
       "default": "underwater",
       "unit": "",
-      "help": "Analitica DESERT oppure Bellhop reale con ambiente sintetico configurato.",
+      "help": "DESERT analytical model, or real Bellhop with a configured synthetic environment.",
       "type": "select",
       "choices": [
         {
           "value": "underwater",
-          "label": "Analitica DESERT"
+          "label": "DESERT analytical"
         },
         {
           "value": "woss",
           "label": "WOSS / Bellhop"
         }
       ],
-      "constraint": "WOSS richiede il PHY BPSK originale su tutti i droni, nessun multi-PHY, almeno 1 m di separazione orizzontale e droni ad almeno 0,1 m da superficie e fondale"
+      "constraint": "WOSS requires the original BPSK PHY on every drone, no multi-PHY, at least 1 m of horizontal separation and drones at least 0.1 m from the surface and the seabed"
     },
     "ssp": {
-      "label": "Profilo velocità del suono",
+      "label": "Sound speed profile",
       "unit": "m, m/s",
-      "help": "Profilo della velocità del suono letto da Bellhop: coppie profondità/velocità in ordine di profondità crescente.",
-      "constraint": "da 2 a 256 punti; il primo a 0 m, l’ultimo alla profondità del fondale; velocità fra 1000 e 2000 m/s",
+      "help": "Sound speed profile read by Bellhop: depth/speed pairs in increasing depth order.",
+      "constraint": "2 to 256 points; the first at 0 m, the last at the seabed depth; speeds between 1000 and 2000 m/s",
       "default": [
         {
           "depth_m": 0,
@@ -2698,127 +2698,127 @@
       ]
     },
     "multiphy": {
-      "label": "Interfacce multiple (multi-PHY)",
+      "label": "Multiple interfaces (multi-PHY)",
       "type": "checkbox",
       "default": false,
       "unit": "",
-      "help": "Ogni drone ha 2 o 3 interfacce, acustiche o ottiche, sotto un solo MAC; il controller nativo DESERT sceglie l’interfaccia attiva.",
-      "constraint": "solo propagazione analitica, CSMA-ALOHA senza ACK e routing statico; bande delle interfacce acustiche disgiunte"
+      "help": "Each drone has 2 or 3 interfaces, acoustic or optical, under a single MAC; the native DESERT controller chooses the active interface.",
+      "constraint": "analytical propagation only, CSMA-ALOHA without ACK and static routing; acoustic interface bands must be disjoint"
     },
     "multiphy_interface": {
-      "label": "Interfaccia",
+      "label": "Interface",
       "type": "text",
       "unit": "",
-      "help": "Nome dell’interfaccia (minuscole, cifre, _). I campi vuoti ereditano i parametri globali del suo mezzo (canale acustico o parametri ottici).",
-      "constraint": "da 2 a 3 interfacce con nomi unici; le bande delle interfacce acustiche non devono sovrapporsi"
+      "help": "Interface name (lowercase letters, digits, _). Empty fields inherit the global parameters of its medium (acoustic channel or optical parameters).",
+      "constraint": "2 to 3 interfaces with unique names; the bands of the acoustic interfaces must not overlap"
     },
     "multiphy_policy": {
       "path": "network.multiphy.policy",
-      "label": "Selezione dell’interfaccia",
+      "label": "Interface selection",
       "type": "select",
       "default": "manual",
       "unit": "",
-      "help": "Manuale: l’applicazione sceglie con select_interface (API Python). Potenza ricevuta: il controller master/slave nativo cambia interfaccia in base alla potenza misurata.",
-      "constraint": "la potenza ricevuta richiede tutte le interfacce su ogni drone e soglie fra interfacce adiacenti",
+      "help": "Manual: the application chooses with select_interface (Python API). Received power: the native master/slave controller switches interface according to the measured power.",
+      "constraint": "received-power selection requires every interface on every drone and thresholds between adjacent interfaces",
       "choices": [
         {
           "value": "manual",
-          "label": "Manuale"
+          "label": "Manual"
         },
         {
           "value": "received_power",
-          "label": "Potenza ricevuta (controller nativo)"
+          "label": "Received power (native controller)"
         }
       ]
     },
     "multiphy_initial": {
       "path": "network.multiphy.initial_interface",
-      "label": "Interfaccia iniziale",
+      "label": "Initial interface",
       "type": "select",
       "unit": "",
-      "help": "Interfaccia attiva all’avvio su ogni drone.",
-      "constraint": "deve essere disponibile su ogni drone"
+      "help": "Interface active at start-up on every drone.",
+      "constraint": "must be available on every drone"
     },
     "multiphy_master": {
       "path": "network.multiphy.master",
-      "label": "Drone master",
+      "label": "Master drone",
       "type": "select",
       "default": "auv_01",
       "unit": "",
-      "help": "Drone che misura la potenza e decide il cambio; gli altri seguono come slave.",
-      "constraint": "usato solo con la selezione per potenza ricevuta"
+      "help": "Drone that measures the power and decides the switch; the others follow as slaves.",
+      "constraint": "used only with received-power selection"
     },
     "multiphy_alpha": {
       "path": "network.multiphy.alpha",
-      "label": "Peso della media (alpha)",
+      "label": "Averaging weight (alpha)",
       "type": "number",
       "default": 0.5,
       "min": 0,
       "max": 1,
-      "unit": "adimensionale",
-      "help": "Peso della nuova misura nella media esponenziale della potenza ricevuta dal master."
+      "unit": "dimensionless",
+      "help": "Weight of the new sample in the master's exponential average of the received power."
     },
     "multiphy_threshold": {
-      "label": "Soglia di potenza ricevuta",
+      "label": "Received-power threshold",
       "type": "number",
-      "unit": "unità lineari del PHY acustico (µPa²) o W",
-      "help": "Il master confronta la media della potenza ricevuta Pr sull’interfaccia corrente: passa all’interfaccia successiva quando la supera, alla precedente quando scende sotto. La soglia è nell’unità del PHY dell’interfaccia di partenza: Pr = 10^(livello ricevuto/10) per un’interfaccia acustica, W per un’interfaccia ottica.",
-      "constraint": "valore positivo; servono entrambe le direzioni fra interfacce adiacenti"
+      "unit": "linear units of the acoustic PHY (µPa²) or W",
+      "help": "The master compares the average received power Pr on the current interface: it switches to the next interface when Pr exceeds the threshold and to the previous one when Pr falls below it. The threshold is in the PHY unit of the interface being left: Pr = 10^(received level/10) for an acoustic interface, W for an optical interface.",
+      "constraint": "positive value; both directions between adjacent interfaces are needed"
     },
     "multiphy_available": {
-      "label": "Interfacce disponibili per drone",
+      "label": "Interfaces available per drone",
       "type": "checkbox",
       "unit": "",
-      "help": "Interfacce installate su ciascun drone.",
-      "constraint": "l’interfaccia iniziale è obbligatoria; con la potenza ricevuta servono tutte"
+      "help": "Interfaces installed on each drone.",
+      "constraint": "the initial interface is mandatory; received-power selection needs all of them"
     },
     "generator": {
       "path": "generator",
-      "label": "Generatore",
+      "label": "Generator",
       "type": "select",
       "default": "python",
       "unit": "",
-      "help": "Python: messaggi applicativi con envelope e TTL. CBR/VBR: timer e pacchetti generati dai moduli nativi DESERT, senza envelope né TTL.",
-      "constraint": "i generatori nativi accettano solo dati, tempi periodici o Poisson, nessuna risposta e nessun intervallo finale",
+      "help": "Python: application messages with envelope and TTL. CBR/VBR: timers and packets generated by the native DESERT modules, with neither envelope nor TTL.",
+      "constraint": "native generators accept only data messages, periodic or Poisson timing, no replies and no final interval",
       "choices": [
         {
           "value": "python",
-          "label": "Python (applicazione)"
+          "label": "Python (application)"
         },
         {
           "value": "desert_cbr",
-          "label": "DESERT CBR nativo"
+          "label": "Native DESERT CBR"
         },
         {
           "value": "desert_vbr",
-          "label": "DESERT VBR nativo"
+          "label": "Native DESERT VBR"
         }
       ]
     },
     "multiphy_medium": {
-      "label": "Mezzo",
+      "label": "Medium",
       "type": "select",
       "default": "acoustic",
       "unit": "",
-      "help": "Acustico: PHY BPSK sul canale acustico condiviso, potenza in dB re 1 µPa. Ottico: PHY ottico nativo DESERT (UW/OPTICAL) su un canale ottico separato, propagazione Lambert-Beer, potenza in W; portata di pochi metri o decine di metri.",
-      "constraint": "un’interfaccia ottica richiede droni fra 0 e 20 m di profondità (tabella del rumore ottico); con la selezione per potenza ricevuta le interfacce ottiche seguono quelle acustiche",
+      "help": "Acoustic: BPSK PHY on the shared acoustic channel, power in dB re 1 µPa. Optical: native DESERT optical PHY (UW/OPTICAL) on a separate optical channel, Lambert-Beer propagation, power in W; range of a few metres to a few tens of metres.",
+      "constraint": "an optical interface requires drones between 0 and 20 m depth (optical noise table); with received-power selection, optical interfaces come after the acoustic ones",
       "choices": [
         {
           "value": "acoustic",
-          "label": "Acustico"
+          "label": "Acoustic"
         },
         {
           "value": "optical",
-          "label": "Ottico"
+          "label": "Optical"
         }
       ]
     },
     "position_based_anchors": {
-      "label": "Ancore del routing per posizione",
+      "label": "Position-based routing anchors",
       "type": "checkbox",
       "unit": "m",
-      "help": "Un’ancora è un drone fermo: il routing conosce solo la sua posizione rilevata (vuota: la posizione dello scenario) e la sua tabella di inoltro. Gli altri droni sono veicoli e conoscono solo la propria posizione e quelle rilevate delle ancore.",
-      "constraint": "almeno un’ancora e un veicolo; le ancore non hanno waypoint; nelle tabelle solo ancore, con prossimo nodo un’ancora o la destinazione"
+      "help": "An anchor is a stationary drone: the routing knows only its surveyed position (empty: the scenario position) and its forwarding table. The other drones are vehicles and know only their own position and the surveyed positions of the anchors.",
+      "constraint": "at least one anchor and one vehicle; anchors have no waypoints; tables list only anchors, with an anchor or the destination as next hop"
     }
   }
 }

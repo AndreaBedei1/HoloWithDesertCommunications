@@ -44,10 +44,10 @@ class ScenarioLibrary:
 
     def _path(self, identifier):
         if not self.ID.fullmatch(identifier):
-            raise ValueError("Identificativo personale non valido; gli esempi sono protetti")
+            raise ValueError("Invalid custom scenario identifier; the examples are protected")
         path = self.directory / (identifier + ".yaml")
         if path.is_symlink() or path.resolve().parent != self.directory:
-            raise ValueError("Percorso dello scenario non consentito")
+            raise ValueError("Scenario path not allowed")
         return path
 
     @contextmanager
@@ -57,7 +57,7 @@ class ScenarioLibrary:
         self.directory.mkdir(parents=True, exist_ok=True)
         lock_path = self.directory / ".library.lock"
         if lock_path.is_symlink():
-            raise ValueError("Percorso di lock non consentito")
+            raise ValueError("Lock path not allowed")
         with self.lock, lock_path.open("a+b") as handle:
             if handle.seek(0, 2) == 0:
                 handle.write(b"0")
@@ -75,7 +75,7 @@ class ScenarioLibrary:
                     break
                 except OSError:
                     if time.monotonic() >= deadline:
-                        raise ScenarioConflict("Libreria occupata; riprova tra pochi secondi")
+                        raise ScenarioConflict("Library busy; try again in a few seconds")
                     time.sleep(.05)
             try:
                 yield
@@ -105,7 +105,7 @@ class ScenarioLibrary:
     def _read_record(self, identifier):
         path = self._path(identifier)
         if path.stat().st_size > self.MAX_BYTES:
-            raise ValueError("Scenario troppo grande (massimo 256 KiB)")
+            raise ValueError("Scenario too large (maximum 256 KiB)")
         raw = path.read_bytes()
         config = self.MODEL.model_validate(self._upgrade(yaml.safe_load(raw)))
         return {"id": identifier, "kind": "user", "revision": hashlib.sha256(raw).hexdigest(),
@@ -136,19 +136,19 @@ class ScenarioLibrary:
         scenario = self.MODEL.model_validate(configuration)
         name = scenario.name.strip()
         if not 1 <= len(name) <= 100 or any(ord(c) < 32 for c in name):
-            raise ValueError("Il nome deve contenere da 1 a 100 caratteri leggibili")
+            raise ValueError("The name must contain 1 to 100 printable characters")
         scenario.name = name
         raw = yaml.safe_dump(scenario.model_dump(), allow_unicode=True, sort_keys=False).encode("utf-8")
         if len(raw) > self.MAX_BYTES:
-            raise ValueError("Scenario troppo grande (massimo 256 KiB)")
+            raise ValueError("Scenario too large (maximum 256 KiB)")
         with self._write_lock():
             if identifier:
                 current = self._read_record(identifier)
                 if current["revision"] != expected_revision:
-                    raise ScenarioConflict("Lo scenario è cambiato. Ricaricalo prima di salvare")
+                    raise ScenarioConflict("The scenario has changed. Reload it before saving")
             key = self._key(name)
             if key in self.reserved or any(self._key(r["configuration"]["name"]) == key and r["id"] != identifier for r in self._list_unlocked()):
-                raise ScenarioConflict("Esiste già uno scenario con questo nome")
+                raise ScenarioConflict("A scenario with this name already exists")
             identifier = identifier or self.PREFIX + uuid.uuid4().hex
             target = self._path(identifier)
             descriptor, temporary = tempfile.mkstemp(prefix=".scenario-", suffix=".tmp", dir=self.directory)
@@ -165,13 +165,13 @@ class ScenarioLibrary:
     def delete(self, identifier, expected_revision):
         with self._write_lock():
             if self._read_record(identifier)["revision"] != expected_revision:
-                raise ScenarioConflict("Lo scenario è cambiato. Ricaricalo prima di eliminarlo")
+                raise ScenarioConflict("The scenario has changed. Reload it before deleting it")
             self._path(identifier).unlink()
 
     def parse_yaml(self, text):
         if len(text.encode("utf-8")) > self.MAX_BYTES:
-            raise ValueError("Scenario troppo grande (massimo 256 KiB)")
+            raise ValueError("Scenario too large (maximum 256 KiB)")
         try:
             return self.MODEL.model_validate(self._upgrade(yaml.safe_load(text))).model_dump()
         except yaml.YAMLError as exc:
-            raise ValueError("YAML non valido: controlla sintassi e indentazione") from exc
+            raise ValueError("Invalid YAML: check the syntax and indentation") from exc

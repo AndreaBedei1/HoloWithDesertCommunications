@@ -78,20 +78,20 @@ class DashboardServer:
         def configuration(name: str):
             try:
                 if name not in self.manager.list() and not self.manager.library.ID.fullmatch(name):
-                    raise ValueError("Scenario non disponibile")
+                    raise ValueError("Scenario not available")
                 return self.manager.load(name).model_dump()
             except (ValueError, FileNotFoundError) as exc:
                 raise HTTPException(404, str(exc)) from exc
 
         def editable():
             if self.run and self.run.state in ("starting", "running", "paused", "stopping"):
-                raise HTTPException(409, "Arresta la simulazione prima di modificare gli scenari")
+                raise HTTPException(409, "Stop the simulation before editing scenarios")
 
         def storage_error(exc):
             if isinstance(exc, ScenarioConflict):
                 raise HTTPException(409, str(exc)) from exc
             if isinstance(exc, FileNotFoundError):
-                raise HTTPException(404, "Scenario personale non trovato") from exc
+                raise HTTPException(404, "Custom scenario not found") from exc
             raise HTTPException(422, str(exc)) from exc
 
         @app.get('/api/network-catalog')
@@ -158,7 +158,7 @@ class DashboardServer:
         @app.get("/api/capabilities")
         def capabilities():
             return {"worlds": ["OpenWater"], "vehicles": ["HoveringAUV"], "max_nodes": 32,
-                    "note": "Editor limitato all'ambiente e al veicolo verificati; YAML CLI invariati."}
+                    "note": "Editor limited to the verified environment and vehicle; CLI YAML files unchanged."}
 
         @app.get("/api/user-scenarios")
         def user_scenarios():
@@ -213,7 +213,7 @@ class DashboardServer:
         def export_scenario(identifier: str):
             try:
                 if identifier not in self.manager.list() and not self.manager.library.ID.fullmatch(identifier):
-                    raise ValueError("Scenario non disponibile")
+                    raise ValueError("Scenario not available")
                 import yaml
                 configuration = self.manager.load(identifier).model_dump()
                 return Response(yaml.safe_dump(configuration, allow_unicode=True, sort_keys=False),
@@ -277,7 +277,7 @@ class DashboardServer:
                     raise HTTPException(409, "A run is already active")
                 try:
                     if request.configuration is None and request.scenario not in self.manager.list() and not self.manager.library.ID.fullmatch(request.scenario):
-                        raise ValueError("Scenario non disponibile")
+                        raise ValueError("Scenario not available")
                     scenario = Scenario.model_validate(request.configuration) if request.configuration is not None else self.manager.load(request.scenario)
                     if self.run:
                         self.run.close()

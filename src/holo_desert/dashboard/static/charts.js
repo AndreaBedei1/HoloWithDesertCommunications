@@ -2,7 +2,7 @@ import {canvas} from './ui.js';
 
 // Round axis step (1, 2 or 5 times a power of ten) giving about `count` intervals over `span`.
 function niceStep(span,count){const raw=span/Math.max(1,count),power=10**Math.floor(Math.log10(raw)),unit=raw/power;return (unit<=1?1:unit<=2?2:unit<=5?5:10)*power}
-const label=v=>(Math.abs(v)<1e-9?0:v).toLocaleString('it-IT',{maximumFractionDigits:3});
+const label=v=>(Math.abs(v)<1e-9?0:v).toLocaleString('en-US',{maximumFractionDigits:3});
 
 // Null is a gap, including unknown MAC counters. No invented zero samples.
 export function chart(selector, series, lines, {window=0, max=null, dual=false, step=false}={}) {
@@ -25,13 +25,13 @@ export function chart(selector, series, lines, {window=0, max=null, dual=false, 
   const xStep=niceStep(Math.max(.01,end-start),4);
   ctx.textAlign='center';
   for(let i=0,t=Math.ceil(start/xStep-1e-9)*xStep;t<=end+xStep*1e-6;t=Math.ceil(start/xStep-1e-9)*xStep+(++i)*xStep)ctx.fillText(label(t),x(t),h-14);
-  ctx.fillText('tempo simulato [s]',left+(w-left-right)/2,h-1);ctx.textAlign='left';
+  ctx.fillText('simulated time [s]',left+(w-left-right)/2,h-1);ctx.textAlign='left';
   for(const line of lines){ctx.strokeStyle=line.color;ctx.lineWidth=2;ctx.beginPath();let previous=null;
     for(const p of data){const value=line.value(p);if(!Number.isFinite(value)){previous=null;continue}
       const px=x(p.time),py=y(value,line.right);if(previous){if(step)ctx.lineTo(px,previous[1]);ctx.lineTo(px,py)}else ctx.moveTo(px,py);previous=[px,py];
     }ctx.stroke();
   }
-  if(!values.length){ctx.fillStyle='#9fb0bf';ctx.fillText('Dati non disponibili',left+12,top+14)}
+  if(!values.length){ctx.fillStyle='#9fb0bf';ctx.fillText('No data available',left+12,top+14)}
 }
 
 // One row per drone, one mark per observed transmission, coloured by the interface used.
@@ -43,6 +43,6 @@ export function strips(selector, rows, marks, colors, {start=0,end=1}={}) {
   for(const m of marks){const i=rows.findIndex(r=>r.id===m.row);if(i<0)continue;ctx.fillStyle=colors[m.key]||'#8795a8';ctx.beginPath();ctx.arc(x(m.time),top+row*(i+.5),4,0,2*Math.PI);ctx.fill()}
   const xStep=niceStep(Math.max(.01,end-start),4);ctx.fillStyle='#748096';ctx.textAlign='center';
   for(let i=0,t=Math.ceil(start/xStep-1e-9)*xStep;t<=end+xStep*1e-6;t=Math.ceil(start/xStep-1e-9)*xStep+(++i)*xStep)ctx.fillText(label(t),x(t),h-14);
-  ctx.fillText('tempo simulato [s]',left+(w-left-right)/2,h-1);ctx.textAlign='left';
-  if(!marks.length){ctx.fillStyle='#9fb0bf';ctx.fillText('Nessuna trasmissione osservata',left+12,top+14)}
+  ctx.fillText('simulated time [s]',left+(w-left-right)/2,h-1);ctx.textAlign='left';
+  if(!marks.length){ctx.fillStyle='#9fb0bf';ctx.fillText('No transmissions observed',left+12,top+14)}
 }
