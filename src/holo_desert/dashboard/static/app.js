@@ -13,6 +13,7 @@ let selectedNode=null,selectedPacket=null,busy=false,executionMode='integrated',
 let configuredRerun=null;
 const active=()=>activeStates.includes(latest.state);
 const byId=id=>catalog.find(s=>s.id===id);
+const GROUPS=[['reference','Reference Scenarios','E01–E06 · one communication concept each, on the analytical acoustic channel.'],['demonstration','Advanced Demonstrations','E07–E09 · native DESERT ranging, Bellhop propagation and dynamic routing.']];
 const names={idle:'No simulation',starting:'Starting',running:'Simulation running',paused:'Paused',stopping:'Stopping the engines',finished:'Simulation completed',stopped:'Simulation stopped',failed:'The simulation needs attention'};
 const serviceNames={not_started:'Not started',starting:'Initialising',running:'Running',stopped:'Stopped',standalone_fixture:'Fixed positions',cleanup_failed:'Shutdown error'};
 const nodeStatsLabels={app_sent:'Sent by the application stack',app_received:'Received by the application stack',mac_queue:'Packets in the MAC queue',mac_data_tx:'Data frames transmitted by the MAC',mac_data_rx:'Data frames received by the MAC',mac_discarded_tx:'Aggregated MAC discards',mac_error_rx:'Aggregated MAC errors',phy_noise_errors:'Errors due to noise',phy_interference_errors:'Error outcomes in the PHY interference branch'};
@@ -52,7 +53,10 @@ function renderHome(){
   $('#examples-tab').classList.toggle('active',libraryTab==='example');$('#personal-tab').classList.toggle('active',libraryTab==='user');
   const list=catalog.filter(x=>x.kind===libraryTab);
   $('#scenario-card').hidden=!list.length;$('.library-layout').classList.toggle('is-empty',!list.length);
-  $('#scenario-list').innerHTML=list.map((s,i)=>{const info=scenarioInfo(s.id,{name:s.name,description:s.description});return '<button class="scenario-option '+(s.id===selectedId?'active':'')+'" data-scenario="'+esc(s.id)+'" '+(active()?'disabled title="Stop the simulation before changing scenario"':'')+' aria-pressed="'+(s.id===selectedId)+'"><span class="scenario-icon" aria-hidden="true">'+(['↔','⋮','⇆','≋','↗','⌁','◎','≈','⇶'][s.kind==='example'?Object.keys(SCENARIOS).indexOf(s.id):i%6])+'</span><span class="scenario-label">'+esc(info.title)+'</span><span class="scenario-number">'+esc(info.code==='Custom'?'↗':info.code)+'</span></button>'}).join('')||'<div class="library-empty"><h3>Your next idea starts here</h3><p>Create a scenario or duplicate one of the examples. It will still be here the next time you start the dashboard.</p></div>';
+  const option=(s,i)=>{const info=scenarioInfo(s.id,{name:s.name,description:s.description});return '<button class="scenario-option '+(s.id===selectedId?'active':'')+'" data-scenario="'+esc(s.id)+'" '+(active()?'disabled title="Stop the simulation before changing scenario"':'title="'+esc(info.description)+'"')+' aria-pressed="'+(s.id===selectedId)+'"><span class="scenario-icon" aria-hidden="true">'+(['↔','⋮','⇆','≋','↗','⌁','◎','≈','⇶'][s.kind==='example'?Object.keys(SCENARIOS).indexOf(s.id):i%6])+'</span><span class="scenario-label">'+esc(info.title)+'</span><span class="scenario-number">'+esc(info.code==='Custom'?'↗':info.code)+'</span></button>'};
+  // Bundled scenarios in their two groups; anything without a known group stays with the references.
+  const grouped=libraryTab==='example'?GROUPS.map(([group,title,text])=>{const items=list.filter(s=>(s.group==='demonstration'?'demonstration':'reference')===group);return items.length?'<section class="scenario-group" aria-labelledby="group-'+group+'"><h3 id="group-'+group+'">'+title+'</h3><p class="micro">'+text+'</p>'+items.map(option).join('')+'</section>':''}).join(''):list.map(option).join('');
+  $('#scenario-list').innerHTML=grouped||'<div class="library-empty"><h3>Your next idea starts here</h3><p>Create a scenario or duplicate one of the examples. It will still be here the next time you start the dashboard.</p></div>';
   $('#scenario-list').querySelectorAll('[data-scenario]').forEach(b=>b.onclick=()=>action(()=>selectScenario(b.dataset.scenario)));
   const item=byId(selectedId),info=scenarioInfo(selectedId,configuration);
   $('#scenario-code').textContent=info.code;$('#scenario-kind').textContent=item?.kind==='user'?'Custom scenario':'Protected example';
@@ -78,7 +82,7 @@ function renderServices(){
 function context(){
   const s=latest,packet=(s.packets||[]).find(p=>p.id===selectedPacket),pose=s.fleet?.[selectedNode];
   $('#context-panel').classList.toggle('has-selection',!!packet||!!pose);$('#clear-selection').hidden=!packet&&!pose;
-  if(packet){$('#context-title').textContent='Message details';preserve($('#context-content'),packetDetails(packet));return}
+  if(packet){$('#context-title').textContent='Message details';preserve($('#context-content'),packetDetails(packet,s));return}
   if(pose){const stats=s.stats?.[selectedNode]||{},app=s.applications?.[selectedNode];$('#context-title').textContent=drone(selectedNode);
     const positions='<div class="position-values">'+['x','y','z'].map(k=>'<div><span>'+k.toUpperCase()+' [m]</span><b>'+number(pose[k],1)+'</b></div>').join('')+'</div>';
     const distances=Object.entries(s.distances_m||{}).filter(([p])=>p.split('>').includes(selectedNode)).map(([p,v])=>'<div class="distance-row"><span>From '+esc(drone(p.split('>').find(n=>n!==selectedNode)))+'</span><b>'+number(v,1)+' m</b></div>').join('');
@@ -182,6 +186,9 @@ function render(){
   $('#generated').textContent=hasRun?number(counts.generated||0,0):'—';$('#received').textContent=hasRun?number(counts.received||0,0):'—';$('#delivery-rate').textContent=resolved?number(counts.received/resolved*100,1)+'%':'—';$('#mean-latency').textContent=last?.mean_latency_s==null?'—':number(last.mean_latency_s,3)+' s';
   const nodes=Object.keys(s.fleet||{}),pairs=Object.keys(s.distances_m||{});
   choices('#metric-node',nodes,null,drone);choices('#metric-pair',pairs,null,p=>p.split('>').map(drone).join(' ↔ '));choices('#packet-node',nodes,'All drones',drone);choices('#packet-destination',nodes,'All recipients',drone);choices('#packet-type',[...new Set((s.packets||[]).map(p=>p.type))],'All types',typeName);
+  choices('#packet-mac',[...new Set((s.packets||[]).map(p=>p.protocol).filter(Boolean))],'All MACs',id=>moduleName('mac',id));
+  const indices=[...new Set((s.packets||[]).flatMap(p=>p.events.filter(e=>e.event==='phy_tx_start'&&e.interface_index>0).map(e=>String(e.interface_index))))].sort();
+  choices('#packet-interface',indices,'All interfaces',v=>interfaceLabel(Number(v)));$('#packet-interface-label').hidden=!s.configuration?.network?.multiphy&&!indices.length;
   if(selectedNode&&!nodes.includes(selectedNode))selectedNode=null;
   if(view==='simulation'){
     $('#map-empty').hidden=nodes.length>0;$('#map-empty-title').textContent=s.state==='starting'?'Preparing the simulators':s.state==='failed'?'The experiment did not start':'Your experiment will appear here';
@@ -203,8 +210,8 @@ $('#stop').onclick=()=>action(()=>api('/api/stop',{}));
 $('#reset').onclick=()=>action(async()=>{await api('/api/reset',{});latest=await api('/api/state');selectedNode=null;selectedPacket=null;resetMaps();showView('home')});
 $('#clear-selection').onclick=()=>{selectedNode=null;selectedPacket=null;render()};
 bindMap('#fleet-canvas','#fit-map',node=>{selectedNode=node;selectedPacket=null},render);
-for(const id of ['trails','route-layer','phy-layer','delivery-layer','packet-node','packet-status','packet-event','packet-destination','packet-type','metric-window','metric-node','metric-pair'])$('#'+id).onchange=render;
-$('#filter').oninput=render;
+for(const id of ['trails','route-layer','phy-layer','delivery-layer','packet-node','packet-status','packet-event','packet-destination','packet-type','packet-mac','packet-interface','metric-window','metric-node','metric-pair'])$('#'+id).onchange=render;
+for(const id of ['filter','packet-from','packet-to'])$('#'+id).oninput=render;
 $('#analysis-tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{analysisGroup=b.dataset.group;$('#analysis-tabs').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));if(analysisGroup==='compare')loadComparisons().catch(showError);render()});
 $('#retain').onclick=()=>action(async()=>{await api('/api/comparison',{});await loadComparisons();notify('Summary kept in memory.')});
 $('#guide-open').onclick=()=>$('#guide-dialog').showModal();$('#about-open').onclick=()=>$('#about-dialog').showModal();document.querySelectorAll('[data-close-dialog]').forEach(b=>b.onclick=()=>b.closest('dialog').close());$('#dismiss-error').onclick=()=>showError(null);bindHelp();

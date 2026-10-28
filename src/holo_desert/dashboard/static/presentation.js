@@ -23,13 +23,14 @@ export const HELP = {
   PHY:'Physical layer of the channel (acoustic, optical or electromagnetic). A PHY reception alone does not confirm delivery to the application.',
   'Multi-PHY':'Each drone has several interfaces (acoustic or optical) under the same MAC; the native DESERT controller selects the active one, manually through the API or from the received power. The chart shows the interface of every observed transmission.',
   TTL:'Maximum application validity time of the message. It does not remove a packet already in the MAC queue.',
+  Evidence:'Observed: read directly from recorded events (both endpoints for a duration). Inferred: derived by matching events, for example a transmission and a decoded reception with the same transmitter; retransmissions can make the match ambiguous. Configured: taken from the scenario, not measured. Nothing here attributes a collision or a cause of loss.',
   Ranging:'Native DESERT estimate: time of flight measured by the ranging MAC multiplied by the configured sound speed. The HoloOcean geometric distance is an external reference the protocol does not know; the difference shows the estimation error.',
 };
 // HELP keys are stable data-help identifiers; these give the readable term for screen readers.
 const TERMS={Latenza:'latency',Interferenza:'interference',Scadenza:'expiry'};
 export const help = term => '<button type="button" class="help" data-help="'+esc(term)+'" aria-label="Explain '+esc(TERMS[term]||term)+'">?</button>';
 export const drone = id => id ? 'Drone '+id.replace(/^auv_/, '') : '—';
-export const typeName = type => ({data:'Data',binary:'Binary data',json:'JSON data',request:'Request',reply:'Reply',heartbeat:'Heartbeat'}[type]||type);
+export const typeName = type => ({data:'Data',binary:'Binary data',json:'JSON data',request:'Request',reply:'Reply',heartbeat:'Heartbeat',desert_cbr:'Native CBR',desert_vbr:'Native VBR'}[type]||type);
 export function interferenceLabel(e){
   const patch=e.phy_patch_id||'',zero=e.positive_interference===false||e.pi===0,positive=e.positive_interference===true||e.pi>0;
   if(zero&&/upstream/.test(patch))return 'Second PHY test failed (zero interference)';

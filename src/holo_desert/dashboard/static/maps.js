@@ -1,5 +1,8 @@
 import {$,canvas,number} from './ui.js';
 import {drone} from './presentation.js';
+import {messageHops,HOP_STATUS} from './packets.js';
+
+const HOP_COLORS={success:'#237454',error:'#b44343',info:'#3165cf',neutral:'#8795a8'};
 
 const cameras=new Map();
 export function resetMaps(){cameras.clear()}
@@ -32,11 +35,12 @@ export function drawMap(selector,s,selected,packetId=null){
     for(const r of routes)if(relevant.has(r.source+'>'+r.destination))link(r.source,r.next_hop,'#9aa5b5',{dash:[4,5],offset:-25,label:'Configured route',width:1});
   }
   const packet=(s.packets||[]).find(p=>p.id===packetId),events=packet?packet.events:(s.observations||[]),observed=new Map();
-  if($('#phy-layer').checked){for(const e of events){if(e.event==='forward')observed.set('forward'+e.node_id+'>'+e.next_hop_id,e);if(e.event==='phy_tx_start')observed.set('tx'+e.node_id+'>'+e.next_hop_id,e);if(e.event==='phy_rx_end'&&e.outcome==='decoded'&&e.node_id===e.next_hop_id)observed.set('rx'+e.transmitter_id+'>'+e.node_id,e)}
+  // Selected message: its addressed hops in order, coloured by the outcome recorded at each next hop.
+  if(packet&&$('#phy-layer').checked)messageHops(packet).forEach((h,i)=>{const [,tone,kind]=HOP_STATUS[h.status];link(h.from,h.to,HOP_COLORS[tone],{offset:-14,dash:kind==='inferred'||h.status==='routed'?[5,4]:[],label:'Hop '+(i+1)+' · '+{decoded:'decoded',reached:'reached (inferred)',error:'PHY error',sent:'no reception recorded',routed:'routed only'}[h.status],width:2.4})});
+  if(!packet&&$('#phy-layer').checked){for(const e of events){if(e.event==='forward')observed.set('forward'+e.node_id+'>'+e.next_hop_id,e);if(e.event==='phy_tx_start')observed.set('tx'+e.node_id+'>'+e.next_hop_id,e);if(e.event==='phy_rx_end'&&e.outcome==='decoded'&&e.node_id===e.next_hop_id)observed.set('rx'+e.transmitter_id+'>'+e.node_id,e)}
     for(const e of observed.values()){const recent=s.time>=e.time&&s.time-e.time<1.2;
-      if(!packet&&!recent)continue;
-      if(e.event==='forward'){if(packet)link(e.node_id,e.next_hop_id,'#7e91b2',{dash:[3,4],offset:-18,width:1})}
-      else link(e.event==='phy_rx_end'?e.transmitter_id:e.node_id,e.event==='phy_rx_end'?e.node_id:e.next_hop_id,recent?'#3165cf':'#8ca7d0',{offset:e.event==='phy_rx_end'?12:0,dash:e.event==='phy_rx_end'?[2,3]:[],label:packet&&e.event==='phy_tx_start'?'Observed TX · absolute t = '+number(e.time,2)+' s':'',width:recent?2.2:1.5});
+      if(!recent||e.event==='forward')continue;
+      link(e.event==='phy_rx_end'?e.transmitter_id:e.node_id,e.event==='phy_rx_end'?e.node_id:e.next_hop_id,'#3165cf',{offset:e.event==='phy_rx_end'?12:0,dash:e.event==='phy_rx_end'?[2,3]:[],width:2.2});
     }
   }
   const delivered=packet?(packet.status==='received'?[{source:packet.source,destination:packet.destination,last_receive:packet.receive_time}]:[]):s.edges||[];

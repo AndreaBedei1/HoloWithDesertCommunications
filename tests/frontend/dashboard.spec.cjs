@@ -3,6 +3,8 @@ const {fixturePage}=require('./fixtures.cjs');
 
 test('initial screen explains nine scenarios without technical panels or invented graphs',async({page})=>{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');await expect(page.locator('[data-scenario]')).toHaveCount(9);
+  await expect(page.locator('#group-reference')).toHaveText('Reference Scenarios');await expect(page.locator('#group-demonstration')).toHaveText('Advanced Demonstrations');
+  await expect(page.locator('[aria-labelledby="group-reference"] [data-scenario]')).toHaveCount(6);await expect(page.locator('[aria-labelledby="group-demonstration"] [data-scenario]')).toHaveText([/Native ranging/,/Bellhop/,/SUN convergecast/]);
   await expect(page.locator('#scenario-title')).toHaveText('Message exchange');await expect(page.getByRole('button',{name:'Start simulation',exact:true})).toBeEnabled();
   await expect(page.locator('#metrics-summary')).toBeHidden();await expect(page.locator('#fleet-canvas')).toBeHidden();
   for(const [id,title]of [['e03_mobility','Moving drones'],['e04_congestion','Network congestion'],['e05_multihop','Relay communication'],['e06_coordination','Drone coordination'],['e07_ranging_tokenbus','Native ranging with TokenBus'],['e08_woss','Bellhop propagation (WOSS)'],['e09_sun_convergecast','SUN convergecast to a sink']]){await page.locator(`[data-scenario="${id}"]`).click();await expect(page.locator('#scenario-title')).toHaveText(title)}
@@ -31,6 +33,8 @@ test('real-event presentation distinguishes pending, expired and delivered; filt
   await page.locator('#packet-details summary').click();await expect(page.locator('#packet-details pre')).toBeVisible();await expect(page.locator('#packet-details pre')).toBeVisible({timeout:2000});
   await page.locator('#packet-status').selectOption('');await page.locator('#packet-destination').selectOption('auv_02');await expect(page.locator('#packet-rows tr[data-id]')).toHaveCount(1);
   await page.locator('#packet-type').selectOption('heartbeat');await expect(page.locator('#packet-rows')).toContainText('Transmission observed');
+  await page.locator('#packet-type').selectOption('');await page.locator('#packet-destination').selectOption('');await page.locator('#packet-mac').selectOption('csma_aloha');await expect(page.locator('#packet-rows tr[data-id]')).toHaveCount(3);
+  await page.locator('#packet-from').fill('2');await expect(page.locator('#packet-rows')).toContainText('No messages match');await page.locator('#packet-from').fill('');await expect(page.locator('#packet-interface-label')).toBeHidden();
   await page.locator('.app-header [data-view="analysis"]').click();await page.locator('[data-group="channel"]').first().click();await expect(page.locator('#queue-chart')).toBeVisible();await expect(page.locator('#pdr-chart')).toBeHidden();
   await page.locator('[data-group="geometry"]').first().click();await expect(page.locator('#distance-chart')).toBeVisible();expect(errors).toEqual([]);
 });
@@ -50,3 +54,18 @@ for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:1
     await expect(page.locator('#pause')).toBeInViewport();await page.locator('#guide-open').click();await expect(page.locator('#guide-dialog')).toBeVisible();expect(await page.locator('#guide-dialog').evaluate(el=>el.getBoundingClientRect().width<=innerWidth)).toBe(true);
   });
 }
+
+test('message inspector: lifecycle evidence, hops and selection kept across refreshes',async({page,request})=>{
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));const fixture=await fixturePage(page,request);
+  await page.locator('.app-header [data-view="messages"]').click();await page.locator('#packet-rows tr[data-id="received-001"]').click();
+  const details=page.locator('#packet-details');await expect(details).toContainText('Delivered to the application');
+  await expect(details.locator('dt',{hasText:'Relays'}).locator('+ dd')).toContainText('Drone 02');await expect(details.locator('dt',{hasText:'End-to-end latency'}).locator('+ dd')).toContainText('2.000 s observed');
+  await expect(details.locator('.hops li')).toHaveText([/Hop 1 · Drone 01 → Drone 02.*Decoded at the next hop.*observed/,/Hop 2 · Drone 02 → Drone 03.*forwarded or delivered.*inferred/]);
+  await expect(details.locator('.lane')).toHaveCount(3);await expect(details).toContainText('+0.200 s');
+  await page.locator('#packet-details summary').filter({hasText:'Technical details'}).click();
+  const state=fixture.state(),extra={...state.packets[1],id:'pending-004',creation_time:11};fixture.setState({...state,packets:[...state.packets,extra]});
+  await expect(page.locator('#packet-rows tr[data-id]')).toHaveCount(4);
+  await expect(page.locator('#packet-rows tr[data-id="received-001"]')).toHaveClass(/selected/);await expect(page.locator('#packet-details pre')).toBeVisible();
+  await page.locator('#packet-rows tr[data-id="expired-003"]').click();await expect(details).toContainText('cause unknown');await expect(details.locator('.final-state')).toHaveClass(/warning/);
+  expect(errors).toEqual([]);
+});
