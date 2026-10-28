@@ -387,7 +387,6 @@ in the browser and are marked by a visible banner, so they do not prove physics
 or networking. The dated visual review and real-backend checks are recorded in
 [evidence/ui-review.md](evidence/ui-review.md) and
 [evidence/desert-laboratory.md](evidence/desert-laboratory.md); screenshots are
-in [images/](images/).
-<!-- screenshot to refresh: the images in docs/images were captured before 1.1.0
-(Italian interface, no scenario groups, previous message details and Designer
-menus) -->
+in [images/](images/): release 1.1.0 captured on 2026-10-28 from real DESERT
+runs on an isolated engine (E01–E09 started from the dashboard, E05 shown;
+`dashboard-messages-390.png` is the 390 px layout).

@@ -146,8 +146,13 @@ switched; *Analysis → Ranging* compares native distance estimates with the
 HoloOcean geometry; *My scenarios* edits vehicles, waypoints, flows and
 routes and imports/exports YAML. The interface is in English.
 
-<!-- screenshot to refresh: captured with the 1.0.0 Italian interface -->
-![Network Designer](docs/images/network-designer-2026-10-22.png)
+Screenshots of release 1.1.0 from real DESERT runs (E05, network-only mode):
+
+![Scenario groups](docs/images/dashboard-scenarios.png)
+![Simulation view of E05](docs/images/dashboard-simulation.png)
+![Message inspector](docs/images/dashboard-messages.png)
+![Analysis](docs/images/dashboard-analysis.png)
+![Network Designer](docs/images/network-designer.png)
 
 ## Scenarios
 
