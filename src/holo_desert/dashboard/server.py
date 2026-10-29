@@ -227,7 +227,7 @@ class DashboardServer:
             if self.run:
                 return {**self.run.snapshot(), "scenario_id": self.scenario_id}
             return {"state": "idle", "services": {"holoocean": "not_started", "desert": "not_started"},
-                    "fleet": {}, "packets": [], "series": [], "counts": {}, "events": [], "edges": [], "trails": {}}
+                    "fleet": {}, "packets": [], "series": [], "counts": {}, "events": [], "edges": [], "trails": {}, "history": {}}
 
         @app.post("/api/validate")
         def validate(configuration: dict):

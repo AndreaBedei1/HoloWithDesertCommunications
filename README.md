@@ -224,7 +224,8 @@ bathymetry; application messages are unicast; one MAC per network. The BPSK
 correction, optical and EM chains are experimental and none of the models is
 calibrated against a specific modem or sea trial. The message inspector shows
 only what DESERT and the telemetry observe (it attributes no collisions), and
-recorded runs cannot be replayed. Full list:
+the map replay covers the current run in the open dashboard (the latest 500 messages),
+not exported runs. Full list:
 [limitations](docs/limitations.md).
 
 ## How to cite

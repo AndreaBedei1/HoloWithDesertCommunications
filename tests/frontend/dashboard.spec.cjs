@@ -70,6 +70,24 @@ test('message inspector: lifecycle evidence, hops and selection kept across refr
   expect(errors).toEqual([]);
 });
 
+test('replay moves the map and the event feed through recorded time without touching the run',async({page,request})=>{
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));const fixture=await fixturePage(page,request);
+  const state=fixture.state();fixture.setState({...state,history:{auv_01:[[0,0,0,-20,0],[12,100,0,-20,0]]}});
+  const clock=page.locator('#replay-clock'),feed=page.locator('#replay-events');
+  await expect(clock).toHaveText('Live · t = 12.00 s of 12.00 s');await expect(page.locator('#replay-live')).toHaveAttribute('aria-pressed','true');
+  await page.locator('#replay-time').fill('1.5');
+  await expect(clock).toHaveText('Replay · t = 1.50 s of 12.00 s');await expect(page.locator('#replay-note')).toBeVisible();
+  await expect(feed.locator('li').first()).toContainText('Drone 01 starts transmitting to Drone 02');await expect(feed).not.toContainText('Delivered');
+  await page.locator('#replay-forward').click();await page.locator('#replay-forward').click();
+  await expect(clock).toHaveText('Replay · t = 3.50 s of 12.00 s');await expect(feed.locator('li').first()).toContainText('Delivered to Drone 03 · end-to-end latency 2.000 s');
+  await feed.locator('li').first().locator('button').click();await expect(page.locator('#context-content')).toContainText('Delivered');
+  await page.locator('#replay-start').click();await expect(clock).toHaveText('Replay · t = 0.00 s of 12.00 s');
+  await page.locator('#replay-speed').selectOption('4');await page.locator('#replay-play').click();await expect(page.locator('#replay-play')).toHaveText('Ⅱ Pause replay');
+  await expect(clock).toHaveText('Live · t = 12.00 s of 12.00 s',{timeout:8000});await expect(page.locator('#replay-play')).toHaveText('▶ Play replay');
+  await page.locator('#replay-time').fill('2');await page.locator('#replay-live').click();await expect(clock).toHaveText(/^Live/);
+  expect(fixture.state().state).toBe('paused');expect(errors).toEqual([]);
+});
+
 test('an open drop-down survives live refreshes that change the panel around it',async({page,request})=>{
   const fixture=await fixturePage(page,request);let tick=0;
   await page.route('**/api/state',route=>{tick++;const state=fixture.state();return route.fulfill({json:{...state,state:'running',time:12+tick,distances_m:{'auv_01>auv_02':500+tick,'auv_02>auv_03':500}}})});

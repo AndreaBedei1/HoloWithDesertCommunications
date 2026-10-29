@@ -15,6 +15,19 @@ def test_control_frames_and_late_arrivals_are_separate_from_data():
     finally:collector.close()
 
 
+def test_pose_history_is_timed_sampled_and_thinned_for_replay():
+    from holo_desert.common.models import Pose
+    collector=TelemetryCollector(ScenarioManager().load('e01_chat').model_dump())
+    try:
+        for i in range(2000):
+            collector.positions({'auv_01':Pose(i,0,-5,90)},i*.1)
+        history=collector.snapshot()['history']['auv_01']
+        # One sample per 0.25 s of simulated time at most, thinned to 600, newest kept.
+        assert len(history)<=601 and history[-1][1:]==[1999,0,-5,90] and abs(history[-1][0]-199.9)<1e-9
+        assert history[0][0]==0 and all(b[0]>a[0] for a,b in zip(history,history[1:]))
+    finally:collector.close()
+
+
 def test_late_arrival_is_visible_without_counting_a_valid_delivery():
     collector=TelemetryCollector(ScenarioManager().load('e01_chat').model_dump())
     try:

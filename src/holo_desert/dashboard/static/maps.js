@@ -1,6 +1,7 @@
 import {$,canvas,number} from './ui.js';
 import {drone} from './presentation.js';
 import {messageHops,HOP_STATUS} from './packets.js';
+import {transmissionsAt,transmissionLabel,transmissionTone} from './replay.js';
 
 const HOP_COLORS={success:'#237454',error:'#b44343',info:'#3165cf',neutral:'#8795a8'};
 
@@ -34,14 +35,16 @@ export function drawMap(selector,s,selected,packetId=null){
     for(const f of s.configuration?.flows||[]){let n=f.source;const visited=new Set();while(n!==f.destination&&!visited.has(n)){visited.add(n);const r=routes.find(r=>r.source===n&&r.destination===f.destination);if(!r)break;relevant.add(n+'>'+f.destination);n=r.next_hop}}
     for(const r of routes)if(relevant.has(r.source+'>'+r.destination))link(r.source,r.next_hop,'#9aa5b5',{dash:[4,5],offset:-25,label:'Configured route',width:1});
   }
-  const packet=(s.packets||[]).find(p=>p.id===packetId),events=packet?packet.events:(s.observations||[]),observed=new Map();
+  const packet=(s.packets||[]).find(p=>p.id===packetId),events=packet?packet.events:(s.observations||[]);
   // Selected message: its addressed hops in order, coloured by the outcome recorded at each next hop.
   if(packet&&$('#phy-layer').checked)messageHops(packet).forEach((h,i)=>{const [,tone,kind]=HOP_STATUS[h.status];link(h.from,h.to,HOP_COLORS[tone],{offset:-14,dash:kind==='inferred'||h.status==='routed'?[5,4]:[],label:'Hop '+(i+1)+' · '+{decoded:'decoded',reached:'reached (inferred)',error:'PHY error',sent:'no reception recorded',routed:'routed only'}[h.status],width:2.4})});
-  if(!packet&&$('#phy-layer').checked){for(const e of events){if(e.event==='forward')observed.set('forward'+e.node_id+'>'+e.next_hop_id,e);if(e.event==='phy_tx_start')observed.set('tx'+e.node_id+'>'+e.next_hop_id,e);if(e.event==='phy_rx_end'&&e.outcome==='decoded'&&e.node_id===e.next_hop_id)observed.set('rx'+e.transmitter_id+'>'+e.node_id,e)}
-    for(const e of observed.values()){const recent=s.time>=e.time&&s.time-e.time<1.2;
-      if(!recent||e.event==='forward')continue;
-      link(e.event==='phy_rx_end'?e.transmitter_id:e.node_id,e.event==='phy_rx_end'?e.node_id:e.next_hop_id,'#3165cf',{offset:e.event==='phy_rx_end'?12:0,dash:e.event==='phy_rx_end'?[2,3]:[],width:2.2});
-    }
+  // Frames on the air at the drawn time: arrow transmitter → receiver, dot = elapsed share of the recorded TX → RX interval.
+  if(!packet&&$('#phy-layer').checked)for(const x of transmissionsAt(s,s.time))if(x.to&&s.fleet[x.from]&&s.fleet[x.to]){
+    const color=HOP_COLORS[transmissionTone(x)],a=xy(s.fleet[x.from]),b=xy(s.fleet[x.to]);
+    arrow(ctx,a,b,color,{label:transmissionLabel(x),width:2.4,dash:x.observedEnd?[]:[5,4]});
+    const d=Math.hypot(b[0]-a[0],b[1]-a[1]);if(d<45)continue;
+    const ux=(b[0]-a[0])/d,uy=(b[1]-a[1])/d,f=18+(d-38)*x.frac;
+    ctx.fillStyle=color;ctx.beginPath();ctx.arc(a[0]+ux*f,a[1]+uy*f,5,0,Math.PI*2);ctx.fill();
   }
   const delivered=packet?(packet.status==='received'?[{source:packet.source,destination:packet.destination,last_receive:packet.receive_time}]:[]):s.edges||[];
   const newest=Math.max(...delivered.map(e=>e.last_receive));

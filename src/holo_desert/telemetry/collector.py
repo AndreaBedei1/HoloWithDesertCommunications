@@ -33,6 +33,9 @@ class TelemetryCollector:
         self.packet_order = deque()
         self.fleet = {}
         self.trails = {}
+        # Timed poses [t, x, y, z, yaw] for the dashboard replay: at most one sample per 0.25 s per node.
+        self.history = {}
+        self.latest_pose = {}
         self.versions = {}
         self.trajectory_hashes = {}
         self.trajectory_samples = {}
@@ -231,6 +234,11 @@ class TelemetryCollector:
             self.fleet = {node: asdict(pose) for node, pose in poses.items()}
             for node, pose in poses.items():
                 self.trails.setdefault(node, deque(maxlen=200)).append([pose.x, pose.y])
+                sample = [timestamp, pose.x, pose.y, pose.z, pose.yaw]
+                history = self.history.setdefault(node, deque(maxlen=4800))
+                if not history or timestamp - history[-1][0] >= 0.25:
+                    history.append(sample)
+                self.latest_pose[node] = sample
                 self.trajectory_hashes.setdefault(node,hashlib.sha256()).update(json.dumps([timestamp,asdict(pose),origin],sort_keys=True,separators=(',',':')).encode())
                 self.trajectory_samples[node]=self.trajectory_samples.get(node,0)+1
             # One event per fleet snapshot, no hidden trajectory/physics in DESERT.
@@ -271,6 +279,8 @@ class TelemetryCollector:
         with self.lock:
             return copy.deepcopy({"time": self.time, "fleet": dict(self.fleet),
                     "trails": {k: list(v) for k, v in self.trails.items()},
+                    "history": {k: self._thin(v, 600) + ([self.latest_pose[k]] if v[-1] is not self.latest_pose[k] else [])
+                                for k, v in self.history.items()},
                     "edges": list(self.edges.values()), "stats": dict(self.stats), "mac_specific_stats":self.mac_specific_stats,
                     "observations": list(self.observations), "configured_routes": self.configured_routes(),
                     "applications": self.application_states, "transitions": list(self.transitions),

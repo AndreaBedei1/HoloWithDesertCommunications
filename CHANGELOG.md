@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Dashboard map replay: Live / replay toggle, play and pause, ±1 s steps, a time
+  slider and 0.25×–4× speed. Frames on the air are drawn transmitter → receiver
+  with their observed outcome, beside a feed of the recorded events up to the
+  chosen time. Built from new timed poses in the state (`history`) and the
+  per-message DESERT events; the simulation clock is never altered.
+- axe-core WCAG 2.2 A/AA audit of every dashboard view in the browser tests.
+
+### Fixed
+- Some drop-downs closed as soon as they were opened: live refreshes rebuilt the
+  panel containing them. Focused controls are now left in place.
+- Text was too small and several greys failed WCAG AA contrast: rem-based type
+  scale (body 16 px, nothing under 13 px) and AA text colours.
+
 ## 1.1.0 — 2026-10-28
 
 Dashboard and scenario discovery release. Engines, protocols, the E01–E06

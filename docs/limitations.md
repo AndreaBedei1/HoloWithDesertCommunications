@@ -110,8 +110,11 @@ summary of verified capabilities is in [capabilities.md](capabilities.md).
   observe. It does not attribute collisions or causes of loss; facts derived by
   matching events are tagged as inferred, and durations are shown only when
   both endpoints are recorded.
-- Replay of a recorded run in the dashboard is not implemented; exported ZIPs
-  are for offline analysis.
+- The map replay works on the run held by the dashboard: timed poses (one sample
+  per 0.25 s, at most 600 sent per drone) and the events of the latest 500
+  messages. Exported ZIPs cannot be reopened for replay; frames that belong to
+  no message (MAC control) are not animated. The moving dot marks the elapsed
+  share of the recorded TX start → RX end interval, not a simulated wavefront.
 - On narrow phone screens the messages table scrolls horizontally.
 
 ## Operation

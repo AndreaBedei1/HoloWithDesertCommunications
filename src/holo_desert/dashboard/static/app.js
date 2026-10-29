@@ -1,6 +1,7 @@
 import {$,esc,number,api,choices,fields,preserve} from './ui.js';
 import {chart,strips} from './charts.js';
 import {drawMap,bindMap,resetMaps} from './maps.js';
+import {viewAt,viewTime,renderReplay,bindReplay,replayFeed,resetReplay} from './replay.js';
 import {bindConfiguration,setNetworkCatalog,moduleName} from './configuration.js';
 import {renderPackets,packetDetails,packetTone,stateHTML,eventTimeline} from './packets.js';
 import {SCENARIOS,scenarioInfo,drone,typeName,help,bindHelp,setInterfaceNames,interfaceLabel} from './presentation.js';
@@ -168,6 +169,8 @@ async function loadComparisons(){
   rows.push(['PHY data frames TX',x=>x.network_metrics?.data_tx_frames??'N/A'],['PHY control frames TX',x=>x.network_metrics?.control_tx_frames??'N/A'],['PHY data bits TX',x=>x.network_metrics?.data_tx_bits??'N/A'],['PHY control bits TX',x=>x.network_metrics?.control_tx_bits??'N/A'],['Data airtime [s]',x=>number(x.network_metrics?.data_airtime_s,6)],['Control airtime [s]',x=>number(x.network_metrics?.control_airtime_s,6)],['Arrivals after TTL',x=>x.network_metrics?.late_received??'N/A'],['Aggregated MAC discards',x=>{const values=Object.values(x.mac_stats||{}).map(n=>n.mac_discarded_tx);return values.length&&values.every(Number.isFinite)?values.reduce((a,b)=>a+b,0):'N/A'}]);
   $('#comparison').innerHTML='<p>'+esc(data.equivalent?'The common parameters match: only the MAC changes.':runs.length===1?'First summary kept. Run again changing only the MAC.':'The common parameters differ or the MAC is the same: the comparison is not controlled.')+'</p><div class="table-scroll"><table><thead><tr><th>Metric</th>'+runs.map(r=>'<th>'+esc(moduleName('mac',r.mac))+'</th>').join('')+'</tr></thead><tbody>'+rows.map(([name,read])=>'<tr><td>'+name+'</td>'+runs.map(r=>'<td>'+esc(read(r.summary))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div><p class="micro">At most six summaries are kept in memory. Negative results remain visible. The same configured geometry and seed do not guarantee identical measured trajectories.</p>';
 }
+// Map, replay bar and event feed only: also called on every replay animation frame.
+function mapFrame(){if(view!=='simulation')return;const v=viewAt(latest);drawMap('#fleet-canvas',v,selectedNode,selectedPacket);renderReplay(latest);preserve($('#replay-events'),replayFeed(v,viewTime(latest)))}
 function render(){
   const s=latest,hasRun=s.state!=='idle'&&!!s.configuration;renderServices();setInterfaceNames(s.configuration);
   $('#configure').disabled=busy||active()||!configuration||view==='editor'||(view==='home'&&libraryTab==='user'&&!catalog.some(s=>s.kind==='user'));$('#configure').title=active()?'Settings can be changed once the simulation has stopped.':'Parameters of the next simulation';
@@ -193,7 +196,7 @@ function render(){
     $('#map-empty').hidden=nodes.length>0;$('#map-empty-title').textContent=s.state==='starting'?'Preparing the simulators':s.state==='failed'?'The experiment did not start':'Your experiment will appear here';
     $('#map-empty-text').textContent=s.state==='starting'?'Initialising HoloOcean and DESERT. The first Docker start-up may take a few minutes.':s.state==='failed'?'See the error message and the diagnostic details.':'Select a scenario and start the simulation.';
     $('#position-source').textContent=s.standalone?'Fixed configured positions · no HoloOcean physics':'Positions measured by HoloOcean';
-    drawMap('#fleet-canvas',s,selectedNode,selectedPacket);context();recentMessages();insight();
+    mapFrame();context();recentMessages();insight();
   }
   if(view==='messages')renderPackets(s,selectedPacket,id=>{selectedPacket=id;selectedNode=null;render()});
   if(view==='analysis')metrics();
@@ -208,7 +211,7 @@ $('#pause').onclick=()=>action(async()=>{await api('/api/'+(latest.state==='paus
 $('#stop').onclick=()=>action(()=>api('/api/stop',{}));
 $('#reset').onclick=()=>action(async()=>{await api('/api/reset',{});latest=await api('/api/state');selectedNode=null;selectedPacket=null;resetMaps();showView('home')});
 $('#clear-selection').onclick=()=>{selectedNode=null;selectedPacket=null;render()};
-bindMap('#fleet-canvas','#fit-map',node=>{selectedNode=node;selectedPacket=null},render);
+bindMap('#fleet-canvas','#fit-map',node=>{selectedNode=node;selectedPacket=null},render);bindReplay(mapFrame,()=>latest);
 for(const id of ['trails','route-layer','phy-layer','delivery-layer','packet-node','packet-status','packet-event','packet-destination','packet-type','packet-interface','metric-window','metric-node','metric-pair'])$('#'+id).onchange=render;
 for(const id of ['filter','packet-from','packet-to'])$('#'+id).oninput=render;
 $('#analysis-tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{analysisGroup=b.dataset.group;$('#analysis-tabs').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));if(analysisGroup==='compare')loadComparisons().catch(showError);render()});
@@ -220,6 +223,6 @@ $('#new-scenario').onclick=()=>action(async()=>{const config=await api('/api/sce
 $('#delete-scenario').onclick=()=>action(async()=>{if(!await confirm('Delete this scenario?','The custom scenario “'+configuration.name+'” will be deleted from the library. The examples are not modified.','Delete scenario'))return;await api('/api/user-scenarios/'+selectedId+'?revision='+encodeURIComponent(byId(selectedId).revision),undefined,'DELETE');await loadCatalog();libraryTab='user';await selectScenario(catalog.find(x=>x.kind==='user')?.id||'e01_chat');notify('Custom scenario deleted.')});
 $('#import-scenario').onclick=()=>$('#import-file').click();$('#import-file').onchange=()=>action(async()=>{const file=$('#import-file').files[0];if(!file)return;try{const config=await api('/api/user-scenarios/import',{yaml:await file.text()});if(SCENARIOS[config.name])config.name=uniqueName(SCENARIOS[config.name].title+' · imported');await editor.open(config);notify('YAML imported into the editor. Check the data before saving.')}finally{$('#import-file').value=''}});
 window.addEventListener('resize',()=>{if(view==='editor')editor.resize();else render()});
-async function poll(){try{const state=await api('/api/state');if(state.run_id!==latest.run_id){selectedNode=null;selectedPacket=null;resetMaps()}latest=state;if(state.error)showError(state.error);render();$('#updated').textContent='Updated at '+new Date().toLocaleTimeString('en-US')}catch(e){showError(e)}setTimeout(poll,500)}
+async function poll(){try{const state=await api('/api/state');if(state.run_id!==latest.run_id){selectedNode=null;selectedPacket=null;resetMaps();resetReplay()}latest=state;if(state.error)showError(state.error);render();$('#updated').textContent='Updated at '+new Date().toLocaleTimeString('en-US')}catch(e){showError(e)}setTimeout(poll,500)}
 // Keep controls inert until bootstrap has chosen the initial view.
 (async()=>{setNetworkCatalog(await api('/api/network-catalog'));await loadCatalog();await selectScenario('e01_chat');latest=await api('/api/state');if(latest.configuration&&latest.state!=='idle'){const known=catalog.find(x=>x.id===latest.configuration.name||x.name===latest.configuration.name);selectedId=known?.id||'e01_chat';configuration=latest.configuration;executionMode=latest.standalone?'standalone':'integrated';showView('simulation')}else showView('home');poll()})().catch(showError).finally(()=>{document.body.inert=false});
