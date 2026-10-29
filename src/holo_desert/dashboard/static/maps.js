@@ -14,7 +14,7 @@ function arrow(ctx,a,b,color,{dash=[],offset=0,label='',width=1.7}={}){
   ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash);ctx.beginPath();ctx.moveTo(...start);ctx.quadraticCurveTo(...control,...end);ctx.stroke();ctx.setLineDash([]);
   const tangent=Math.atan2(end[1]-control[1],end[0]-control[0]);
   ctx.beginPath();ctx.moveTo(...end);ctx.lineTo(end[0]-7*Math.cos(tangent-.4),end[1]-7*Math.sin(tangent-.4));ctx.lineTo(end[0]-7*Math.cos(tangent+.4),end[1]-7*Math.sin(tangent+.4));ctx.fill();
-  if(label){ctx.font='10px "Segoe UI",sans-serif';const x=(a[0]+b[0])/2+normal[0]*offset/2,y=(a[1]+b[1])/2+normal[1]*offset/2+(offset>40?20:-8);ctx.textAlign='center';ctx.fillStyle='#fff';ctx.fillRect(x-ctx.measureText(label).width/2-5,y-10,ctx.measureText(label).width+10,14);ctx.fillStyle=color;ctx.fillText(label,x,y);ctx.textAlign='left'}
+  if(label){ctx.font='12px "Segoe UI",sans-serif';const x=(a[0]+b[0])/2+normal[0]*offset/2,y=(a[1]+b[1])/2+normal[1]*offset/2+(offset>40?20:-8);ctx.textAlign='center';ctx.fillStyle='#fff';ctx.fillRect(x-ctx.measureText(label).width/2-5,y-10,ctx.measureText(label).width+10,14);ctx.fillStyle=color;ctx.fillText(label,x,y);ctx.textAlign='left'}
 }
 export function drawMap(selector,s,selected,packetId=null){
   const {ctx,w,h}=canvas(selector),fleet=Object.entries(s.fleet||{});
@@ -23,7 +23,7 @@ export function drawMap(selector,s,selected,packetId=null){
   if(camera.auto){const xs=fleet.map(([,p])=>p.x),ys=fleet.map(([,p])=>p.y);camera.x=(Math.min(...xs)+Math.max(...xs))/2;camera.y=(Math.min(...ys)+Math.max(...ys))/2;camera.scale=Math.max(.000001,Math.min((w-150)/Math.max(20,Math.max(...xs)-Math.min(...xs)),(h-110)/Math.max(20,Math.max(...ys)-Math.min(...ys))))}
   const scale=camera.scale*camera.zoom,xy=p=>[w/2+(p.x-camera.x)*scale,h/2-(p.y-camera.y)*scale];
   const raw=80/scale,base=10**Math.floor(Math.log10(raw)),grid=[1,2,5,10].map(v=>v*base).find(v=>v>=raw);
-  ctx.strokeStyle='#eff2f7';ctx.fillStyle='#94a0b0';ctx.font='10px "Segoe UI",sans-serif';ctx.lineWidth=1;
+  ctx.strokeStyle='#eff2f7';ctx.fillStyle='#94a0b0';ctx.font='12px "Segoe UI",sans-serif';ctx.lineWidth=1;
   const minX=camera.x-w/2/scale,maxX=camera.x+w/2/scale,minY=camera.y-h/2/scale,maxY=camera.y+h/2/scale;
   for(let x=Math.ceil(minX/grid)*grid;x<maxX;x+=grid){const [px]=xy({x,y:0});ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,h-20);ctx.stroke();ctx.fillText(number(x,0),px+4,h-7)}
   for(let y=Math.ceil(minY/grid)*grid;y<maxY;y+=grid){const [,py]=xy({x:0,y});ctx.beginPath();ctx.moveTo(0,py);ctx.lineTo(w,py);ctx.stroke();ctx.fillText(number(y,0),4,py-4)}
@@ -53,7 +53,7 @@ export function drawMap(selector,s,selected,packetId=null){
     ctx.fillStyle=node===selected?'#eaf1ff':'#f6f8fc';ctx.strokeStyle=node===selected?'#3165cf':'#c0ccde';ctx.lineWidth=node===selected?1.7:1;ctx.beginPath();ctx.arc(x,y,16,0,Math.PI*2);ctx.fill();ctx.stroke();
     ctx.save();ctx.translate(x,y);ctx.rotate(-p.yaw*Math.PI/180);ctx.fillStyle=node===selected?'#3165cf':'#647c9f';ctx.beginPath();ctx.moveTo(9,0);ctx.lineTo(-6,-5);ctx.lineTo(-3,0);ctx.lineTo(-6,5);ctx.closePath();ctx.fill();ctx.restore();
     let label=drone(node);if(s.configuration?.name==='e05_multihop')label=String.fromCharCode(65+fleet.findIndex(([n])=>n===node))+' · '+label;
-    ctx.font='12px "Segoe UI",sans-serif';ctx.textAlign='center';const tw=ctx.measureText(label).width;ctx.fillStyle='#ffffffed';ctx.fillRect(x-tw/2-4,y+22,tw+8,18);ctx.fillStyle='#435570';ctx.fillText(label,x,y+35);ctx.textAlign='left';
+    ctx.font='13px "Segoe UI",sans-serif';ctx.textAlign='center';const tw=ctx.measureText(label).width;ctx.fillStyle='#ffffffed';ctx.fillRect(x-tw/2-4,y+22,tw+8,18);ctx.fillStyle='#435570';ctx.fillText(label,x,y+35);ctx.textAlign='left';
   }
 }
 export function bindMap(selector,fitButton,onSelect,render){

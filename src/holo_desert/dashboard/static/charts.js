@@ -16,7 +16,7 @@ export function chart(selector, series, lines, {window=0, max=null, dual=false, 
   const yStep=niceStep(hi-lo,divisions);
   if(max==null){hi=Math.ceil(hi/yStep-1e-9)*yStep;lo=Math.floor(lo/yStep+1e-9)*yStep}
   const y=(v,rightAxis=false)=>h-bottom-(rightAxis?v:(v-lo)/(hi-lo))*(h-top-bottom);
-  ctx.font='11px "Segoe UI",sans-serif';ctx.fillStyle='#748096';ctx.textAlign='left';
+  ctx.font='13px "Segoe UI",sans-serif';ctx.fillStyle='#748096';ctx.textAlign='left';
   for(let i=0,v=lo;v<=hi+yStep*1e-6;v=lo+(++i)*yStep){
     const py=y(v);ctx.strokeStyle='#edf0f5';ctx.beginPath();ctx.moveTo(left,py);ctx.lineTo(w-right,py);ctx.stroke();
     ctx.fillStyle='#748096';ctx.fillText(label(v),2,py+3);
@@ -38,7 +38,7 @@ export function chart(selector, series, lines, {window=0, max=null, dual=false, 
 export function strips(selector, rows, marks, colors, {start=0,end=1}={}) {
   const {ctx,w,h}=canvas(selector), left=86,right=15,top=12,bottom=32,row=(h-top-bottom)/Math.max(1,rows.length);
   const x=t=>left+(t-start)/Math.max(.01,end-start)*(w-left-right);
-  ctx.font='11px "Segoe UI",sans-serif';ctx.textAlign='left';
+  ctx.font='13px "Segoe UI",sans-serif';ctx.textAlign='left';
   rows.forEach((r,i)=>{const cy=top+row*(i+.5);ctx.strokeStyle='#edf0f5';ctx.beginPath();ctx.moveTo(left,cy);ctx.lineTo(w-right,cy);ctx.stroke();ctx.fillStyle='#53647d';ctx.fillText(r.label,2,cy+4)});
   for(const m of marks){const i=rows.findIndex(r=>r.id===m.row);if(i<0)continue;ctx.fillStyle=colors[m.key]||'#8795a8';ctx.beginPath();ctx.arc(x(m.time),top+row*(i+.5),4,0,2*Math.PI);ctx.fill()}
   const xStep=niceStep(Math.max(.01,end-start),4);ctx.fillStyle='#748096';ctx.textAlign='center';
