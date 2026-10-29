@@ -69,3 +69,12 @@ test('message inspector: lifecycle evidence, hops and selection kept across refr
   await page.locator('#packet-rows tr[data-id="expired-003"]').click();await expect(details).toContainText('cause unknown');await expect(details.locator('.final-state')).toHaveClass(/warning/);
   expect(errors).toEqual([]);
 });
+
+test('an open drop-down survives live refreshes that change the panel around it',async({page,request})=>{
+  const fixture=await fixturePage(page,request);let tick=0;
+  await page.route('**/api/state',route=>{tick++;const state=fixture.state();return route.fulfill({json:{...state,state:'running',time:12+tick,distances_m:{'auv_01>auv_02':500+tick,'auv_02>auv_03':500}}})});
+  const choice=page.locator('[data-node-choice]');await choice.focus();const handle=await choice.elementHandle();
+  const before=tick;await expect.poll(()=>tick,{timeout:5000}).toBeGreaterThan(before+2);
+  expect(await handle.evaluate(el=>el.isConnected&&document.activeElement===el)).toBe(true);
+  await choice.blur();await expect.poll(()=>handle.evaluate(el=>el.isConnected),{timeout:3000}).toBe(false);
+});

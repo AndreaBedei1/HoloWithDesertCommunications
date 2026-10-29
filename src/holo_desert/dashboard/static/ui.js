@@ -16,8 +16,11 @@ export function choices(selector, values, placeholder, label=value=>value.replac
   el.dataset.choices = signature;
 }
 // Replace only changed markup, keeping open <details> and the scroll position across refreshes.
+// A focused control (an open drop-down, a field being typed in) is never torn down: the next poll after blur refreshes it.
 export function preserve(root,html){
   if(root.innerHTML===html)return;
+  const active=document.activeElement;
+  if(active?.matches?.('select,input,textarea')&&root.contains(active))return;
   const opened=new Set([...root.querySelectorAll('details[open]')].map(d=>d.querySelector('summary')?.textContent)),scroll=root.scrollTop;
   root.innerHTML=html;root.querySelectorAll('details').forEach(d=>{if(opened.has(d.querySelector('summary')?.textContent))d.open=true});root.scrollTop=scroll;
 }
